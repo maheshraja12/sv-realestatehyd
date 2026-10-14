@@ -1,0 +1,54 @@
+<header class="site-header" id="siteHeader">
+    <div class="header-topbar">
+        <div class="container topbar-inner">
+            <div class="topbar-left">
+                <span><i class="fas fa-map-marker-alt text-gold"></i> Hyderabad, Telangana</span>
+                <span class="topbar-sep">•</span>
+                <a href="mailto:<%= businessEmail %>"><i class="fas fa-envelope text-gold"></i> <%= businessEmail %></a>
+            </div>
+            <div class="topbar-right">
+                <a href="tel:<%= businessPhone %>" class="topbar-link"><i class="fas fa-phone-alt text-gold"></i> <%= businessPhone %></a>
+                <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="topbar-link text-whatsapp"><i class="fab fa-whatsapp"></i> Chat on WhatsApp</a>
+                <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+                <a href="/admin/dashboard" class="topbar-admin-badge"><i class="fas fa-user-shield"></i> Admin Portal</a>
+                <% } else { %>
+                <a href="/admin/login" class="topbar-link text-muted"><i class="fas fa-lock"></i> Staff Login</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-main">
+        <div class="container header-inner">
+            <a href="/" class="brand-logo">
+                <div class="logo-symbol">
+                    <span class="gold-monogram">SV</span>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">SV REAL ESTATES</span>
+                    <span class="brand-subtitle">HYDERABAD • LUXURY LIVING</span>
+                </div>
+            </a>
+
+            <nav class="main-nav" id="mainNav">
+                <ul class="nav-links">
+                    <li><a href="/" class="<%= path === '/' ? 'active' : '' %>">Home</a></li>
+                    <li><a href="/properties" class="<%= path.startsWith('/properties') ? 'active' : '' %>">Properties</a></li>
+                    <li><a href="/about" class="<%= path === '/about' ? 'active' : '' %>">About Us</a></li>
+                    <li><a href="/services" class="<%= path === '/services' ? 'active' : '' %>">Services</a></li>
+                    <li><a href="/locations" class="<%= path === '/locations' ? 'active' : '' %>">Locations</a></li>
+                    <li><a href="/contact" class="<%= path === '/contact' ? 'active' : '' %>">Contact Us</a></li>
+                </ul>
+            </nav>
+
+            <div class="header-actions">
+                <button type="button" class="btn btn-gold btn-header-cta" onclick="openEnquiryModal()">
+                    <i class="fas fa-envelope"></i> Enquire Now
+                </button>
+                <button class="mobile-toggle" id="mobileNavToggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>

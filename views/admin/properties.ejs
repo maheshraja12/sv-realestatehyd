@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2>Properties</h2>
+            </div>
+            <div class="header-right">
+                <a href="/admin/properties/new" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Property</a>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <!-- Filters -->
+            <div class="filter-bar">
+                <form method="GET" action="/admin/properties" class="filter-form">
+                    <div class="filter-group">
+                        <input type="text" name="search" value="<%= search %>" placeholder="Search properties..." class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <select name="category" class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="villa" <%= category === 'villa' ? 'selected' : '' %>>Villas</option>
+                            <option value="residential_plot" <%= category === 'residential_plot' ? 'selected' : '' %>>Residential Plots</option>
+                            <option value="apartment" <%= category === 'apartment' ? 'selected' : '' %>>Apartments</option>
+                            <option value="independent_house" <%= category === 'independent_house' ? 'selected' : '' %>>Independent Houses</option>
+                            <option value="commercial" <%= category === 'commercial' ? 'selected' : '' %>>Commercial</option>
+                            <option value="agricultural_land" <%= category === 'agricultural_land' ? 'selected' : '' %>>Agricultural Land</option>
+                            <option value="rental" <%= category === 'rental' ? 'selected' : '' %>>Rental</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <select name="status" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="draft" <%= status === 'draft' ? 'selected' : '' %>>Draft</option>
+                            <option value="published" <%= status === 'published' ? 'selected' : '' %>>Published</option>
+                            <option value="archived" <%= status === 'archived' ? 'selected' : '' %>>Archived</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary"><i class="fas fa-search"></i> Filter</button>
+                    <a href="/admin/properties" class="btn btn-ghost">Clear</a>
+                </form>
+            </div>
+
+            <div class="table-info">
+                <span>Showing <%= properties.length %> of <%= total %> properties</span>
+            </div>
+
+            <!-- Properties Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Title / Code</th>
+                            <th>Category</th>
+                            <th>Location</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Leads</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (properties.length === 0) { %>
+                        <tr><td colspan="8" class="empty-row">No properties found. <a href="/admin/properties/new">Add your first property</a></td></tr>
+                        <% } %>
+                        <% properties.forEach(prop => { %>
+                        <tr>
+                            <td>
+                                <% if (prop.cover_image) { %>
+                                <img src="<%= prop.cover_image %>" alt="" class="table-thumb">
+                                <% } else { %>
+                                <div class="table-thumb-placeholder"><i class="fas fa-image"></i></div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <strong><%= prop.title %></strong>
+                                <small class="text-muted"><%= prop.property_code %></small>
+                            </td>
+                            <td><span class="category-badge"><%= prop.category.replace(/_/g, ' ') %></span></td>
+                            <td><%= prop.locality || prop.city || '—' %></td>
+                            <td><%= prop.price ? '₹' + Number(prop.price).toLocaleString('en-IN') : '—' %></td>
+                            <td><span class="status-badge status-<%= prop.status %>"><%= prop.status %></span></td>
+                            <td><%= prop.lead_count || 0 %></td>
+                            <td class="actions-cell">
+                                <a href="/admin/properties/<%= prop.id %>/edit" class="btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
+                                <% if (prop.status === 'draft') { %>
+                                <button onclick="publishProperty(<%= prop.id %>)" class="btn-icon text-success" title="Publish"><i class="fas fa-check"></i></button>
+                                <% } else if (prop.status === 'published') { %>
+                                <button onclick="unpublishProperty(<%= prop.id %>)" class="btn-icon text-warning" title="Unpublish"><i class="fas fa-eye-slash"></i></button>
+                                <% } %>
+                                <button onclick="duplicateProperty(<%= prop.id %>)" class="btn-icon" title="Duplicate"><i class="fas fa-copy"></i></button>
+                                <button onclick="deleteProperty(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>')" class="btn-icon text-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+            <div class="pagination">
+                <% if (page > 1) { %>
+                <a href="?page=<%= page - 1 %>&search=<%= search %>&category=<%= category %>&status=<%= status %>" class="btn btn-ghost">← Prev</a>
+                <% } %>
+                <span class="page-info">Page <%= page %> of <%= totalPages %></span>
+                <% if (page < totalPages) { %>
+                <a href="?page=<%= page + 1 %>&search=<%= search %>&category=<%= category %>&status=<%= status %>" class="btn btn-ghost">Next →</a>
+                <% } %>
+            </div>
+            <% } %>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

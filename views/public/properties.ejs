@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Explore verified luxury properties for sale and rent in Hyderabad. Villas, plots, flats, and commercial properties with clear titles and transparent pricing.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Header -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS</span>
+            <h1 class="page-title">Properties in <span class="gold-gradient-text">Hyderabad</span></h1>
+            <p class="page-subtitle">Handpicked, legally vetted, premium homes, plots, and investment opportunities.</p>
+        </div>
+    </section>
+
+    <!-- Main Content & Filter Bar -->
+    <section class="section properties-catalog-section">
+        <div class="container">
+            <!-- Filter Box -->
+            <div class="catalog-filter-card">
+                <form action="/properties" method="GET" class="catalog-filter-form" id="filterForm">
+                    <div class="filter-row-top">
+                        <div class="filter-input-wrap search-keyword">
+                            <i class="fas fa-search"></i>
+                            <input type="text" name="search" value="<%= filters.search %>" placeholder="Search by property title, locality, keywords...">
+                        </div>
+                        <div class="filter-input-wrap">
+                            <select name="sort" onchange="this.form.submit()">
+                                <option value="newest" <%= filters.sort === 'newest' ? 'selected' : '' %>>Sort: Newest First</option>
+                                <option value="price_low" <%= filters.sort === 'price_low' ? 'selected' : '' %>>Price: Low to High</option>
+                                <option value="price_high" <%= filters.sort === 'price_high' ? 'selected' : '' %>>Price: High to Low</option>
+                                <option value="oldest" <%= filters.sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row-grid">
+                        <div class="filter-col">
+                            <label><i class="fas fa-layer-group text-gold"></i> Category</label>
+                            <select name="category" onchange="this.form.submit()">
+                                <option value="">All Categories</option>
+                                <option value="villa" <%= filters.category === 'villa' ? 'selected' : '' %>>Luxury Villas</option>
+                                <option value="residential_plot" <%= filters.category === 'residential_plot' ? 'selected' : '' %>>Residential Plots</option>
+                                <option value="apartment" <%= filters.category === 'apartment' ? 'selected' : '' %>>Apartments</option>
+                                <option value="independent_house" <%= filters.category === 'independent_house' ? 'selected' : '' %>>Independent Houses</option>
+                                <option value="commercial" <%= filters.category === 'commercial' ? 'selected' : '' %>>Commercial</option>
+                                <option value="agricultural_land" <%= filters.category === 'agricultural_land' ? 'selected' : '' %>>Farm / Agri Land</option>
+                                <option value="rental" <%= filters.category === 'rental' ? 'selected' : '' %>>Rentals</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-tag text-gold"></i> Purpose</label>
+                            <select name="purpose" onchange="this.form.submit()">
+                                <option value="">Buy & Rent</option>
+                                <option value="sale" <%= filters.purpose === 'sale' ? 'selected' : '' %>>For Sale</option>
+                                <option value="rent" <%= filters.purpose === 'rent' ? 'selected' : '' %>>For Rent</option>
+                                <option value="lease" <%= filters.purpose === 'lease' ? 'selected' : '' %>>For Lease</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-map-pin text-gold"></i> Locality</label>
+                            <select name="locality" onchange="this.form.submit()">
+                                <option value="">All Localities</option>
+                                <% localities.forEach(loc => { %>
+                                <option value="<%= loc.locality %>" <%= filters.locality === loc.locality ? 'selected' : '' %>><%= loc.locality %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-bed text-gold"></i> Bedrooms</label>
+                            <select name="bedrooms" onchange="this.form.submit()">
+                                <option value="">Any BHK</option>
+                                <option value="2" <%= filters.bedrooms === '2' ? 'selected' : '' %>>2+ BHK</option>
+                                <option value="3" <%= filters.bedrooms === '3' ? 'selected' : '' %>>3+ BHK</option>
+                                <option value="4" <%= filters.bedrooms === '4' ? 'selected' : '' %>>4+ BHK</option>
+                                <option value="5" <%= filters.bedrooms === '5' ? 'selected' : '' %>>5+ BHK</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-rupee-sign text-gold"></i> Max Price</label>
+                            <select name="max_price" onchange="this.form.submit()">
+                                <option value="">Any Price</option>
+                                <option value="5000000" <%= filters.maxPrice === '5000000' ? 'selected' : '' %>>Up to ₹50 Lakh</option>
+                                <option value="10000000" <%= filters.maxPrice === '10000000' ? 'selected' : '' %>>Up to ₹1 Cr</option>
+                                <option value="25000000" <%= filters.maxPrice === '25000000' ? 'selected' : '' %>>Up to ₹2.5 Cr</option>
+                                <option value="50000000" <%= filters.maxPrice === '50000000' ? 'selected' : '' %>>Up to ₹5 Cr</option>
+                                <option value="100000000" <%= filters.maxPrice === '100000000' ? 'selected' : '' %>>Up to ₹10 Cr</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col filter-action-col">
+                            <button type="submit" class="btn btn-gold btn-filter-submit"><i class="fas fa-filter"></i> Apply</button>
+                            <a href="/properties" class="btn btn-ghost">Reset</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Info Header -->
+            <div class="catalog-info-bar">
+                <span class="results-count">
+                    Showing <strong><%= properties.length %></strong> of <strong><%= total %></strong> properties
+                </span>
+                <% if (filters.category || filters.locality || filters.search || filters.purpose) { %>
+                <div class="active-chips">
+                    <span class="active-label">Active Filters:</span>
+                    <% if (filters.category) { %><span class="filter-pill"><%= filters.category.replace(/_/g, ' ') %></span><% } %>
+                    <% if (filters.locality) { %><span class="filter-pill"><%= filters.locality %></span><% } %>
+                    <% if (filters.purpose) { %><span class="filter-pill"><%= filters.purpose %></span><% } %>
+                    <% if (filters.search) { %><span class="filter-pill">"<%= filters.search %>"</span><% } %>
+                    <a href="/properties" class="clear-all-link">Clear All</a>
+                </div>
+                <% } %>
+            </div>
+
+            <!-- Properties Grid -->
+            <div class="properties-grid catalog-grid">
+                <% if (properties.length === 0) { %>
+                <div class="no-properties-card">
+                    <div class="no-prop-icon"><i class="fas fa-search-location"></i></div>
+                    <h3>No Properties Match Your Search</h3>
+                    <p>Try adjusting your search criteria or explore our complete catalog across other prime Hyderabad localities.</p>
+                    <div class="no-prop-actions">
+                        <a href="/properties" class="btn btn-gold">View All Properties</a>
+                        <button type="button" class="btn btn-secondary" onclick="openEnquiryModal(null, 'Custom Requirement')">
+                            Request Custom Property
+                        </button>
+                    </div>
+                </div>
+                <% } %>
+
+                <% properties.forEach(prop => { %>
+                <div class="property-card" data-id="<%= prop.id %>">
+                    <div class="prop-card-media">
+                        <% if (prop.cover_image) { %>
+                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                        <% } else { %>
+                        <div class="prop-img-placeholder">
+                            <i class="fas fa-building"></i>
+                            <span>SV Real Estates</span>
+                        </div>
+                        <% } %>
+
+                        <div class="prop-badge-top">
+                            <% if (prop.is_featured) { %>
+                            <span class="badge-featured"><i class="fas fa-star"></i> Featured</span>
+                            <% } %>
+                            <span class="badge-category"><%= prop.category.replace(/_/g, ' ') %></span>
+                            <span class="badge-purpose badge-<%= prop.purpose %>"><%= prop.purpose %></span>
+                        </div>
+
+                        <div class="prop-price-tag">
+                            <% if (prop.price) { %>
+                            ₹<%= Number(prop.price) >= 10000000 ? (prop.price / 10000000).toFixed(2) + ' Cr' : (prop.price / 100000).toFixed(2) + ' L' %>
+                            <% } else { %>
+                            Price on Request
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <div class="prop-card-body">
+                        <div class="prop-location">
+                            <i class="fas fa-map-marker-alt text-gold"></i>
+                            <span><%= prop.locality ? prop.locality + ', ' : '' %><%= prop.city %></span>
+                        </div>
+                        <h3 class="prop-title">
+                            <a href="/properties/<%= prop.id %>"><%= prop.title %></a>
+                        </h3>
+                        <% if (prop.short_description) { %>
+                        <p class="prop-desc"><%= prop.short_description %></p>
+                        <% } %>
+
+                        <div class="prop-specs-row">
+                            <% if (prop.bedrooms) { %>
+                            <div class="spec-item"><i class="fas fa-bed"></i> <%= prop.bedrooms %> BHK</div>
+                            <% } %>
+                            <% if (prop.bathrooms) { %>
+                            <div class="spec-item"><i class="fas fa-bath"></i> <%= prop.bathrooms %> Bath</div>
+                            <% } %>
+                            <% if (prop.built_up_area || prop.plot_area) { %>
+                            <div class="spec-item">
+                                <i class="fas fa-ruler-combined"></i>
+                                <%= (prop.built_up_area || prop.plot_area).toLocaleString() %> <%= (prop.area_unit || 'sq_ft').replace(/_/g, ' ') %>
+                            </div>
+                            <% } %>
+                            <% if (prop.facing) { %>
+                            <div class="spec-item"><i class="fas fa-compass"></i> <%= prop.facing %></div>
+                            <% } %>
+                        </div>
+
+                        <div class="prop-card-footer">
+                            <button class="btn btn-card-enquire" onclick="openEnquiryModal(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>', '<%= prop.property_code %>', '<%= prop.category %>')">
+                                <i class="fas fa-envelope"></i> Enquire
+                            </button>
+                            <a href="/properties/<%= prop.id %>" class="btn btn-card-details">
+                                Details <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+            <div class="pagination-wrapper">
+                <% if (page > 1) { %>
+                <a href="?page=<%= page - 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+                <% } %>
+
+                <div class="page-numbers">
+                    <span>Page <%= page %> of <%= totalPages %></span>
+                </div>
+
+                <% if (page < totalPages) { %>
+                <a href="?page=<%= page + 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+                <% } %>
+            </div>
+            <% } %>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+</body>
+</html>

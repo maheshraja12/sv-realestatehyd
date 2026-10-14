@@ -1,0 +1,430 @@
+/**
+ * Property CRUD API
+ */
+const express = require('express');
+const router = express.Router();
+const { getDb } = require('../../database/db');
+const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
+const { sanitizeObject, validatePropertyData } = require('../../middleware/validation');
+const { upload } = require('../../middleware/upload');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+
+// Generate unique property code
+function generatePropertyCode(category) {
+    const prefix = {
+        villa: 'SV-VL',
+        residential_plot: 'SV-RP',
+        apartment: 'SV-AP',
+        independent_house: 'SV-IH',
+        commercial: 'SV-CM',
+        agricultural_land: 'SV-AL',
+        rental: 'SV-RT'
+    };
+    const pre = prefix[category] || 'SV-PR';
+    const num = String(Date.now()).slice(-6);
+    return `${pre}-${num}`;
+}
+
+// ── Public Endpoints ──────────────────────────────────────
+
+// GET /api/properties/public — Public property list
+router.get('/public', (req, res) => {
+    const db = getDb();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const offset = (page - 1) * limit;
+
+    const category = req.query.category || '';
+    const purpose = req.query.purpose || '';
+    const minPrice = req.query.min_price || '';
+    const maxPrice = req.query.max_price || '';
+    const bedrooms = req.query.bedrooms || '';
+    const search = req.query.search || '';
+
+    let where = "status = 'published'";
+    const params = [];
+
+    if (search) {
+        where += ' AND (title LIKE ? OR locality LIKE ? OR city LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (category) { where += ' AND category = ?'; params.push(category); }
+    if (purpose) { where += ' AND purpose = ?'; params.push(purpose); }
+    if (minPrice) { where += ' AND price >= ?'; params.push(parseFloat(minPrice)); }
+    if (maxPrice) { where += ' AND price <= ?'; params.push(parseFloat(maxPrice)); }
+    if (bedrooms) { where += ' AND bedrooms >= ?'; params.push(parseInt(bedrooms)); }
+
+    const total = db.prepare(`SELECT COUNT(*) as count FROM properties WHERE ${where}`).get(...params).count;
+    const properties = db.prepare(`
+        SELECT p.id, p.property_code, p.title, p.category, p.purpose, p.short_description,
+            p.price, p.price_negotiable, p.city, p.locality, p.plot_area, p.built_up_area,
+            p.area_unit, p.bedrooms, p.bathrooms, p.floors, p.facing, p.furnishing,
+            p.is_featured, p.amenities, p.availability,
+            (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
+        FROM properties p
+        WHERE ${where}
+        ORDER BY p.is_featured DESC, p.published_at DESC
+        LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    res.json({ properties, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+// GET /api/properties/public/:id — Public property detail
+router.get('/public/:id', (req, res) => {
+    const db = getDb();
+    let property;
+    if (isNaN(req.params.id)) {
+        property = db.prepare("SELECT * FROM properties WHERE property_code = ? AND status = 'published'").get(req.params.id);
+    } else {
+        property = db.prepare("SELECT * FROM properties WHERE id = ? AND status = 'published'").get(req.params.id);
+    }
+
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    const images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    
+    // Don't expose admin_notes to public
+    delete property.admin_notes;
+    delete property.created_by;
+
+    res.json({ property, images });
+});
+
+// ── Admin Endpoints (Protected) ──────────────────────────
+
+// POST /api/properties — Create property
+router.post('/', requireAuth, (req, res) => {
+    try {
+        const db = getDb();
+        const data = sanitizeObject(req.body);
+        const errors = validatePropertyData(data);
+        if (errors.length > 0) return res.status(400).json({ errors });
+
+        const propertyCode = data.property_code || generatePropertyCode(data.category);
+
+        // Check for duplicate property code
+        const existing = db.prepare('SELECT id FROM properties WHERE property_code = ?').get(propertyCode);
+        if (existing) return res.status(409).json({ error: 'Property code already exists' });
+
+        let amenities = '[]';
+        if (data.amenities) {
+            try {
+                amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities);
+            } catch (e) { amenities = '[]'; }
+        }
+
+        const result = db.prepare(`
+            INSERT INTO properties (
+                property_code, title, category, purpose, short_description, description,
+                price, price_negotiable, state, city, locality, full_address, pin_code,
+                map_link, latitude, longitude, plot_area, built_up_area, carpet_area,
+                area_unit, bedrooms, bathrooms, balconies, floors, facing, furnishing,
+                parking, plot_dimensions, road_width, land_use_category, approval_details,
+                private_garden, private_pool, virtual_tour_link, brochure_url,
+                amenities, status, availability, is_featured, seo_title, seo_description,
+                admin_notes, created_by
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
+        `).run(
+            propertyCode, data.title, data.category, data.purpose || 'sale',
+            data.short_description || null, data.description || null,
+            data.price ? parseFloat(data.price) : null,
+            data.price_negotiable ? 1 : 0,
+            data.state || 'Telangana', data.city || 'Hyderabad',
+            data.locality || null, data.full_address || null, data.pin_code || null,
+            data.map_link || null,
+            data.latitude ? parseFloat(data.latitude) : null,
+            data.longitude ? parseFloat(data.longitude) : null,
+            data.plot_area ? parseFloat(data.plot_area) : null,
+            data.built_up_area ? parseFloat(data.built_up_area) : null,
+            data.carpet_area ? parseFloat(data.carpet_area) : null,
+            data.area_unit || 'sq_ft',
+            data.bedrooms ? parseInt(data.bedrooms) : null,
+            data.bathrooms ? parseInt(data.bathrooms) : null,
+            data.balconies ? parseInt(data.balconies) : null,
+            data.floors ? parseInt(data.floors) : null,
+            data.facing || null, data.furnishing || null, data.parking || null,
+            data.plot_dimensions || null, data.road_width || null,
+            data.land_use_category || null, data.approval_details || null,
+            data.private_garden ? 1 : 0, data.private_pool ? 1 : 0,
+            data.virtual_tour_link || null, data.brochure_url || null,
+            amenities,
+            data.status || 'draft', data.availability || 'available',
+            data.is_featured ? 1 : 0,
+            data.seo_title || null, data.seo_description || null,
+            data.admin_notes || null, req.session.userId
+        );
+
+        const propertyId = result.lastInsertRowid;
+
+        // If publishing, set published_at
+        if (data.status === 'published') {
+            db.prepare("UPDATE properties SET published_at = datetime('now') WHERE id = ?").run(propertyId);
+        }
+
+        auditLog(db, req.session.userId, req.session.userName, 'create', 'property', propertyId, `Created: ${data.title}`, req.ip);
+
+        res.status(201).json({ id: propertyId, property_code: propertyCode, message: 'Property created successfully' });
+    } catch (err) {
+        console.error('Create property error:', err);
+        res.status(500).json({ error: 'Failed to create property' });
+    }
+});
+
+// PUT /api/properties/:id — Update property
+router.put('/:id', requireAuth, (req, res) => {
+    try {
+        const db = getDb();
+        const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
+        if (!property) return res.status(404).json({ error: 'Property not found' });
+
+        const data = sanitizeObject(req.body);
+        const errors = validatePropertyData(data);
+        if (errors.length > 0) return res.status(400).json({ errors });
+
+        // Check property_code uniqueness if changed
+        if (data.property_code && data.property_code !== property.property_code) {
+            const dup = db.prepare('SELECT id FROM properties WHERE property_code = ? AND id != ?').get(data.property_code, property.id);
+            if (dup) return res.status(409).json({ error: 'Property code already exists' });
+        }
+
+        let amenities = property.amenities;
+        if (data.amenities !== undefined) {
+            try {
+                amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities);
+            } catch (e) { /* keep existing */ }
+        }
+
+        // Track publish status change
+        const wasPublished = property.status === 'published';
+        const willPublish = data.status === 'published';
+
+        db.prepare(`
+            UPDATE properties SET
+                title = ?, category = ?, purpose = ?, short_description = ?, description = ?,
+                price = ?, price_negotiable = ?, state = ?, city = ?, locality = ?,
+                full_address = ?, pin_code = ?, map_link = ?, latitude = ?, longitude = ?,
+                plot_area = ?, built_up_area = ?, carpet_area = ?, area_unit = ?,
+                bedrooms = ?, bathrooms = ?, balconies = ?, floors = ?, facing = ?,
+                furnishing = ?, parking = ?, plot_dimensions = ?, road_width = ?,
+                land_use_category = ?, approval_details = ?, private_garden = ?, private_pool = ?,
+                virtual_tour_link = ?, brochure_url = ?, amenities = ?, status = ?,
+                availability = ?, is_featured = ?, seo_title = ?, seo_description = ?,
+                admin_notes = ?, updated_at = datetime('now'),
+                property_code = COALESCE(?, property_code)
+            WHERE id = ?
+        `).run(
+            data.title, data.category, data.purpose || 'sale',
+            data.short_description || null, data.description || null,
+            data.price ? parseFloat(data.price) : null,
+            data.price_negotiable ? 1 : 0,
+            data.state || 'Telangana', data.city || 'Hyderabad',
+            data.locality || null, data.full_address || null, data.pin_code || null,
+            data.map_link || null,
+            data.latitude ? parseFloat(data.latitude) : null,
+            data.longitude ? parseFloat(data.longitude) : null,
+            data.plot_area ? parseFloat(data.plot_area) : null,
+            data.built_up_area ? parseFloat(data.built_up_area) : null,
+            data.carpet_area ? parseFloat(data.carpet_area) : null,
+            data.area_unit || 'sq_ft',
+            data.bedrooms ? parseInt(data.bedrooms) : null,
+            data.bathrooms ? parseInt(data.bathrooms) : null,
+            data.balconies ? parseInt(data.balconies) : null,
+            data.floors ? parseInt(data.floors) : null,
+            data.facing || null, data.furnishing || null, data.parking || null,
+            data.plot_dimensions || null, data.road_width || null,
+            data.land_use_category || null, data.approval_details || null,
+            data.private_garden ? 1 : 0, data.private_pool ? 1 : 0,
+            data.virtual_tour_link || null, data.brochure_url || null,
+            amenities, data.status || property.status,
+            data.availability || 'available',
+            data.is_featured ? 1 : 0,
+            data.seo_title || null, data.seo_description || null,
+            data.admin_notes || null,
+            data.property_code || null,
+            req.params.id
+        );
+
+        // Set published_at if newly publishing
+        if (!wasPublished && willPublish) {
+            db.prepare("UPDATE properties SET published_at = datetime('now') WHERE id = ?").run(req.params.id);
+        }
+
+        auditLog(db, req.session.userId, req.session.userName, 'update', 'property', req.params.id, `Updated: ${data.title}`, req.ip);
+
+        res.json({ message: 'Property updated successfully' });
+    } catch (err) {
+        console.error('Update property error:', err);
+        res.status(500).json({ error: 'Failed to update property' });
+    }
+});
+
+// POST /api/properties/:id/images — Upload images
+router.post('/:id/images', requireAuth, upload.array('images', 20), (req, res) => {
+    try {
+        const db = getDb();
+        const property = db.prepare('SELECT id FROM properties WHERE id = ?').get(req.params.id);
+        if (!property) return res.status(404).json({ error: 'Property not found' });
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No images uploaded' });
+        }
+
+        const existingCount = db.prepare('SELECT COUNT(*) as count FROM property_images WHERE property_id = ?').get(req.params.id).count;
+        const hasCover = db.prepare('SELECT COUNT(*) as count FROM property_images WHERE property_id = ? AND is_cover = 1').get(req.params.id).count > 0;
+
+        const stmt = db.prepare(`
+            INSERT INTO property_images (property_id, image_url, original_name, is_cover, display_order)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+
+        const images = [];
+        req.files.forEach((file, index) => {
+            const imageUrl = `/uploads/properties/${file.filename}`;
+            const isCover = (!hasCover && index === 0) ? 1 : 0;
+            const order = existingCount + index;
+            const result = stmt.run(req.params.id, imageUrl, file.originalname, isCover, order);
+            images.push({ id: result.lastInsertRowid, image_url: imageUrl, is_cover: isCover, display_order: order });
+        });
+
+        auditLog(db, req.session.userId, req.session.userName, 'upload_images', 'property', req.params.id, `Uploaded ${req.files.length} images`, req.ip);
+
+        res.json({ images, message: `${req.files.length} image(s) uploaded` });
+    } catch (err) {
+        console.error('Upload images error:', err);
+        res.status(500).json({ error: 'Failed to upload images' });
+    }
+});
+
+// PUT /api/properties/:id/images/:imageId/cover — Set cover image
+router.put('/:id/images/:imageId/cover', requireAuth, (req, res) => {
+    const db = getDb();
+    db.prepare('UPDATE property_images SET is_cover = 0 WHERE property_id = ?').run(req.params.id);
+    db.prepare('UPDATE property_images SET is_cover = 1 WHERE id = ? AND property_id = ?').run(req.params.imageId, req.params.id);
+    res.json({ message: 'Cover image updated' });
+});
+
+// DELETE /api/properties/:id/images/:imageId — Delete image
+router.delete('/:id/images/:imageId', requireAuth, (req, res) => {
+    const db = getDb();
+    const image = db.prepare('SELECT * FROM property_images WHERE id = ? AND property_id = ?').get(req.params.imageId, req.params.id);
+    if (!image) return res.status(404).json({ error: 'Image not found' });
+
+    // Delete file from disk
+    const filePath = path.join(__dirname, '..', '..', 'public', image.image_url);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+
+    db.prepare('DELETE FROM property_images WHERE id = ?').run(req.params.imageId);
+
+    // If deleted image was cover, make the first remaining image the cover
+    if (image.is_cover) {
+        const first = db.prepare('SELECT id FROM property_images WHERE property_id = ? ORDER BY display_order LIMIT 1').get(req.params.id);
+        if (first) {
+            db.prepare('UPDATE property_images SET is_cover = 1 WHERE id = ?').run(first.id);
+        }
+    }
+
+    res.json({ message: 'Image deleted' });
+});
+
+// PUT /api/properties/:id/images/reorder — Reorder images
+router.put('/:id/images/reorder', requireAuth, (req, res) => {
+    const db = getDb();
+    const { order } = req.body; // Array of image IDs in new order
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'Invalid order data' });
+
+    const stmt = db.prepare('UPDATE property_images SET display_order = ? WHERE id = ? AND property_id = ?');
+    order.forEach((imageId, index) => {
+        stmt.run(index, imageId, req.params.id);
+    });
+
+    res.json({ message: 'Images reordered' });
+});
+
+// PATCH /api/properties/:id/publish — Publish
+router.patch('/:id/publish', requireAuth, (req, res) => {
+    const db = getDb();
+    db.prepare("UPDATE properties SET status = 'published', published_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+    auditLog(db, req.session.userId, req.session.userName, 'publish', 'property', req.params.id, null, req.ip);
+    res.json({ message: 'Property published' });
+});
+
+// PATCH /api/properties/:id/unpublish — Unpublish
+router.patch('/:id/unpublish', requireAuth, (req, res) => {
+    const db = getDb();
+    db.prepare("UPDATE properties SET status = 'draft', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+    auditLog(db, req.session.userId, req.session.userName, 'unpublish', 'property', req.params.id, null, req.ip);
+    res.json({ message: 'Property unpublished' });
+});
+
+// PATCH /api/properties/:id/archive — Archive
+router.patch('/:id/archive', requireAuth, (req, res) => {
+    const db = getDb();
+    db.prepare("UPDATE properties SET status = 'archived', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+    auditLog(db, req.session.userId, req.session.userName, 'archive', 'property', req.params.id, null, req.ip);
+    res.json({ message: 'Property archived' });
+});
+
+// POST /api/properties/:id/duplicate — Duplicate
+router.post('/:id/duplicate', requireAuth, (req, res) => {
+    const db = getDb();
+    const original = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
+    if (!original) return res.status(404).json({ error: 'Property not found' });
+
+    const newCode = generatePropertyCode(original.category);
+    const result = db.prepare(`
+        INSERT INTO properties (
+            property_code, title, category, purpose, short_description, description,
+            price, price_negotiable, state, city, locality, full_address, pin_code,
+            map_link, latitude, longitude, plot_area, built_up_area, carpet_area,
+            area_unit, bedrooms, bathrooms, balconies, floors, facing, furnishing,
+            parking, plot_dimensions, road_width, land_use_category, approval_details,
+            private_garden, private_pool, virtual_tour_link, brochure_url,
+            amenities, status, availability, is_featured, seo_title, seo_description,
+            admin_notes, created_by
+        ) SELECT
+            ?, title || ' (Copy)', category, purpose, short_description, description,
+            price, price_negotiable, state, city, locality, full_address, pin_code,
+            map_link, latitude, longitude, plot_area, built_up_area, carpet_area,
+            area_unit, bedrooms, bathrooms, balconies, floors, facing, furnishing,
+            parking, plot_dimensions, road_width, land_use_category, approval_details,
+            private_garden, private_pool, virtual_tour_link, brochure_url,
+            amenities, 'draft', availability, 0, seo_title, seo_description,
+            admin_notes, ?
+        FROM properties WHERE id = ?
+    `).run(newCode, req.session.userId, req.params.id);
+
+    auditLog(db, req.session.userId, req.session.userName, 'duplicate', 'property', result.lastInsertRowid, `Duplicated from ${req.params.id}`, req.ip);
+    res.json({ id: result.lastInsertRowid, property_code: newCode, message: 'Property duplicated as draft' });
+});
+
+// DELETE /api/properties/:id — Delete
+router.delete('/:id', requireAuth, (req, res) => {
+    const db = getDb();
+    const property = db.prepare('SELECT title FROM properties WHERE id = ?').get(req.params.id);
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    // Delete associated images from disk
+    const images = db.prepare('SELECT image_url FROM property_images WHERE property_id = ?').all(req.params.id);
+    images.forEach(img => {
+        const filePath = path.join(__dirname, '..', '..', 'public', img.image_url);
+        if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
+        }
+    });
+
+    db.prepare('DELETE FROM property_images WHERE property_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM properties WHERE id = ?').run(req.params.id);
+
+    auditLog(db, req.session.userId, req.session.userName, 'delete', 'property', req.params.id, `Deleted: ${property.title}`, req.ip);
+    res.json({ message: 'Property deleted' });
+});
+
+module.exports = router;

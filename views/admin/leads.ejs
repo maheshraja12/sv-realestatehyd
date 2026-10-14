@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2>Leads & Enquiries</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:10px; align-items:center;">
+                <span class="badge" style="background:rgba(37,211,102,0.15); color:#25D366; border:1px solid rgba(37,211,102,0.3); font-size:0.8rem; padding:6px 12px; border-radius:6px; font-weight:600;">
+                    <i class="fas fa-circle" style="font-size:0.6rem; margin-right:4px;"></i> Live Updates
+                </span>
+                <button type="button" onclick="window.location.reload()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; cursor:pointer;">
+                    <i class="fas fa-sync-alt"></i> Refresh Leads
+                </button>
+                <a href="/api/leads/export/csv" class="btn btn-secondary"><i class="fas fa-download"></i> Export CSV</a>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <div class="filter-bar">
+                <form method="GET" action="/admin/leads" class="filter-form">
+                    <div class="filter-group">
+                        <input type="text" name="search" value="<%= search %>" placeholder="Search by name, phone, code..." class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <select name="status" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="new" <%= status === 'new' ? 'selected' : '' %>>New</option>
+                            <option value="contacted" <%= status === 'contacted' ? 'selected' : '' %>>Contacted</option>
+                            <option value="interested" <%= status === 'interested' ? 'selected' : '' %>>Interested</option>
+                            <option value="site_visit_scheduled" <%= status === 'site_visit_scheduled' ? 'selected' : '' %>>Site Visit Scheduled</option>
+                            <option value="negotiation" <%= status === 'negotiation' ? 'selected' : '' %>>Negotiation</option>
+                            <option value="converted" <%= status === 'converted' ? 'selected' : '' %>>Converted</option>
+                            <option value="lost" <%= status === 'lost' ? 'selected' : '' %>>Lost</option>
+                            <option value="spam" <%= status === 'spam' ? 'selected' : '' %>>Spam</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <select name="category" class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="villa" <%= category === 'villa' ? 'selected' : '' %>>Villa</option>
+                            <option value="residential_plot" <%= category === 'residential_plot' ? 'selected' : '' %>>Plot</option>
+                            <option value="apartment" <%= category === 'apartment' ? 'selected' : '' %>>Apartment</option>
+                            <option value="independent_house" <%= category === 'independent_house' ? 'selected' : '' %>>Independent House</option>
+                            <option value="commercial" <%= category === 'commercial' ? 'selected' : '' %>>Commercial</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary"><i class="fas fa-search"></i></button>
+                    <a href="/admin/leads" class="btn btn-ghost">Clear</a>
+                </form>
+            </div>
+
+            <div class="table-info">
+                <span>Showing <%= leads.length %> of <%= total %> enquiries</span>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Customer Name</th>
+                            <th>Phone Number</th>
+                            <th>Appointment Date</th>
+                            <th>Appointment Time</th>
+                            <th>Property Requirement</th>
+                            <th>Enquiry Status</th>
+                            <th>Submission Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (leads.length === 0) { %>
+                        <tr><td colspan="9" class="empty-row">No enquiries found</td></tr>
+                        <% } %>
+                        <% leads.forEach(lead => { %>
+                        <tr onclick="window.location='/admin/leads/<%= lead.id %>'" class="clickable-row">
+                            <td><strong><%= lead.lead_code %></strong></td>
+                            <td>
+                                <strong style="color:var(--text-primary);"><%= lead.full_name || lead.customer_name %></strong>
+                                <% if (lead.email) { %><br><small class="text-muted"><%= lead.email %></small><% } %>
+                            </td>
+                            <td>
+                                <a href="tel:<%= lead.phone_number || lead.phone %>" style="color:var(--gold); font-weight:600; text-decoration:none;">
+                                    <i class="fas fa-phone-alt"></i> <%= lead.phone_number || lead.phone %>
+                                </a>
+                            </td>
+                            <td>
+                                <% if (lead.appointment_date || lead.preferred_visit_date) { %>
+                                <span class="date-badge-visit">
+                                    <i class="fas fa-calendar-day"></i> <%= formatDate(lead.appointment_date || lead.preferred_visit_date) %>
+                                </span>
+                                <% } else { %>
+                                <span class="text-muted">Immediate</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <span class="badge" style="background:rgba(212,175,55,0.12); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-size:0.8rem; padding:4px 8px; border-radius:4px; font-weight:600;">
+                                    <i class="fas fa-clock"></i> <%= lead.appointment_time || '10:00 AM - 12:00 PM' %>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge-type-meet" style="font-weight:600; font-size:0.82rem;">
+                                    <i class="fas fa-home"></i> <%= lead.property_requirement || lead.property_category || 'Residential Plot' %>
+                                </span>
+                                <% if (lead.property_title) { %>
+                                <br><small class="text-muted"><%= lead.property_title %></small>
+                                <% } %>
+                            </td>
+                            <td>
+                                <select class="inline-status" onchange="updateLeadStatus(<%= lead.id %>, this.value); event.stopPropagation();">
+                                    <option value="new" <%= lead.status === 'new' ? 'selected' : '' %>>New</option>
+                                    <option value="contacted" <%= lead.status === 'contacted' ? 'selected' : '' %>>Contacted</option>
+                                    <option value="interested" <%= lead.status === 'interested' ? 'selected' : '' %>>Interested</option>
+                                    <option value="site_visit_scheduled" <%= lead.status === 'site_visit_scheduled' ? 'selected' : '' %>>Site Visit</option>
+                                    <option value="negotiation" <%= lead.status === 'negotiation' ? 'selected' : '' %>>Negotiation</option>
+                                    <option value="converted" <%= lead.status === 'converted' ? 'selected' : '' %>>Converted</option>
+                                    <option value="lost" <%= lead.status === 'lost' ? 'selected' : '' %>>Lost</option>
+                                    <option value="spam" <%= lead.status === 'spam' ? 'selected' : '' %>>Spam</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div style="font-weight:600;"><%= formatDate(lead.created_at) %></div>
+                                <small class="text-muted"><%= formatDateTime(lead.created_at).includes(',') ? formatDateTime(lead.created_at).split(',')[1].trim() : '' %></small>
+                            </td>
+                            <td class="actions-cell" onclick="event.stopPropagation()">
+                                <a href="/admin/leads/<%= lead.id %>" class="btn-icon" title="View Full Details"><i class="fas fa-eye"></i></a>
+                                <a href="tel:<%= lead.phone_number || lead.phone %>" class="btn-icon text-success" title="Call Customer"><i class="fas fa-phone"></i></a>
+                                <a href="https://wa.me/<%= String(lead.phone_number || lead.phone).replace(/[^0-9]/g, '') %>" target="_blank" class="btn-icon" style="color:#25D366" title="WhatsApp Customer"><i class="fab fa-whatsapp"></i></a>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <% if (totalPages > 1) { %>
+            <div class="pagination">
+                <% if (page > 1) { %>
+                <a href="?page=<%= page - 1 %>&search=<%= search %>&status=<%= status %>&category=<%= category %>" class="btn btn-ghost">← Prev</a>
+                <% } %>
+                <span class="page-info">Page <%= page %> of <%= totalPages %></span>
+                <% if (page < totalPages) { %>
+                <a href="?page=<%= page + 1 %>&search=<%= search %>&status=<%= status %>&category=<%= category %>" class="btn btn-ghost">Next →</a>
+                <% } %>
+            </div>
+            <% } %>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

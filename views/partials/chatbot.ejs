@@ -1,0 +1,58 @@
+<!-- AI Real Estate Assistant Chatbot -->
+<div class="chatbot-container" id="chatbotWidget">
+    <!-- Trigger Button -->
+    <button class="chatbot-toggle-btn" id="chatbotToggleBtn" onclick="toggleChatbot()" aria-label="Open Real Estate AI Assistant">
+        <div class="bot-icon-glow"></div>
+        <i class="fas fa-robot chatbot-icon"></i>
+        <i class="fas fa-times close-icon" style="display:none;"></i>
+        <span class="bot-badge">AI Assistant</span>
+    </button>
+
+    <!-- Chat Window -->
+    <div class="chatbot-window" id="chatbotWindow" style="display:none;">
+        <div class="chat-header">
+            <div class="chat-header-user">
+                <div class="avatar-status">
+                    <div class="bot-avatar"><i class="fas fa-gem"></i></div>
+                    <span class="online-dot"></span>
+                </div>
+                <div>
+                    <h4>SV Property Advisor</h4>
+                    <span class="chat-status">AI Concierge • Instant Response</span>
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <button type="button" class="btn-chat-icon" onclick="resetChat()" title="Reset Chat"><i class="fas fa-redo-alt"></i></button>
+                <button type="button" class="btn-chat-icon" onclick="toggleChatbot()" title="Minimize"><i class="fas fa-minus"></i></button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <!-- Initial Greeting -->
+            <div class="chat-msg bot-msg">
+                <div class="msg-bubble">
+                    <p>Namaste! 🙏 Welcome to <strong>SV Real Estates Hyderabad</strong>.</p>
+                    <p>I can help you discover luxury villas, prime plots, or schedule property site visits across Hyderabad.</p>
+                </div>
+                <span class="msg-time">Just now</span>
+            </div>
+
+            <!-- Quick Suggestions -->
+            <div class="quick-chips" id="quickChips">
+                <button type="button" class="chip" onclick="handleChipClick('Villas in Jubilee Hills')">🏡 Villas</button>
+                <button type="button" class="chip" onclick="handleChipClick('Plots in Kokapet')">📐 Kokapet Plots</button>
+                <button type="button" class="chip" onclick="handleChipClick('Gated Apartments')">🏢 Apartments</button>
+                <button type="button" class="chip" onclick="handleChipClick('Schedule Site Visit')">📅 Site Visit</button>
+                <button type="button" class="chip" onclick="handleChipClick('Connect with Agent')">📞 Call Agent</button>
+            </div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <form class="chat-input-bar" id="chatInputForm" onsubmit="handleChatSubmit(event)">
+            <input type="text" id="chatInputText" placeholder="Ask about villas, budget, locations..." autocomplete="off">
+            <button type="submit" class="btn-send-chat" id="chatSendBtn" aria-label="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>

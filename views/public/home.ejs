@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Discover premier luxury villas, gated community plots, and high-rise apartments in Hyderabad with SV Real Estates. Verified titles, transparent deals, and prime locations.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg-overlay"></div>
+        <div class="hero-glow hero-glow-1"></div>
+        <div class="hero-glow hero-glow-2"></div>
+        
+        <div class="container hero-content">
+            <div class="hero-badge animate-fade-down">
+                <i class="fas fa-crown text-gold"></i>
+                <span>HYDERABAD'S PREMIER REAL ESTATE ADVISORY</span>
+            </div>
+            
+            <h1 class="hero-title animate-fade-up">
+                Redefining <span class="gold-gradient-text">Luxury Living</span> & Strategic Land Investments
+            </h1>
+            
+            <p class="hero-subtitle animate-fade-up">
+                Explore handpicked luxury villas in Jubilee Hills, HMDA & RERA approved plots in Kokapet, and prime high-rises across the Financial District.
+            </p>
+
+            <!-- Hero Search Filter Bar -->
+            <div class="hero-search-card animate-fade-up">
+                <form action="/properties" method="GET" class="hero-search-form">
+                    <div class="search-field">
+                        <label><i class="fas fa-th-large text-gold"></i> Category</label>
+                        <select name="category">
+                            <option value="">All Categories</option>
+                            <option value="villa">Luxury Villas</option>
+                            <option value="residential_plot">Residential Plots</option>
+                            <option value="apartment">High-Rise Apartments</option>
+                            <option value="independent_house">Independent Houses</option>
+                            <option value="commercial">Commercial Land / Space</option>
+                        </select>
+                    </div>
+
+                    <div class="search-field">
+                        <label><i class="fas fa-map-marker-alt text-gold"></i> Locality</label>
+                        <input type="text" name="locality" placeholder="e.g. Kokapet, Jubilee Hills">
+                    </div>
+
+                    <div class="search-field">
+                        <label><i class="fas fa-rupee-sign text-gold"></i> Max Budget</label>
+                        <select name="max_price">
+                            <option value="">Any Budget</option>
+                            <option value="10000000">Up to ₹1 Cr</option>
+                            <option value="25000000">Up to ₹2.5 Cr</option>
+                            <option value="50000000">Up to ₹5 Cr</option>
+                            <option value="100000000">Up to ₹10 Cr</option>
+                            <option value="200000000">Up to ₹20 Cr</option>
+                        </select>
+                    </div>
+
+                    <div class="search-field btn-field">
+                        <button type="submit" class="btn btn-gold btn-hero-search">
+                            <i class="fas fa-search"></i> Search Properties
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Quick Stats Counters -->
+            <div class="hero-stats-row">
+                <div class="hero-stat-item">
+                    <span class="stat-big">15+</span>
+                    <span class="stat-desc">Years in Hyderabad Real Estate</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="hero-stat-item">
+                    <span class="stat-big">500+</span>
+                    <span class="stat-desc">Acres Developed & Advised</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="hero-stat-item">
+                    <span class="stat-big">100%</span>
+                    <span class="stat-desc">RERA & HMDA Clear Titles</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="hero-stat-item">
+                    <span class="stat-big">3,200+</span>
+                    <span class="stat-desc">Satisfied Homeowners & Investors</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="section categories-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">PORTFOLIO</span>
+                <h2 class="section-title">Explore by <span class="gold-gradient-text">Property Type</span></h2>
+                <p class="section-subtitle">Curated investments across prime residential, commercial, and agricultural hubs in Telangana.</p>
+            </div>
+
+            <div class="categories-grid">
+                <a href="/properties?category=villa" class="category-card">
+                    <div class="cat-icon"><i class="fas fa-house-chimney-window"></i></div>
+                    <h3>Luxury Villas</h3>
+                    <p>Triplex & gated designer villas with private pools, clubhouses, and elite living.</p>
+                    <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="/properties?category=residential_plot" class="category-card featured-cat">
+                    <div class="cat-badge">High Growth</div>
+                    <div class="cat-icon"><i class="fas fa-vector-square"></i></div>
+                    <h3>Residential Plots</h3>
+                    <p>HMDA & DTCP clear title open plots with underground cabling and 100ft road access.</p>
+                    <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="/properties?category=apartment" class="category-card">
+                    <div class="cat-icon"><i class="fas fa-building"></i></div>
+                    <h3>High-Rise Apartments</h3>
+                    <p>3BHK & 4BHK sky residences near Hitec City and Financial District with panoramic views.</p>
+                    <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="/properties?category=commercial" class="category-card">
+                    <div class="cat-icon"><i class="fas fa-city"></i></div>
+                    <h3>Commercial Properties</h3>
+                    <p>Prime retail spaces, corporate offices, and highway-facing development lands.</p>
+                    <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Properties Section -->
+    <section class="section featured-section">
+        <div class="container">
+            <div class="section-header-flex">
+                <div>
+                    <span class="section-badge">HANDPICKED SELECTIONS</span>
+                    <h2 class="section-title">Featured <span class="gold-gradient-text">Properties</span></h2>
+                    <p class="section-subtitle">Exclusive verified homes and parcels currently available for acquisition.</p>
+                </div>
+                <a href="/properties" class="btn btn-outline-gold">View All Properties <i class="fas fa-arrow-right"></i></a>
+            </div>
+
+            <div class="properties-grid">
+                <% if (!featuredProperties || featuredProperties.length === 0) { %>
+                <div class="empty-listings-box">
+                    <i class="fas fa-home fa-3x text-gold"></i>
+                    <h3>No Featured Properties Yet</h3>
+                    <p>Our catalog is being updated with fresh prime inventory. Browse all active listings or get in touch directly.</p>
+                    <a href="/properties" class="btn btn-gold">Browse Catalog</a>
+                </div>
+                <% } else { %>
+                <% featuredProperties.forEach(prop => { %>
+                <div class="property-card" data-category="<%= prop.category %>">
+                    <div class="prop-card-media">
+                        <% if (prop.cover_image) { %>
+                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                        <% } else { %>
+                        <div class="prop-img-placeholder">
+                            <i class="fas fa-building"></i>
+                            <span>SV Real Estates</span>
+                        </div>
+                        <% } %>
+                        <div class="prop-badge-top">
+                            <span class="badge-featured"><i class="fas fa-star"></i> Featured</span>
+                            <span class="badge-category"><%= prop.category.replace(/_/g, ' ') %></span>
+                        </div>
+                        <div class="prop-price-tag">
+                            <% if (prop.price) { %>
+                            ₹<%= Number(prop.price) >= 10000000 ? (prop.price / 10000000).toFixed(2) + ' Cr' : (prop.price / 100000).toFixed(2) + ' L' %>
+                            <% } else { %>
+                            Price on Request
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <div class="prop-card-body">
+                        <div class="prop-location">
+                            <i class="fas fa-map-marker-alt text-gold"></i>
+                            <span><%= prop.locality ? prop.locality + ', ' : '' %><%= prop.city %></span>
+                        </div>
+                        <h3 class="prop-title">
+                            <a href="/properties/<%= prop.id %>"><%= prop.title %></a>
+                        </h3>
+                        <% if (prop.short_description) { %>
+                        <p class="prop-desc"><%= prop.short_description %></p>
+                        <% } %>
+
+                        <div class="prop-specs-row">
+                            <% if (prop.bedrooms) { %>
+                            <div class="spec-item"><i class="fas fa-bed"></i> <%= prop.bedrooms %> BHK</div>
+                            <% } %>
+                            <% if (prop.bathrooms) { %>
+                            <div class="spec-item"><i class="fas fa-bath"></i> <%= prop.bathrooms %> Bath</div>
+                            <% } %>
+                            <% if (prop.built_up_area || prop.plot_area) { %>
+                            <div class="spec-item">
+                                <i class="fas fa-ruler-combined"></i>
+                                <%= (prop.built_up_area || prop.plot_area).toLocaleString() %> <%= (prop.area_unit || 'sq_ft').replace(/_/g, ' ') %>
+                            </div>
+                            <% } %>
+                            <% if (prop.facing) { %>
+                            <div class="spec-item"><i class="fas fa-compass"></i> <%= prop.facing %></div>
+                            <% } %>
+                        </div>
+
+                        <div class="prop-card-footer">
+                            <button class="btn btn-card-enquire" onclick="openEnquiryModal(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>', '<%= prop.property_code %>', '<%= prop.category %>')">
+                                <i class="fas fa-envelope"></i> Enquire
+                            </button>
+                            <a href="/properties/<%= prop.id %>" class="btn btn-card-details">
+                                Details <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <% }) %>
+                <% } %>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose SV Real Estates Section -->
+    <section class="section why-us-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">UNCOMPROMISING EXCELLENCE</span>
+                <h2 class="section-title">The <span class="gold-gradient-text">SV Real Estates</span> Standard</h2>
+                <p class="section-subtitle">We bridge discerning buyers with validated, legal, and high-appreciation properties.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-stamp text-gold"></i></div>
+                    <h3>100% Legal Title Due Diligence</h3>
+                    <p>Every single listing undergoes 30-year title verification, link document checking, and RERA/HMDA compliance audit by certified legal counsel.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-handshake text-gold"></i></div>
+                    <h3>Direct Developer & Owner Pricing</h3>
+                    <p>Zero hidden margins, transparent documentation, and authentic price parity guarantee for plots, villas, and apartments.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-car-side text-gold"></i></div>
+                    <h3>Complimentary Chauffeur Site Visits</h3>
+                    <p>Experience hassle-free property inspections with our dedicated relationship managers who arrange chauffeured site visits 7 days a week.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-line text-gold"></i></div>
+                    <h3>High Capital Appreciation Zones</h3>
+                    <p>We specialize in Hyderabad's growth corridors: Neopolis Kokapet, Tellapur, Shankarpally, Mokila, and Kompally.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Hyderabad Prime Locations Banner -->
+    <section class="section locations-preview-section">
+        <div class="container">
+            <div class="section-header-flex">
+                <div>
+                    <span class="section-badge">LOCAL INTELLIGENCE</span>
+                    <h2 class="section-title">Prime <span class="gold-gradient-text">Hyderabad Corridors</span></h2>
+                    <p class="section-subtitle">Strategic locations experiencing maximum infrastructure and metro expansion.</p>
+                </div>
+                <a href="/locations" class="btn btn-outline-gold">Explore All Locations <i class="fas fa-map-marked-alt"></i></a>
+            </div>
+
+            <div class="location-cards-grid">
+                <a href="/properties?locality=Jubilee+Hills" class="loc-card">
+                    <div class="loc-content">
+                        <h3>Jubilee Hills</h3>
+                        <span>Ultra-Luxury Villas • High-Net-Worth Residential</span>
+                    </div>
+                </a>
+                <a href="/properties?locality=Kokapet" class="loc-card">
+                    <div class="loc-content">
+                        <h3>Kokapet & Neopolis</h3>
+                        <span>Golden Mile • Sky Villas & Premium Open Plots</span>
+                    </div>
+                </a>
+                <a href="/properties?locality=Gachibowli" class="loc-card">
+                    <div class="loc-content">
+                        <h3>Gachibowli & Financial Dist</h3>
+                        <span>IT Hub Hub • Gated High-Rise Communities</span>
+                    </div>
+                </a>
+                <a href="/properties?locality=Tellapur" class="loc-card">
+                    <div class="loc-content">
+                        <h3>Tellapur & Kollur</h3>
+                        <span>Booming Green Suburbs • Modern Villa Projects</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-banner-section">
+        <div class="container">
+            <div class="cta-banner-card">
+                <div class="cta-text">
+                    <h2>Looking to Buy, Sell, or Invest in Hyderabad?</h2>
+                    <p>Speak directly with our principal real estate advisor for tailored options, private walkthroughs, and bespoke investment portfolios.</p>
+                </div>
+                <div class="cta-buttons">
+                    <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal()">
+                        <i class="fas fa-envelope"></i> Enquire Now
+                    </button>
+                    <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="btn btn-whatsapp btn-large">
+                        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+</body>
+</html>

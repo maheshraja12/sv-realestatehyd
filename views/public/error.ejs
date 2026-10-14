@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <section class="section error-page-section">
+        <div class="container text-center">
+            <div class="error-content-card">
+                <span class="error-glitch-code">500</span>
+                <h1 class="error-title">System Notice</h1>
+                <p class="error-desc"><%= typeof error !== 'undefined' ? error : 'An unexpected error occurred while processing your request.' %></p>
+                <div class="error-actions">
+                    <a href="/" class="btn btn-gold"><i class="fas fa-home"></i> Return Home</a>
+                    <a href="/contact" class="btn btn-outline-gold"><i class="fas fa-headset"></i> Contact Support</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

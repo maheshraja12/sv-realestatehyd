@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Explore prime real estate locations in Hyderabad. Jubilee Hills, Banjara Hills, Kokapet, Gachibowli, Tellapur, and Shamshabad. Property insights and live listings.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Banner -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-map-marked-alt text-gold"></i> STRATEGIC DESTINATIONS</span>
+            <h1 class="page-title">Hyderabad Prime <span class="gold-gradient-text">Locations</span></h1>
+            <p class="page-subtitle">A neighborhood guide to high-appreciation residential enclaves and commercial corridors across Hyderabad.</p>
+        </div>
+    </section>
+
+    <!-- Corridors Overview -->
+    <section class="section locations-page-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">MICRO-MARKET INTELLIGENCE</span>
+                <h2 class="section-title">Key Growth <span class="gold-gradient-text">Corridors</span></h2>
+                <p class="section-subtitle">Understanding where Hyderabad's infrastructure, wealth, and commercial capital are expanding.</p>
+            </div>
+
+            <!-- Pre-defined Prime Locations Grid with Live Counts -->
+            <div class="locations-detailed-grid">
+                <!-- Jubilee Hills -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Jubilee Hills & Banjara Hills</h3>
+                            <span class="loc-subtitle">Central West Hyderabad • Ultra-Luxury</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        The gold standard of Hyderabad's residential pedigree. Home to top business tycoons, celebrities, and diplomats. Known for grand triplex villas, elite dining, luxury clubhouses, and leafy avenues.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹1.5L - ₹3L / sq.yd</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>35 Mins via ORR</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Villas & Palatial Mansions</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Jubilee+Hills" class="btn btn-gold btn-block">
+                            Explore Properties in Jubilee Hills <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Kokapet -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Kokapet & Neopolis</h3>
+                            <span class="loc-subtitle">West Hyderabad • Golden Mile</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        Hyderabad's most celebrated growth center. Home to the Neopolis high-density business district, Trump Tower, and signature 50+ floor sky residences. Unmatched access to Financial District.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹9,000 - ₹16,000 / sq.ft</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>20 Mins via ORR</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Sky Villas & Commercial Hubs</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Kokapet" class="btn btn-gold btn-block">
+                            Explore Properties in Kokapet <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Gachibowli & Financial District -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Gachibowli & Financial District</h3>
+                            <span class="loc-subtitle">IT Capital • Nanakramguda</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        The heartbeat of India's tech ecosystem hosting Microsoft, Google, Amazon, and Apple. Outstanding high-rise residential gated communities with walking proximity to corporate campuses and international schools.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹8,500 - ₹13,500 / sq.ft</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>25 Mins direct ORR</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Gated High-Rise Communities</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Gachibowli" class="btn btn-gold btn-block">
+                            Explore Properties in Gachibowli <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tellapur & Kollur -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Tellapur, Kollur & Mokila</h3>
+                            <span class="loc-subtitle">Villa Corridors • Clean Air Enclave</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        Rapidly booming green suburban haven adjacent to Gachibowli. Renowned for expansive 4BHK and 5BHK gated villa communities, prestigious IB schools (Glendale, Gaudium), and HMDA plotted developments.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹45,000 - ₹95,000 / sq.yd</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>30 Mins via ORR Exit 2</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Gated Community Villas & Plots</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Tellapur" class="btn btn-gold btn-block">
+                            Explore Properties in Tellapur <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Shankarpally -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Shankarpally & Chevella</h3>
+                            <span class="loc-subtitle">West Green Zone • Luxury Farm Lands</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        Premier destination for luxury weekend villas, curated farm estates, and high-capital-gain agricultural land banking. Excellent four-lane road connectivity to Gachibowli and IIT Hyderabad.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹25,000 - ₹50,000 / sq.yd</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>40 Mins</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Farm Estates & Open Plots</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Shankarpally" class="btn btn-gold btn-block">
+                            Explore Properties in Shankarpally <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Shamshabad -->
+                <div class="loc-detail-card">
+                    <div class="loc-card-header">
+                        <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <h3>Shamshabad & Airport Corridor</h3>
+                            <span class="loc-subtitle">South Hyderabad • Global Aero Hub</span>
+                        </div>
+                    </div>
+                    <p class="loc-body-desc">
+                        Anchored by Rajiv Gandhi International Airport, hardware parks, aviation SEZs, and upcoming Airport Metro line. Exceptional open plot layouts with explosive commercial and warehousing potential.
+                    </p>
+                    <div class="loc-meta-grid">
+                        <div class="meta-box"><span>Price Trends</span><strong>₹20,000 - ₹45,000 / sq.yd</strong></div>
+                        <div class="meta-box"><span>Airport Connectivity</span><strong>5-10 Mins</strong></div>
+                        <div class="meta-box"><span>Character</span><strong>Commercial Lands & Plotted Layouts</strong></div>
+                    </div>
+                    <div class="loc-card-bottom">
+                        <a href="/properties?locality=Shamshabad" class="btn btn-gold btn-block">
+                            Explore Properties in Shamshabad <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Active Database Localities Summary -->
+            <% if (locationData && locationData.length > 0) { %>
+            <div class="active-localities-box">
+                <h3><i class="fas fa-chart-pie text-gold"></i> Live Catalog by Locality</h3>
+                <div class="loc-badge-pills">
+                    <% locationData.forEach(item => { %>
+                    <a href="/properties?locality=<%= encodeURIComponent(item.locality) %>" class="loc-pill-link">
+                        <span class="pill-name"><%= item.locality %></span>
+                        <span class="pill-count"><%= item.property_count %></span>
+                    </a>
+                    <% }) %>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-banner-section">
+        <div class="container">
+            <div class="cta-banner-card">
+                <div class="cta-text">
+                    <h2>Unsure Which Locality Fits Your Budget?</h2>
+                    <p>Speak with our market research analysts for a complimentary location feasibility and ROI forecast report.</p>
+                </div>
+                <div class="cta-buttons">
+                    <button type="button" class="btn btn-gold btn-large" onclick="openConsultationModal('Locality Advisory')">
+                        <i class="fas fa-map-marked-alt"></i> Request Locality Analysis
+                    </button>
+                    <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="btn btn-whatsapp btn-large">
+                        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+</body>
+</html>

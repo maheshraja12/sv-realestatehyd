@@ -1,0 +1,14 @@
+# SV Real Estates Hyderabad
+node_modules/
+.env
+.env.local
+.env.*.local
+database/.env
+data/
+public/uploads/
+logs/
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+npm-debug.log*

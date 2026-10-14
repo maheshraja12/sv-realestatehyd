@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Contact SV Real Estates Hyderabad — Schedule private site visits, speak with property advisors, and explore luxury villas and plots in Hyderabad.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Banner -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-headset text-gold"></i> DIRECT ASSISTANCE</span>
+            <h1 class="page-title">Connect with <span class="gold-gradient-text">Our Advisors</span></h1>
+            <p class="page-subtitle">Visit our corporate office in Jubilee Hills or book an on-site property walkthrough today.</p>
+        </div>
+    </section>
+
+    <!-- Contact Info Cards & Form Section -->
+    <section class="section contact-page-section">
+        <div class="container">
+            <div class="contact-layout-grid">
+                <!-- Left: Contact Details & Office -->
+                <div class="contact-info-col">
+                    <div class="contact-lead-box">
+                        <span class="section-badge">EXECUTIVE OFFICE</span>
+                        <h2>We're Here to Elevate Your Real Estate Journey</h2>
+                        <p>Whether you require title verification reports, off-market villa walk-throughs, or assistance with plotting layouts, our senior team is readily accessible.</p>
+                    </div>
+
+                    <div class="contact-methods-list">
+                        <div class="contact-method-card">
+                            <div class="method-icon"><i class="fas fa-phone-alt"></i></div>
+                            <div>
+                                <span>Direct Consultation Line</span>
+                                <h4><a href="tel:<%= businessPhone %>"><%= businessPhone %></a></h4>
+                                <small>Available 8:00 AM – 9:00 PM (All 7 Days)</small>
+                            </div>
+                        </div>
+
+                        <div class="contact-method-card">
+                            <div class="method-icon icon-whatsapp"><i class="fab fa-whatsapp"></i></div>
+                            <div>
+                                <span>Instant WhatsApp Chat</span>
+                                <h4><a href="https://wa.me/<%= businessWhatsapp %>" target="_blank">+91 <%= businessWhatsapp %></a></h4>
+                                <small>Immediate response for brochures & location pins</small>
+                            </div>
+                        </div>
+
+                        <div class="contact-method-card">
+                            <div class="method-icon"><i class="fas fa-envelope"></i></div>
+                            <div>
+                                <span>Official Email</span>
+                                <h4><a href="mailto:<%= businessEmail %>"><%= businessEmail %></a></h4>
+                                <small>Formal proposals, seller inquiries, and legal docs</small>
+                            </div>
+                        </div>
+
+                        <div class="contact-method-card">
+                            <div class="method-icon"><i class="fas fa-building"></i></div>
+                            <div>
+                                <span>Corporate Office Address</span>
+                                <h4>SV Real Estates Hyderabad</h4>
+                                <p class="text-muted">Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Contact Form -->
+                <div class="contact-form-col">
+                    <div class="contact-form-card">
+                        <div class="form-card-header">
+                            <span class="form-tag">SEND A MESSAGE</span>
+                            <h3>Request Callback or Site Visit</h3>
+                            <p>Fill out the details below and a senior advisor will reach out within 30 minutes.</p>
+                        </div>
+
+                        <form id="contactPageForm" onsubmit="handleContactPageSubmit(event)">
+                            <div class="form-grid-modal">
+                                <div class="form-group-modal">
+                                    <label for="contactName">Your Name *</label>
+                                    <input type="text" id="contactName" name="customer_name" required placeholder="e.g. Anand Rao">
+                                </div>
+
+                                <div class="form-group-modal">
+                                    <label for="contactPhone">Phone / WhatsApp Number *</label>
+                                    <input type="tel" id="contactPhone" name="phone" required placeholder="e.g. 9876543210" autocomplete="tel">
+                                </div>
+
+                                <div class="form-group-modal">
+                                    <label for="contactEmail">Email Address</label>
+                                    <input type="email" id="contactEmail" name="email" placeholder="e.g. anand@example.com">
+                                </div>
+
+                                <div class="form-group-modal">
+                                    <label for="contactCategory">Interested In</label>
+                                    <select id="contactCategory" name="property_category">
+                                        <option value="">Select Property Type</option>
+                                        <option value="villa">Luxury Villa</option>
+                                        <option value="residential_plot">Residential Plot</option>
+                                        <option value="apartment">Gated Apartment</option>
+                                        <option value="commercial">Commercial Land / Space</option>
+                                        <option value="agricultural_land">Farm Land</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group-modal">
+                                    <label for="contactLocation">Preferred Location</label>
+                                    <input type="text" id="contactLocation" name="preferred_location" placeholder="e.g. Kokapet, Jubilee Hills, Tellapur">
+                                </div>
+
+                                <div class="form-group-modal">
+                                    <label for="contactBudget">Budget Range</label>
+                                    <select id="contactBudget" name="budget">
+                                        <option value="">Select Budget</option>
+                                        <option value="Under ₹1 Cr">Under ₹1 Cr</option>
+                                        <option value="₹1 Cr - ₹2.5 Cr">₹1 Cr - ₹2.5 Cr</option>
+                                        <option value="₹2.5 Cr - ₹5 Cr">₹2.5 Cr - ₹5 Cr</option>
+                                        <option value="₹5 Cr - ₹10 Cr">₹5 Cr - ₹10 Cr</option>
+                                        <option value="Above ₹10 Cr">Above ₹10 Cr</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group-modal full-width">
+                                    <label for="contactMessage">Message / Specific Requirements</label>
+                                    <textarea id="contactMessage" name="message" rows="4" placeholder="Mention configuration (e.g. 4BHK East facing, 300 sq.yds) or preferred visit timing..."></textarea>
+                                </div>
+                            </div>
+
+                            <div class="modal-consent">
+                                <label>
+                                    <input type="checkbox" name="consent" value="1" required checked>
+                                    <span>I agree to receive property details and updates via Phone, WhatsApp, and Email.</span>
+                                </label>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" id="contactSubmitBtn" class="btn btn-gold btn-block btn-large">
+                                    <i class="fas fa-paper-plane"></i> Send Enquiry
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="contactSuccessState" class="modal-success-state" style="display:none;">
+                            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                            <h3 class="text-gold">Enquiry Submitted!</h3>
+                            <p>Thank you for reaching out. We have assigned your enquiry to our senior property consultant.</p>
+                            <div class="ref-badge" id="contactRefCode">Reference: SV-LEAD-XXXXXX</div>
+                            <div class="success-actions" style="margin-top:1.5rem;">
+                                <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="btn btn-whatsapp">
+                                    <i class="fab fa-whatsapp"></i> Chat Now on WhatsApp
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Google Maps Section -->
+    <section class="section map-section">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">LOCATION</span>
+                <h2 class="section-title">Visit Our <span class="gold-gradient-text">Hyderabad Office</span></h2>
+                <p class="section-subtitle">Located conveniently on Road No. 36, Jubilee Hills with reserved client valet parking.</p>
+            </div>
+
+            <div class="map-embed-wrapper">
+                <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3806.6669945037135!2d78.40149027581566!3d17.427774101655823!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb96cd3d63b0a7%3A0xea2ea04d7008cf67!2sRoad%20No.%2036%2C%20Jubilee%20Hills%2C%20Hyderabad%2C%20Telangana!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
+                    width="100%" 
+                    height="450" 
+                    style="border:0;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade"
+                    title="SV Real Estates Jubilee Hills Office Map">
+                </iframe>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+    <script>
+        async function handleContactPageSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('contactSubmitBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.consent = 1;
+            data.contact_preference = 'phone';
+
+            try {
+                const res = await fetch('/api/leads/public', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    form.style.display = 'none';
+                    const successBox = document.getElementById('contactSuccessState');
+                    document.getElementById('contactRefCode').innerText = `Reference: ${result.lead_code || 'SV-LEAD-NEW'}`;
+                    successBox.style.display = 'block';
+                } else {
+                    alert(result.error || 'Submission failed. Please try again.');
+                }
+            } catch (err) {
+                alert('Connection error. Please call us directly.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2>Settings</h2>
+            </div>
+            <div class="header-right">
+                <div class="notification-bell" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <% if (unreadNotifications > 0) { %>
+                    <span class="badge"><%= unreadNotifications %></span>
+                    <% } %>
+                </div>
+                <span class="user-name"><%= currentUser ? currentUser.name : 'Admin' %></span>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <% if (typeof message !== 'undefined' && message) { %>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <%= message %>
+            </div>
+            <% } %>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <%= error %>
+            </div>
+            <% } %>
+
+            <div class="settings-grid">
+                <!-- Business Profile Form -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-building text-gold"></i> Business Profile</h3>
+                        <p>These details are displayed publicly on the website header, footer, and contact pages.</p>
+                    </div>
+                    <form method="POST" action="/admin/settings" class="settings-form">
+                        <div class="form-group">
+                            <label for="business_name">Business Name</label>
+                            <input type="text" id="business_name" name="business_name" value="<%= settings.business_name || 'SV Real Estates Hyderabad' %>" required>
+                        </div>
+
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="business_phone">Contact Phone</label>
+                                <input type="text" id="business_phone" name="business_phone" value="<%= settings.business_phone || '+91-9876543210' %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="business_whatsapp">WhatsApp Number (with country code)</label>
+                                <input type="text" id="business_whatsapp" name="business_whatsapp" value="<%= settings.business_whatsapp || '919876543210' %>" placeholder="e.g. 919876543210" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="business_email">Official Email</label>
+                            <input type="email" id="business_email" name="business_email" value="<%= settings.business_email || 'info@svrealestate.com' %>" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="business_address">Office Address</label>
+                            <textarea id="business_address" name="business_address" rows="3"><%= settings.business_address || 'Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033' %></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Business Details</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- SMTP & Email Settings -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-envelope-open-text text-gold"></i> Email Notifications (SMTP)</h3>
+                        <p>Configure automated enquiry and site visit email alerts.</p>
+                    </div>
+                    <form method="POST" action="/admin/settings" class="settings-form">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="smtp_configured" value="1" <%= settings.smtp_configured === '1' ? 'checked' : '' %>>
+                                Enable Automated SMTP Email Alerts
+                            </label>
+                        </div>
+
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="smtp_host">SMTP Host</label>
+                                <input type="text" id="smtp_host" name="smtp_host" value="<%= settings.smtp_host || '' %>" placeholder="smtp.gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp_port">SMTP Port</label>
+                                <input type="text" id="smtp_port" name="smtp_port" value="<%= settings.smtp_port || '587' %>" placeholder="587">
+                            </div>
+                        </div>
+
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="smtp_user">SMTP User / Email</label>
+                                <input type="text" id="smtp_user" name="smtp_user" value="<%= settings.smtp_user || '' %>" placeholder="alerts@svrealestate.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp_pass">SMTP Password</label>
+                                <input type="password" id="smtp_pass" name="smtp_pass" value="<%= settings.smtp_pass || '' %>" placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-secondary"><i class="fas fa-save"></i> Update Email Settings</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Change Password -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-lock text-gold"></i> Security & Password</h3>
+                        <p>Update your admin account login password.</p>
+                    </div>
+                    <form method="POST" action="/admin/settings/password" class="settings-form">
+                        <div class="form-group">
+                            <label for="current_password">Current Password</label>
+                            <input type="password" id="current_password" name="current_password" required placeholder="••••••••">
+                        </div>
+
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="new_password">New Password (min 8 chars)</label>
+                                <input type="password" id="new_password" name="new_password" minlength="8" required placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm New Password</label>
+                                <input type="password" id="confirm_password" name="confirm_password" minlength="8" required placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> Change Password</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- System Data & Backup -->
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-database text-gold"></i> Data Management</h3>
+                        <p>Export CRM data and view database health.</p>
+                    </div>
+                    <div class="backup-actions">
+                        <div class="backup-item">
+                            <div>
+                                <strong>Customer Enquiries & Leads</strong>
+                                <p class="text-muted">Export complete lead history in CSV format for CRM analysis or offline backups.</p>
+                            </div>
+                            <a href="/api/leads/export/csv" class="btn btn-secondary"><i class="fas fa-file-csv"></i> Download CSV</a>
+                        </div>
+                        <div class="backup-item">
+                            <div>
+                                <strong>Database Engine</strong>
+                                <p class="text-muted">SQLite WAL Mode Active. Instant local reads with zero cloud lock-in.</p>
+                            </div>
+                            <span class="status-badge status-published"><i class="fas fa-check"></i> Operational</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

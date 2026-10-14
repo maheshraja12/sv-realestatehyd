@@ -1,0 +1,30 @@
+<nav class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-building"></i>
+        <span>SV Real Estates</span>
+    </div>
+    <ul class="sidebar-nav">
+        <li class="<%= path === '/admin/dashboard' ? 'active' : '' %>">
+            <a href="/admin/dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+        </li>
+        <li class="<%= path.startsWith('/admin/properties') ? 'active' : '' %>">
+            <a href="/admin/properties"><i class="fas fa-building"></i><span>Properties</span></a>
+        </li>
+        <li class="<%= path.startsWith('/admin/leads') ? 'active' : '' %>">
+            <a href="/admin/leads"><i class="fas fa-users"></i><span>Leads / Enquiries</span></a>
+        </li>
+        <li class="<%= path.startsWith('/admin/appointments') ? 'active' : '' %>">
+            <a href="/admin/appointments"><i class="fas fa-calendar-alt"></i><span>Site Visits</span></a>
+        </li>
+        <li class="<%= path === '/admin/settings' ? 'active' : '' %>">
+            <a href="/admin/settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+        </li>
+        <li class="nav-divider"></li>
+        <li>
+            <a href="/" target="_blank"><i class="fas fa-external-link-alt"></i><span>View Website</span></a>
+        </li>
+        <li>
+            <a href="/admin/logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+        </li>
+    </ul>
+</nav>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2>Site Visits / Appointments</h2>
+            </div>
+            <div class="header-right">
+                <div class="notification-bell" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <% if (unreadNotifications > 0) { %>
+                    <span class="badge"><%= unreadNotifications %></span>
+                    <% } %>
+                </div>
+                <span class="user-name"><%= currentUser ? currentUser.name : 'Admin' %></span>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <form method="GET" action="/admin/appointments" class="filter-form">
+                    <div class="filter-group">
+                        <select name="status" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="requested" <%= status === 'requested' ? 'selected' : '' %>>Requested</option>
+                            <option value="confirmed" <%= status === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
+                            <option value="rescheduled" <%= status === 'rescheduled' ? 'selected' : '' %>>Rescheduled</option>
+                            <option value="completed" <%= status === 'completed' ? 'selected' : '' %>>Completed</option>
+                            <option value="cancelled" <%= status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary"><i class="fas fa-filter"></i> Filter</button>
+                    <a href="/admin/appointments" class="btn btn-ghost">Clear</a>
+                </form>
+            </div>
+
+            <div class="table-info">
+                <span>Showing <%= appointments.length %> of <%= total %> site visits</span>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ref Code</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Property</th>
+                            <th>Preferred Date & Time</th>
+                            <th>Confirmed Date</th>
+                            <th>Status</th>
+                            <th>Assigned Agent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (appointments.length === 0) { %>
+                        <tr>
+                            <td colspan="9" class="empty-row">No site visits scheduled yet.</td>
+                        </tr>
+                        <% } %>
+                        <% appointments.forEach(apt => { %>
+                        <tr>
+                            <td><strong><%= apt.appointment_code %></strong></td>
+                            <td>
+                                <div><%= apt.customer_name %></div>
+                                <% if (apt.notes) { %>
+                                <small class="text-muted"><%= apt.notes %></small>
+                                <% } %>
+                            </td>
+                            <td>
+                                <a href="tel:<%= apt.phone %>"><%= apt.phone %></a>
+                            </td>
+                            <td>
+                                <% if (apt.property_title) { %>
+                                <a href="/admin/properties/<%= apt.property_id %>/edit" target="_blank">
+                                    <%= apt.property_title %>
+                                </a>
+                                <% if (apt.property_code) { %><small class="text-muted">(<%= apt.property_code %>)</small><% } %>
+                                <% } else { %>
+                                <span class="text-muted">General Visit</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <div><i class="fas fa-calendar-day text-gold"></i> <strong><%= formatDate(apt.requested_date) %></strong></div>
+                                <% if (apt.requested_time) { %>
+                                <small class="text-muted"><i class="fas fa-clock"></i> <%= apt.requested_time %></small>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (apt.confirmed_date) { %>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> <%= apt.confirmed_date %> <%= apt.confirmed_time || '' %></span>
+                                <% } else { %>
+                                <span class="text-muted">Pending confirmation</span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <select class="inline-status" onchange="updateAppointmentStatus(<%= apt.id %>, this.value)">
+                                    <option value="requested" <%= apt.status === 'requested' ? 'selected' : '' %>>Requested</option>
+                                    <option value="confirmed" <%= apt.status === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
+                                    <option value="rescheduled" <%= apt.status === 'rescheduled' ? 'selected' : '' %>>Rescheduled</option>
+                                    <option value="completed" <%= apt.status === 'completed' ? 'selected' : '' %>>Completed</option>
+                                    <option value="cancelled" <%= apt.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="filter-select inline-select" onchange="assignAppointmentAgent(<%= apt.id %>, this.value)">
+                                    <option value="">Unassigned</option>
+                                    <% agents.forEach(agent => { %>
+                                    <option value="<%= agent.id %>" <%= apt.assigned_agent_id === agent.id ? 'selected' : '' %>><%= agent.name %></option>
+                                    <% }) %>
+                                </select>
+                            </td>
+                            <td class="actions-cell">
+                                <button onclick="openConfirmModal(<%= apt.id %>, '<%= apt.customer_name %>', '<%= apt.requested_date %>')" class="btn-icon text-gold" title="Confirm / Schedule"><i class="fas fa-calendar-check"></i></button>
+                                <a href="tel:<%= apt.phone %>" class="btn-icon text-success" title="Call"><i class="fas fa-phone"></i></a>
+                                <a href="https://wa.me/<%= apt.phone.replace(/[^0-9]/g, '') %>?text=Hello%20<%= encodeURIComponent(apt.customer_name) %>,%20this%20is%20SV%20Real%20Estates%20Hyderabad%20regarding%20your%20site%20visit%20request%20(<%= apt.appointment_code %>)." target="_blank" class="btn-icon" style="color:#25D366" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <% if (totalPages > 1) { %>
+            <div class="pagination">
+                <% if (page > 1) { %>
+                <a href="?page=<%= page - 1 %>&status=<%= status %>" class="btn btn-ghost">← Prev</a>
+                <% } %>
+                <span class="page-info">Page <%= page %> of <%= totalPages %></span>
+                <% if (page < totalPages) { %>
+                <a href="?page=<%= page + 1 %>&status=<%= status %>" class="btn btn-ghost">Next →</a>
+                <% } %>
+            </div>
+            <% } %>
+        </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="admin-modal" style="display:none;">
+        <div class="modal-backdrop" onclick="closeConfirmModal()"></div>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Confirm Site Visit</h3>
+                <button type="button" class="btn-close" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <form id="confirmVisitForm" onsubmit="submitVisitConfirmation(event)">
+                <input type="hidden" id="modalAptId">
+                <div class="form-group">
+                    <label>Customer</label>
+                    <input type="text" id="modalCustomerName" readonly class="form-control-readonly">
+                </div>
+                <div class="form-row cols-2">
+                    <div class="form-group">
+                        <label>Confirmed Date *</label>
+                        <input type="date" id="modalConfirmedDate" required class="filter-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmed Time</label>
+                        <input type="time" id="modalConfirmedTime" class="filter-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes / Meeting Point</label>
+                    <textarea id="modalResultNotes" rows="2" placeholder="e.g., Meet at Site Entrance gate near Kokapet SEZ..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" onclick="closeConfirmModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Save Confirmation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+    <script>
+        function updateAppointmentStatus(id, status) {
+            fetch(`/api/appointments/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            }).then(r => {
+                if (r.ok) {
+                    showToast('Status updated successfully');
+                } else {
+                    showToast('Failed to update status', 'error');
+                }
+            }).catch(e => showToast('Network error', 'error'));
+        }
+
+        function assignAppointmentAgent(id, agentId) {
+            fetch(`/api/appointments/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assigned_agent_id: agentId ? parseInt(agentId) : null })
+            }).then(r => {
+                if (r.ok) {
+                    showToast('Agent assigned');
+                } else {
+                    showToast('Failed to assign agent', 'error');
+                }
+            }).catch(e => showToast('Network error', 'error'));
+        }
+
+        function openConfirmModal(id, name, requestedDate) {
+            document.getElementById('modalAptId').value = id;
+            document.getElementById('modalCustomerName').value = name;
+            document.getElementById('modalConfirmedDate').value = requestedDate || '';
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        function submitVisitConfirmation(e) {
+            e.preventDefault();
+            const id = document.getElementById('modalAptId').value;
+            const confirmed_date = document.getElementById('modalConfirmedDate').value;
+            const confirmed_time = document.getElementById('modalConfirmedTime').value;
+            const result_notes = document.getElementById('modalResultNotes').value;
+
+            fetch(`/api/appointments/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'confirmed',
+                    confirmed_date,
+                    confirmed_time,
+                    result_notes
+                })
+            }).then(r => {
+                if (r.ok) {
+                    showToast('Site visit confirmed');
+                    setTimeout(() => location.reload(), 700);
+                } else {
+                    showToast('Failed to confirm visit', 'error');
+                }
+            }).catch(e => showToast('Network error', 'error'));
+        }
+    </script>
+</body>
+</html>

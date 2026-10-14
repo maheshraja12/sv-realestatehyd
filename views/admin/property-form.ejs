@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><%= isEdit ? 'Edit Property' : 'Add New Property' %></h2>
+            </div>
+            <div class="header-right">
+                <a href="/admin/properties" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back</a>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <form id="propertyForm" class="property-form" enctype="multipart/form-data">
+                <input type="hidden" id="propertyId" value="<%= property ? property.id : '' %>">
+                
+                <div class="form-grid">
+                    <!-- Left Column — Main Form -->
+                    <div class="form-main">
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-info-circle"></i> Basic Information</h3>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="title">Property Title *</label>
+                                    <input type="text" id="title" name="title" required value="<%= property ? property.title : '' %>" placeholder="e.g., Luxury 4BHK Villa in Jubilee Hills">
+                                </div>
+                            </div>
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label for="property_code">Property Code</label>
+                                    <input type="text" id="property_code" name="property_code" value="<%= property ? property.property_code : '' %>" placeholder="Auto-generated if empty">
+                                </div>
+                                <div class="form-group">
+                                    <label for="category">Category *</label>
+                                    <select id="category" name="category" required onchange="toggleCategoryFields()">
+                                        <option value="">Select Category</option>
+                                        <option value="villa" <%= property && property.category === 'villa' ? 'selected' : '' %>>Villa</option>
+                                        <option value="residential_plot" <%= property && property.category === 'residential_plot' ? 'selected' : '' %>>Residential Plot</option>
+                                        <option value="apartment" <%= property && property.category === 'apartment' ? 'selected' : '' %>>Apartment / Flat</option>
+                                        <option value="independent_house" <%= property && property.category === 'independent_house' ? 'selected' : '' %>>Independent House</option>
+                                        <option value="commercial" <%= property && property.category === 'commercial' ? 'selected' : '' %>>Commercial</option>
+                                        <option value="agricultural_land" <%= property && property.category === 'agricultural_land' ? 'selected' : '' %>>Agricultural Land</option>
+                                        <option value="rental" <%= property && property.category === 'rental' ? 'selected' : '' %>>Rental</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="purpose">Listing Purpose *</label>
+                                    <select id="purpose" name="purpose">
+                                        <option value="sale" <%= property && property.purpose === 'sale' ? 'selected' : '' %>>Sale</option>
+                                        <option value="rent" <%= property && property.purpose === 'rent' ? 'selected' : '' %>>Rent</option>
+                                        <option value="lease" <%= property && property.purpose === 'lease' ? 'selected' : '' %>>Lease</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="short_description">Short Description</label>
+                                    <input type="text" id="short_description" name="short_description" value="<%= property ? property.short_description || '' : '' %>" placeholder="Brief one-line summary" maxlength="200">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="description">Full Description</label>
+                                    <textarea id="description" name="description" rows="5" placeholder="Detailed property description..."><%= property ? property.description || '' : '' %></textarea>
+                                </div>
+                            </div>
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label for="price">Price (₹)</label>
+                                    <input type="number" id="price" name="price" value="<%= property ? property.price || '' : '' %>" placeholder="e.g., 15000000" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="price_negotiable">Negotiable</label>
+                                    <select id="price_negotiable" name="price_negotiable">
+                                        <option value="0" <%= property && property.price_negotiable ? '' : 'selected' %>>No</option>
+                                        <option value="1" <%= property && property.price_negotiable ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="availability">Availability</label>
+                                    <select id="availability" name="availability">
+                                        <option value="available" <%= property && property.availability === 'available' ? 'selected' : '' %>>Available</option>
+                                        <option value="sold" <%= property && property.availability === 'sold' ? 'selected' : '' %>>Sold</option>
+                                        <option value="rented" <%= property && property.availability === 'rented' ? 'selected' : '' %>>Rented</option>
+                                        <option value="upcoming" <%= property && property.availability === 'upcoming' ? 'selected' : '' %>>Upcoming</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label for="state">State</label>
+                                    <input type="text" id="state" name="state" value="<%= property ? property.state || 'Telangana' : 'Telangana' %>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="city">City</label>
+                                    <input type="text" id="city" name="city" value="<%= property ? property.city || 'Hyderabad' : 'Hyderabad' %>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="locality">Locality</label>
+                                    <input type="text" id="locality" name="locality" value="<%= property ? property.locality || '' : '' %>" placeholder="e.g., Jubilee Hills">
+                                </div>
+                            </div>
+                            <div class="form-row cols-2">
+                                <div class="form-group">
+                                    <label for="full_address">Full Address</label>
+                                    <input type="text" id="full_address" name="full_address" value="<%= property ? property.full_address || '' : '' %>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="pin_code">PIN Code</label>
+                                    <input type="text" id="pin_code" name="pin_code" value="<%= property ? property.pin_code || '' : '' %>" maxlength="6">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="map_link">Map Link</label>
+                                    <input type="url" id="map_link" name="map_link" value="<%= property ? property.map_link || '' : '' %>" placeholder="Google Maps URL">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Property Details -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-ruler-combined"></i> Property Details</h3>
+                            <div class="form-row cols-4">
+                                <div class="form-group">
+                                    <label for="plot_area">Plot Area</label>
+                                    <input type="number" id="plot_area" name="plot_area" value="<%= property ? property.plot_area || '' : '' %>" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="built_up_area">Built-up Area</label>
+                                    <input type="number" id="built_up_area" name="built_up_area" value="<%= property ? property.built_up_area || '' : '' %>" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="carpet_area">Carpet Area</label>
+                                    <input type="number" id="carpet_area" name="carpet_area" value="<%= property ? property.carpet_area || '' : '' %>" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="area_unit">Area Unit</label>
+                                    <select id="area_unit" name="area_unit">
+                                        <option value="sq_ft" <%= property && property.area_unit === 'sq_ft' ? 'selected' : '' %>>Sq. Ft.</option>
+                                        <option value="sq_yd" <%= property && property.area_unit === 'sq_yd' ? 'selected' : '' %>>Sq. Yd.</option>
+                                        <option value="acres" <%= property && property.area_unit === 'acres' ? 'selected' : '' %>>Acres</option>
+                                        <option value="guntas" <%= property && property.area_unit === 'guntas' ? 'selected' : '' %>>Guntas</option>
+                                        <option value="cents" <%= property && property.area_unit === 'cents' ? 'selected' : '' %>>Cents</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row cols-4" id="buildingFields">
+                                <div class="form-group">
+                                    <label for="bedrooms">Bedrooms</label>
+                                    <input type="number" id="bedrooms" name="bedrooms" value="<%= property ? property.bedrooms || '' : '' %>" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bathrooms">Bathrooms</label>
+                                    <input type="number" id="bathrooms" name="bathrooms" value="<%= property ? property.bathrooms || '' : '' %>" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="balconies">Balconies</label>
+                                    <input type="number" id="balconies" name="balconies" value="<%= property ? property.balconies || '' : '' %>" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="floors">Floors</label>
+                                    <input type="number" id="floors" name="floors" value="<%= property ? property.floors || '' : '' %>" min="0">
+                                </div>
+                            </div>
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label for="facing">Facing</label>
+                                    <select id="facing" name="facing">
+                                        <option value="">Select</option>
+                                        <option value="North" <%= property && property.facing === 'North' ? 'selected' : '' %>>North</option>
+                                        <option value="South" <%= property && property.facing === 'South' ? 'selected' : '' %>>South</option>
+                                        <option value="East" <%= property && property.facing === 'East' ? 'selected' : '' %>>East</option>
+                                        <option value="West" <%= property && property.facing === 'West' ? 'selected' : '' %>>West</option>
+                                        <option value="North-East" <%= property && property.facing === 'North-East' ? 'selected' : '' %>>North-East</option>
+                                        <option value="North-West" <%= property && property.facing === 'North-West' ? 'selected' : '' %>>North-West</option>
+                                        <option value="South-East" <%= property && property.facing === 'South-East' ? 'selected' : '' %>>South-East</option>
+                                        <option value="South-West" <%= property && property.facing === 'South-West' ? 'selected' : '' %>>South-West</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="furnishing">Furnishing</label>
+                                    <select id="furnishing" name="furnishing">
+                                        <option value="">Select</option>
+                                        <option value="unfurnished" <%= property && property.furnishing === 'unfurnished' ? 'selected' : '' %>>Unfurnished</option>
+                                        <option value="semi_furnished" <%= property && property.furnishing === 'semi_furnished' ? 'selected' : '' %>>Semi-Furnished</option>
+                                        <option value="fully_furnished" <%= property && property.furnishing === 'fully_furnished' ? 'selected' : '' %>>Fully Furnished</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="parking">Parking</label>
+                                    <input type="text" id="parking" name="parking" value="<%= property ? property.parking || '' : '' %>" placeholder="e.g., 2 Car Parking">
+                                </div>
+                            </div>
+
+                            <!-- Plot-specific fields -->
+                            <div id="plotFields" style="display:none;">
+                                <div class="form-row cols-3">
+                                    <div class="form-group">
+                                        <label for="plot_dimensions">Plot Dimensions</label>
+                                        <input type="text" id="plot_dimensions" name="plot_dimensions" value="<%= property ? property.plot_dimensions || '' : '' %>" placeholder="e.g., 30x40">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="road_width">Road Width</label>
+                                        <input type="text" id="road_width" name="road_width" value="<%= property ? property.road_width || '' : '' %>" placeholder="e.g., 30 ft">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="land_use_category">Land Use Category</label>
+                                        <input type="text" id="land_use_category" name="land_use_category" value="<%= property ? property.land_use_category || '' : '' %>">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full">
+                                        <label for="approval_details">Approval Details</label>
+                                        <input type="text" id="approval_details" name="approval_details" value="<%= property ? property.approval_details || '' : '' %>" placeholder="HMDA / DTCP approval reference">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Villa-specific fields -->
+                            <div id="villaFields" style="display:none;">
+                                <div class="form-row cols-2">
+                                    <div class="form-group">
+                                        <label><input type="checkbox" id="private_garden" name="private_garden" value="1" <%= property && property.private_garden ? 'checked' : '' %>> Private Garden</label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" id="private_pool" name="private_pool" value="1" <%= property && property.private_pool ? 'checked' : '' %>> Private Pool</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Amenities -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-swimming-pool"></i> Amenities & Features</h3>
+                            <div class="amenities-grid" id="amenitiesGrid">
+                                <% 
+                                const allAmenities = ['Gated Community', 'Swimming Pool', 'Gym', 'Clubhouse', 'Park', 'Children Play Area', 'Power Backup', '24/7 Security', 'CCTV', 'Intercom', 'Lift', 'Car Parking', 'Visitor Parking', 'Rain Water Harvesting', 'Solar Panels', 'Vastu Compliant', 'Water Supply', 'Sewage Treatment', 'Fire Safety', 'Jogging Track', 'Tennis Court', 'Basketball Court', 'Indoor Games', 'Community Hall', 'Shopping Complex', 'Temple', 'Garden', 'Landscaping'];
+                                let currentAmenities = [];
+                                try { currentAmenities = JSON.parse(property ? property.amenities || '[]' : '[]'); } catch(e) {}
+                                allAmenities.forEach(a => { %>
+                                <label class="amenity-checkbox">
+                                    <input type="checkbox" name="amenity" value="<%= a %>" <%= currentAmenities.includes(a) ? 'checked' : '' %>>
+                                    <span><%= a %></span>
+                                </label>
+                                <% }) %>
+                            </div>
+                        </div>
+
+                        <!-- Media -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-images"></i> Images & Media</h3>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="images">Property Images</label>
+                                    <div class="upload-zone" id="uploadZone">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Drop images here or <label for="imageInput" class="upload-link">browse</label></p>
+                                        <small>JPEG, PNG, WebP — Max 10MB each, up to 20 images</small>
+                                        <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Image preview area -->
+                            <div class="image-preview-grid" id="imagePreviewGrid">
+                                <% if (typeof images !== 'undefined' && images.length > 0) { %>
+                                <% images.forEach(img => { %>
+                                <div class="image-preview-item" data-image-id="<%= img.id %>">
+                                    <img src="<%= img.image_url %>" alt="">
+                                    <div class="image-actions">
+                                        <button type="button" onclick="setCoverImage(<%= img.id %>)" class="<%= img.is_cover ? 'active' : '' %>" title="Set as cover"><i class="fas fa-star"></i></button>
+                                        <button type="button" onclick="deleteImage(<%= img.id %>)" class="text-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                    <% if (img.is_cover) { %><span class="cover-badge">Cover</span><% } %>
+                                </div>
+                                <% }) %>
+                                <% } %>
+                            </div>
+                            <div class="form-row cols-2">
+                                <div class="form-group">
+                                    <label for="virtual_tour_link">Virtual Tour Link</label>
+                                    <input type="url" id="virtual_tour_link" name="virtual_tour_link" value="<%= property ? property.virtual_tour_link || '' : '' %>" placeholder="YouTube / Matterport URL">
+                                </div>
+                                <div class="form-group">
+                                    <label for="brochure_url">Brochure URL</label>
+                                    <input type="url" id="brochure_url" name="brochure_url" value="<%= property ? property.brochure_url || '' : '' %>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEO -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-search"></i> SEO</h3>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="seo_title">SEO Title</label>
+                                    <input type="text" id="seo_title" name="seo_title" value="<%= property ? property.seo_title || '' : '' %>" maxlength="60">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group full">
+                                    <label for="seo_description">SEO Description</label>
+                                    <textarea id="seo_description" name="seo_description" rows="2" maxlength="160"><%= property ? property.seo_description || '' : '' %></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Notes -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-sticky-note"></i> Internal Notes</h3>
+                            <div class="form-group full">
+                                <textarea id="admin_notes" name="admin_notes" rows="3" placeholder="Private notes (not shown on website)..."><%= property ? property.admin_notes || '' : '' %></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column — Sidebar Actions -->
+                    <div class="form-sidebar">
+                        <div class="sidebar-card">
+                            <h4>Publish</h4>
+                            <div class="form-group">
+                                <label for="status">Status</label>
+                                <select id="status" name="status">
+                                    <option value="draft" <%= !property || property.status === 'draft' ? 'selected' : '' %>>Draft</option>
+                                    <option value="published" <%= property && property.status === 'published' ? 'selected' : '' %>>Published</option>
+                                    <option value="archived" <%= property && property.status === 'archived' ? 'selected' : '' %>>Archived</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label><input type="checkbox" id="is_featured" name="is_featured" value="1" <%= property && property.is_featured ? 'checked' : '' %>> Featured Listing</label>
+                            </div>
+                            <% if (property && property.published_at) { %>
+                            <p class="meta-text">Published: <%= new Date(property.published_at).toLocaleDateString('en-IN') %></p>
+                            <% } %>
+                            <div class="sidebar-actions">
+                                <button type="button" class="btn btn-primary btn-block" onclick="saveProperty('published')"><i class="fas fa-check"></i> Save & Publish</button>
+                                <button type="button" class="btn btn-secondary btn-block" onclick="saveProperty('draft')"><i class="fas fa-save"></i> Save as Draft</button>
+                                <% if (isEdit) { %>
+                                <a href="/properties/<%= property.id %>" target="_blank" class="btn btn-ghost btn-block"><i class="fas fa-eye"></i> Preview</a>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+    <script src="/js/property-form.js"></script>
+</body>
+</html>

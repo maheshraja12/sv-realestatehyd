@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="<%= property.seo_description || property.short_description || property.title %>">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Breadcrumb & Detail Header -->
+    <section class="detail-header-section">
+        <div class="container">
+            <div class="breadcrumb-nav">
+                <a href="/">Home</a>
+                <span class="bc-sep">/</span>
+                <a href="/properties">Properties</a>
+                <span class="bc-sep">/</span>
+                <a href="/properties?category=<%= property.category %>"><%= property.category.replace(/_/g, ' ') %></a>
+                <span class="bc-sep">/</span>
+                <span class="bc-current"><%= property.property_code %></span>
+            </div>
+
+            <div class="prop-detail-header-flex">
+                <div class="header-main-info">
+                    <div class="prop-tags-row">
+                        <span class="badge-category"><%= property.category.replace(/_/g, ' ') %></span>
+                        <span class="badge-purpose badge-<%= property.purpose %>">For <%= property.purpose %></span>
+                        <span class="badge-code"><%= property.property_code %></span>
+                        <span class="badge-verified"><i class="fas fa-check-circle text-gold"></i> Title Verified</span>
+                    </div>
+                    <h1 class="prop-detail-title"><%= property.title %></h1>
+                    <p class="prop-detail-location">
+                        <i class="fas fa-map-marker-alt text-gold"></i>
+                        <%= property.full_address || (property.locality ? property.locality + ', ' + property.city : property.city) %>
+                        <% if (property.pin_code) { %> - <%= property.pin_code %><% } %>
+                    </p>
+                </div>
+
+                <div class="header-price-info">
+                    <div class="detail-price-box">
+                        <span class="price-label">Offered Price</span>
+                        <h2 class="detail-price-val">
+                            <% if (property.price) { %>
+                            ₹<%= Number(property.price) >= 10000000 ? (property.price / 10000000).toFixed(2) + ' Cr' : (property.price / 100000).toFixed(2) + ' L' %>
+                            <% } else { %>
+                            Price on Request
+                            <% } %>
+                        </h2>
+                        <% if (property.price_negotiable) { %>
+                        <span class="badge-negotiable"><i class="fas fa-handshake"></i> Price Negotiable</span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Detail Content Grid -->
+    <section class="section prop-detail-content-section">
+        <div class="container">
+            <div class="detail-layout-grid">
+                <!-- Left Column — Media, Specs, Description, Amenities -->
+                <div class="detail-left-col">
+                    <!-- Gallery Area -->
+                    <div class="prop-gallery-card">
+                        <% if (images && images.length > 0) { %>
+                        <div class="main-image-viewport">
+                            <img id="mainGalleryImage" src="<%= images[0].image_url %>" alt="<%= property.title %>" class="main-img">
+                            <span class="gallery-counter" id="galleryCounter">1 / <%= images.length %> Photos</span>
+                        </div>
+                        <% if (images.length > 1) { %>
+                        <div class="thumbnails-track">
+                            <% images.forEach((img, idx) => { %>
+                            <div class="thumb-item <%= idx === 0 ? 'active' : '' %>" onclick="selectGalleryImage('<%= img.image_url %>', <%= idx + 1 %>)">
+                                <img src="<%= img.image_url %>" alt="Thumbnail <%= idx + 1 %>">
+                            </div>
+                            <% }) %>
+                        </div>
+                        <% } %>
+                        <% } else { %>
+                        <div class="gallery-empty-placeholder">
+                            <i class="fas fa-building fa-4x text-gold"></i>
+                            <p>SV Real Estates Hyderabad Exclusive Listing</p>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Key Specs Highlights Banner -->
+                    <div class="key-specs-card">
+                        <% if (property.bedrooms) { %>
+                        <div class="key-spec-cell">
+                            <i class="fas fa-bed text-gold"></i>
+                            <div>
+                                <span class="spec-label">Configuration</span>
+                                <strong class="spec-val"><%= property.bedrooms %> BHK</strong>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (property.bathrooms) { %>
+                        <div class="key-spec-cell">
+                            <i class="fas fa-bath text-gold"></i>
+                            <div>
+                                <span class="spec-label">Bathrooms</span>
+                                <strong class="spec-val"><%= property.bathrooms %> Baths</strong>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (property.built_up_area || property.plot_area) { %>
+                        <div class="key-spec-cell">
+                            <i class="fas fa-ruler-combined text-gold"></i>
+                            <div>
+                                <span class="spec-label">Total Area</span>
+                                <strong class="spec-val"><%= (property.built_up_area || property.plot_area).toLocaleString() %> <%= (property.area_unit || 'sq_ft').replace(/_/g, ' ') %></strong>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (property.facing) { %>
+                        <div class="key-spec-cell">
+                            <i class="fas fa-compass text-gold"></i>
+                            <div>
+                                <span class="spec-label">Facing</span>
+                                <strong class="spec-val"><%= property.facing %></strong>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (property.furnishing) { %>
+                        <div class="key-spec-cell">
+                            <i class="fas fa-couch text-gold"></i>
+                            <div>
+                                <span class="spec-label">Furnishing</span>
+                                <strong class="spec-val"><%= property.furnishing.replace(/_/g, ' ') %></strong>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <div class="key-spec-cell">
+                            <i class="fas fa-shield-alt text-gold"></i>
+                            <div>
+                                <span class="spec-label">Availability</span>
+                                <strong class="spec-val text-capitalize"><%= property.availability || 'Available' %></strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description Section -->
+                    <div class="detail-section-card">
+                        <h3 class="detail-sec-heading"><i class="fas fa-align-left text-gold"></i> Property Description</h3>
+                        <div class="prop-description-body">
+                            <% if (property.description) { %>
+                            <p style="white-space: pre-line;"><%= property.description %></p>
+                            <% } else { %>
+                            <p>An exceptional real estate asset situated in <%= property.locality || 'Hyderabad' %>, presenting first-class infrastructure, high capital appreciation prospects, and legal clarity vetted by SV Real Estates.</p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Specifications Table -->
+                    <div class="detail-section-card">
+                        <h3 class="detail-sec-heading"><i class="fas fa-list-check text-gold"></i> Detailed Specifications</h3>
+                        <div class="specs-table-grid">
+                            <div class="spec-row"><span class="col-lbl">Property Code</span><span class="col-val"><strong><%= property.property_code %></strong></span></div>
+                            <div class="spec-row"><span class="col-lbl">Property Category</span><span class="col-val text-capitalize"><%= property.category.replace(/_/g, ' ') %></span></div>
+                            <div class="spec-row"><span class="col-lbl">Transaction Type</span><span class="col-val text-capitalize"><%= property.purpose %></span></div>
+                            <div class="spec-row"><span class="col-lbl">City / Region</span><span class="col-val"><%= property.city %>, <%= property.state %></span></div>
+                            <div class="spec-row"><span class="col-lbl">Locality</span><span class="col-val"><%= property.locality || '—' %></span></div>
+                            <% if (property.built_up_area) { %>
+                            <div class="spec-row"><span class="col-lbl">Built-Up Area</span><span class="col-val"><%= property.built_up_area %> <%= (property.area_unit || 'sq_ft').replace(/_/g, ' ') %></span></div>
+                            <% } %>
+                            <% if (property.carpet_area) { %>
+                            <div class="spec-row"><span class="col-lbl">Carpet Area</span><span class="col-val"><%= property.carpet_area %> <%= (property.area_unit || 'sq_ft').replace(/_/g, ' ') %></span></div>
+                            <% } %>
+                            <% if (property.plot_area) { %>
+                            <div class="spec-row"><span class="col-lbl">Plot Area</span><span class="col-val"><%= property.plot_area %> <%= (property.area_unit || 'sq_ft').replace(/_/g, ' ') %></span></div>
+                            <% } %>
+                            <% if (property.plot_dimensions) { %>
+                            <div class="spec-row"><span class="col-lbl">Plot Dimensions</span><span class="col-val"><%= property.plot_dimensions %></span></div>
+                            <% } %>
+                            <% if (property.road_width) { %>
+                            <div class="spec-row"><span class="col-lbl">Facing Road Width</span><span class="col-val"><%= property.road_width %></span></div>
+                            <% } %>
+                            <% if (property.floors) { %>
+                            <div class="spec-row"><span class="col-lbl">Total Floors</span><span class="col-val"><%= property.floors %> Floors</span></div>
+                            <% } %>
+                            <% if (property.balconies) { %>
+                            <div class="spec-row"><span class="col-lbl">Balconies</span><span class="col-val"><%= property.balconies %></span></div>
+                            <% } %>
+                            <% if (property.parking) { %>
+                            <div class="spec-row"><span class="col-lbl">Parking Space</span><span class="col-val"><%= property.parking %></span></div>
+                            <% } %>
+                            <% if (property.approval_details) { %>
+                            <div class="spec-row"><span class="col-lbl">Approvals</span><span class="col-val text-gold"><strong><%= property.approval_details %></strong></span></div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Amenities & Features -->
+                    <% if (amenities && amenities.length > 0) { %>
+                    <div class="detail-section-card">
+                        <h3 class="detail-sec-heading"><i class="fas fa-gem text-gold"></i> Amenities & Lifestyle Features</h3>
+                        <div class="amenities-tags-grid">
+                            <% amenities.forEach(item => { %>
+                            <div class="amenity-pill">
+                                <i class="fas fa-check-circle text-gold"></i>
+                                <span><%= item %></span>
+                            </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <!-- Virtual Tour & Brochure if present -->
+                    <% if (property.virtual_tour_link || property.brochure_url) { %>
+                    <div class="detail-section-card media-actions-card">
+                        <h3 class="detail-sec-heading"><i class="fas fa-video text-gold"></i> Interactive Media</h3>
+                        <div class="media-btn-row">
+                            <% if (property.virtual_tour_link) { %>
+                            <a href="<%= property.virtual_tour_link %>" target="_blank" class="btn btn-gold">
+                                <i class="fas fa-vr-cardboard"></i> Watch Virtual Tour
+                            </a>
+                            <% } %>
+                            <% if (property.brochure_url) { %>
+                            <a href="<%= property.brochure_url %>" target="_blank" class="btn btn-outline-gold">
+                                <i class="fas fa-file-pdf"></i> Download E-Brochure
+                            </a>
+                            <% } %>
+                        </div>
+                    </div>
+                    <% } %>
+                </div>
+
+                <!-- Right Sticky Sidebar -->
+                <div class="detail-right-col">
+                    <div class="sticky-sidebar-card">
+                        <!-- Direct Enquiry Action Card (Opens Single Shared Enquiry Modal) -->
+                        <div class="sidebar-form-box">
+                            <span class="form-tag">DIRECT INQUIRY</span>
+                            <h3 class="form-title">Interested in this Property?</h3>
+                            <p class="form-desc">Get the complete price sheet, verified legal title documents, floor plans, or schedule a private site visit.</p>
+
+                            <button type="button" class="btn btn-gold btn-block btn-large btn-schedule-cta" onclick="openEnquiryModal(<%= property.id %>, '<%= property.title.replace(/'/g, "\\'") %>', '<%= property.property_code %>', '<%= property.category %>')">
+                                <i class="fas fa-envelope"></i> Enquire Now
+                            </button>
+                        </div>
+
+                        <!-- Instant Contact Actions -->
+                        <div class="sidebar-quick-connect">
+                            <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Real%20Estates,%20I%20am%20interested%20in%20property%20<%= encodeURIComponent(property.title) %>%20(Ref:%20<%= property.property_code %>)." target="_blank" class="btn btn-whatsapp btn-block">
+                                <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                            </a>
+                            <a href="tel:<%= businessPhone %>" class="btn btn-outline-gold btn-block">
+                                <i class="fas fa-phone-alt"></i> Call: <%= businessPhone %>
+                            </a>
+                        </div>
+
+                        <!-- Relationship Manager Card -->
+                        <div class="agent-trust-card">
+                            <div class="agent-avatar"><i class="fas fa-user-tie"></i></div>
+                            <div class="agent-info">
+                                <strong>SV Senior Property Advisor</strong>
+                                <span>West Hyderabad Luxury Specialist</span>
+                                <small class="text-gold"><i class="fas fa-award"></i> Verified Title Guarantee</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Similar Properties Carousel / Grid -->
+            <% if (similarProperties && similarProperties.length > 0) { %>
+            <div class="similar-properties-section">
+                <div class="section-header">
+                    <span class="section-badge">YOU MAY ALSO LIKE</span>
+                    <h2 class="section-title">Similar Properties in <span class="gold-gradient-text"><%= property.locality || 'Hyderabad' %></span></h2>
+                </div>
+
+                <div class="properties-grid">
+                    <% similarProperties.forEach(prop => { %>
+                    <div class="property-card">
+                        <div class="prop-card-media">
+                            <% if (prop.cover_image) { %>
+                            <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                            <% } else { %>
+                            <div class="prop-img-placeholder"><i class="fas fa-building"></i></div>
+                            <% } %>
+                            <div class="prop-badge-top">
+                                <span class="badge-category"><%= prop.category.replace(/_/g, ' ') %></span>
+                            </div>
+                            <div class="prop-price-tag">
+                                <% if (prop.price) { %>
+                                ₹<%= Number(prop.price) >= 10000000 ? (prop.price / 10000000).toFixed(2) + ' Cr' : (prop.price / 100000).toFixed(2) + ' L' %>
+                                <% } else { %>
+                                Price on Request
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="prop-card-body">
+                            <div class="prop-location"><i class="fas fa-map-marker-alt text-gold"></i> <%= prop.locality || prop.city %></div>
+                            <h3 class="prop-title"><a href="/properties/<%= prop.id %>"><%= prop.title %></a></h3>
+                            <div class="prop-card-footer">
+                                <button class="btn btn-card-enquire" onclick="openEnquiryModal(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>', '<%= prop.property_code %>', '<%= prop.category %>')">
+                                    <i class="fas fa-envelope"></i> Enquire
+                                </button>
+                                <a href="/properties/<%= prop.id %>" class="btn btn-card-details">
+                                    Details <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <% }) %>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+    <script>
+        function selectGalleryImage(url, index) {
+            const mainImg = document.getElementById('mainGalleryImage');
+            if (mainImg) mainImg.src = url;
+            const counter = document.getElementById('galleryCounter');
+            const thumbs = document.querySelectorAll('.thumb-item');
+            thumbs.forEach((t, i) => {
+                if (i === index - 1) t.classList.add('active');
+                else t.classList.remove('active');
+            });
+            if (counter) counter.innerText = `${index} / ${thumbs.length} Photos`;
+        }
+    </script>
+</body>
+</html>

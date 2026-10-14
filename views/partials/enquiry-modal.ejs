@@ -1,0 +1,98 @@
+<!-- Universal Shared Enquiry & Appointment Modal -->
+<div class="modal-backdrop-custom" id="enquiryModalBackdrop" style="display:none;" onclick="closeEnquiryModal()"></div>
+<div class="modal-wrapper-custom" id="enquiryModal" style="display:none;" onclick="handleModalWrapperClick(event)">
+    <div class="modal-dialog-custom" onclick="event.stopPropagation()">
+        <button type="button" class="modal-close-btn" onclick="closeEnquiryModal()" aria-label="Close dialog">&times;</button>
+        
+        <div class="modal-header-custom">
+            <span class="modal-tag" id="modalBadge">DIRECT ENQUIRY</span>
+            <h3 id="modalTitle">Enquire & Schedule Visit</h3>
+            <p id="modalSubtitle" class="text-muted">Connect directly with our senior property consultant in Hyderabad.</p>
+        </div>
+
+        <!-- Property Preview (if opened from a specific property listing) -->
+        <div id="modalPropertyPreview" class="modal-property-card" style="display:none;">
+            <i class="fas fa-building text-gold fa-2x"></i>
+            <div class="modal-property-meta">
+                <strong id="modalPropTitle">Property Title</strong>
+                <span id="modalPropCode" class="text-gold">Code</span>
+            </div>
+        </div>
+
+        <!-- Error State Alert -->
+        <div id="modalErrorAlert" class="alert-error-custom" style="display:none; background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#fca5a5; padding:10px 14px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;">
+            <i class="fas fa-exclamation-circle"></i> <span id="modalErrorText">Please fill in all required fields.</span>
+        </div>
+
+        <form id="publicEnquiryForm" onsubmit="handlePublicEnquirySubmit(event)">
+            <input type="hidden" id="modalPropertyId" name="property_id" value="">
+
+            <div class="form-grid-modal">
+                <!-- 1. Full Name -->
+                <div class="form-group-modal full-width">
+                    <label for="modalCustomerName"><i class="fas fa-user text-gold"></i> Full Name *</label>
+                    <input type="text" id="modalCustomerName" name="full_name" required placeholder="Enter your full name" autocomplete="name">
+                </div>
+
+                <!-- 2. Phone Number -->
+                <div class="form-group-modal full-width">
+                    <label for="modalPhone"><i class="fas fa-phone-alt text-gold"></i> Phone Number *</label>
+                    <input type="tel" id="modalPhone" name="phone_number" required placeholder="10-digit mobile number (e.g. 9876543210)" autocomplete="tel" pattern="[0-9+ -]{10,15}">
+                </div>
+
+                <!-- 3. Preferred Appointment Date & Time -->
+                <div class="form-group-modal">
+                    <label for="modalAppointmentDate"><i class="fas fa-calendar-day text-gold"></i> Preferred Appointment Date *</label>
+                    <input type="date" id="modalAppointmentDate" name="appointment_date" required>
+                </div>
+
+                <div class="form-group-modal">
+                    <label for="modalAppointmentTime"><i class="fas fa-clock text-gold"></i> Appointment Time Slot *</label>
+                    <select id="modalAppointmentTime" name="appointment_time" required>
+                        <option value="">Select Time Slot *</option>
+                        <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM (Morning)</option>
+                        <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM (Afternoon)</option>
+                        <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM (Post-Lunch)</option>
+                        <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM (Evening)</option>
+                        <option value="06:00 PM - 08:00 PM">06:00 PM - 08:00 PM (Late Evening)</option>
+                    </select>
+                </div>
+
+                <!-- 4. What Are You Looking For? -->
+                <div class="form-group-modal full-width">
+                    <label for="modalPropertyRequirement"><i class="fas fa-home text-gold"></i> What Are You Looking For? *</label>
+                    <select id="modalPropertyRequirement" name="property_requirement" required>
+                        <option value="">Select Property Type *</option>
+                        <option value="Residential Plot">Residential Plot</option>
+                        <option value="Villa">Villa</option>
+                        <option value="Apartment">Apartment</option>
+                        <option value="Commercial Property">Commercial Property</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="modal-footer-custom" style="margin-top:18px;">
+                <button type="submit" id="modalSubmitBtn" class="btn btn-gold btn-block btn-large">
+                    <i class="fas fa-paper-plane"></i> <span id="submitBtnText">Submit Enquiry</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Success Message -->
+        <div id="modalSuccess" class="modal-success-state" style="display:none;">
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+            <h3 class="text-gold" id="successHeading">Enquiry Submitted Successfully!</h3>
+            <p id="successMessageText">Your details have been received by our senior team.</p>
+            <div class="ref-badge" id="successRefCode">Reference: SV-LEAD-XXXXXX</div>
+            <p class="text-muted"><small>Our representative will contact you at your chosen appointment time.</small></p>
+            <div class="success-actions" style="margin-top:20px; display:flex; gap:12px; justify-content:center;">
+                <a id="successWhatsAppLink" href="#" target="_blank" class="btn btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                </a>
+                <button type="button" class="btn btn-ghost" onclick="closeEnquiryModal()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,107 @@
+<footer class="site-footer">
+    <div class="footer-top">
+        <div class="container footer-grid">
+            <!-- Brand Column -->
+            <div class="footer-col brand-col">
+                <a href="/" class="brand-logo footer-logo">
+                    <div class="logo-symbol">
+                        <span class="gold-monogram">SV</span>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">SV REAL ESTATES</span>
+                        <span class="brand-subtitle">HYDERABAD</span>
+                    </div>
+                </a>
+                <p class="footer-desc">
+                    Hyderabad's trusted advisory for luxury villas, gated community plots, premium high-rise apartments, and commercial investments across West & North Hyderabad corridor.
+                </p>
+                <div class="footer-socials">
+                    <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="social-icon text-whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                    <a href="tel:<%= businessPhone %>" class="social-icon" title="Call Us"><i class="fas fa-phone"></i></a>
+                    <a href="mailto:<%= businessEmail %>" class="social-icon" title="Email Us"><i class="fas fa-envelope"></i></a>
+                    <a href="#" class="social-icon" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-icon" title="YouTube"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="footer-col">
+                <h4 class="footer-heading">Property Types</h4>
+                <ul class="footer-links">
+                    <li><a href="/properties?category=villa"><i class="fas fa-chevron-right text-gold"></i> Luxury Villas</a></li>
+                    <li><a href="/properties?category=residential_plot"><i class="fas fa-chevron-right text-gold"></i> Premium Plots</a></li>
+                    <li><a href="/properties?category=apartment"><i class="fas fa-chevron-right text-gold"></i> Gated Apartments</a></li>
+                    <li><a href="/properties?category=independent_house"><i class="fas fa-chevron-right text-gold"></i> Independent Houses</a></li>
+                    <li><a href="/properties?category=commercial"><i class="fas fa-chevron-right text-gold"></i> Commercial Spaces</a></li>
+                    <li><a href="/properties?category=agricultural_land"><i class="fas fa-chevron-right text-gold"></i> Farm Lands</a></li>
+                </ul>
+            </div>
+
+            <!-- Prime Locations -->
+            <div class="footer-col">
+                <h4 class="footer-heading">Prime Locations</h4>
+                <ul class="footer-links">
+                    <li><a href="/properties?locality=Jubilee+Hills"><i class="fas fa-map-marker-alt text-gold"></i> Jubilee Hills</a></li>
+                    <li><a href="/properties?locality=Banjara+Hills"><i class="fas fa-map-marker-alt text-gold"></i> Banjara Hills</a></li>
+                    <li><a href="/properties?locality=Kokapet"><i class="fas fa-map-marker-alt text-gold"></i> Kokapet (Golden Mile)</a></li>
+                    <li><a href="/properties?locality=Gachibowli"><i class="fas fa-map-marker-alt text-gold"></i> Gachibowli & Financial Dist</a></li>
+                    <li><a href="/properties?locality=Tellapur"><i class="fas fa-map-marker-alt text-gold"></i> Tellapur & Kollur</a></li>
+                    <li><a href="/properties?locality=Mokila"><i class="fas fa-map-marker-alt text-gold"></i> Mokila & Shankarpally</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="footer-col">
+                <h4 class="footer-heading">Direct Contact</h4>
+                <ul class="footer-contact">
+                    <li>
+                        <i class="fas fa-phone-alt text-gold"></i>
+                        <div>
+                            <span>Phone Consultation</span>
+                            <a href="tel:<%= businessPhone %>"><%= businessPhone %></a>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fab fa-whatsapp text-whatsapp"></i>
+                        <div>
+                            <span>WhatsApp Assistance</span>
+                            <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank">+91 <%= businessWhatsapp %></a>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-envelope text-gold"></i>
+                        <div>
+                            <span>Email Enquiries</span>
+                            <a href="mailto:<%= businessEmail %>"><%= businessEmail %></a>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-building text-gold"></i>
+                        <div>
+                            <span>Corporate Office</span>
+                            <p>Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <div class="container footer-bottom-inner">
+            <p>&copy; <%= new Date().getFullYear() %> SV Real Estates Hyderabad. All rights reserved. RERA Registered Advisory.</p>
+            <div class="footer-bottom-links">
+                <a href="/about">About Us</a>
+                <a href="/services">Services</a>
+                <a href="/contact">Contact</a>
+                <a href="/admin/login">Admin Login</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Floating WhatsApp Action -->
+<a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Real%20Estates,%20I%20am%20looking%20for%20property%20consultation." target="_blank" class="floating-whatsapp" aria-label="Contact via WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+    <span class="whatsapp-tooltip">Chat with us</span>
+</a>
