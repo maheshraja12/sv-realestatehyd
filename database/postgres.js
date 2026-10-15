@@ -1,9 +1,16 @@
 /**
  * SV Real Estates Hyderabad — PostgreSQL / Supabase / Vercel Postgres Database Client
  * Provides persistent cloud storage for Leads, Appointments, and Sessions across ephemeral Vercel Serverless instances.
+ * Seamlessly supports both direct PostgreSQL connection pooling (pg) and Supabase REST API (@supabase/supabase-js).
  */
 require('dotenv').config();
 const { Pool } = require('pg');
+let createClient;
+try {
+    createClient = require('@supabase/supabase-js').createClient;
+} catch (e) {
+    createClient = null;
+}
 
 const rawConnectionString = (
     process.env.DATABASE_URL ||
@@ -14,7 +21,20 @@ const rawConnectionString = (
     ''
 ).trim();
 
-function isPostgresConfigured() {
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+
+function isSupabaseConfigured() {
+    return !!(
+        createClient &&
+        supabaseUrl &&
+        supabaseKey &&
+        (supabaseUrl.startsWith('https://') || supabaseUrl.startsWith('http://')) &&
+        !supabaseUrl.includes('your-project')
+    );
+}
+
+function isDirectPostgresConfigured() {
     if (rawConnectionString && (rawConnectionString.startsWith('postgres://') || rawConnectionString.startsWith('postgresql://'))) {
         return true;
     }
@@ -24,8 +44,27 @@ function isPostgresConfigured() {
     return false;
 }
 
+function isPostgresConfigured() {
+    return isDirectPostgresConfigured() || isSupabaseConfigured();
+}
+
 let pool = null;
+let supabaseClient = null;
 let tablesInitialized = false;
+
+function getSupabaseClient() {
+    if (!supabaseClient && isSupabaseConfigured()) {
+        try {
+            supabaseClient = createClient(supabaseUrl, supabaseKey, {
+                auth: { persistSession: false }
+            });
+            console.log(`✅ [SUPABASE] REST API client connected to: ${supabaseUrl}`);
+        } catch (err) {
+            console.error('❌ [SUPABASE] Client init error:', err.message);
+        }
+    }
+    return supabaseClient;
+}
 
 function getPoolConfig() {
     if (rawConnectionString) {
@@ -73,7 +112,7 @@ function getPoolConfig() {
 }
 
 function getPgPool() {
-    if (!pool && isPostgresConfigured()) {
+    if (!pool && isDirectPostgresConfigured()) {
         try {
             pool = new Pool(getPoolConfig());
             pool.on('error', (err) => {
@@ -95,7 +134,7 @@ function getPgPool() {
  * Automatically creates leads, appointments, and session tables if they do not exist
  */
 async function initializePostgresTables() {
-    if (tablesInitialized || !isPostgresConfigured()) return;
+    if (tablesInitialized || !isDirectPostgresConfigured()) return;
     const p = getPgPool();
     if (!p) return;
 
@@ -189,136 +228,244 @@ async function initializePostgresTables() {
 }
 
 /**
- * Insert a lead/enquiry into PostgreSQL
+ * Insert a lead/enquiry into PostgreSQL or Supabase REST
  */
 async function insertLead(lead) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true };
+
+    const leadPayload = {
+        lead_code: lead.lead_code || `SV-LEAD-${Date.now().toString().slice(-6)}`,
+        customer_name: lead.customer_name || lead.full_name || 'Enquiry Client',
+        full_name: lead.full_name || lead.customer_name || 'Enquiry Client',
+        phone: lead.phone || lead.phone_number || '',
+        phone_number: lead.phone_number || lead.phone || '',
+        email: lead.email || null,
+        property_id: lead.property_id ? parseInt(lead.property_id, 10) : null,
+        property_category: lead.property_category || lead.property_requirement || 'Residential Plot',
+        property_requirement: lead.property_requirement || lead.property_category || 'Residential Plot',
+        budget: lead.budget || 'Consult / Market Price',
+        preferred_location: lead.preferred_location || 'Hyderabad',
+        message: lead.message || null,
+        contact_preference: lead.contact_preference || 'phone',
+        preferred_visit_date: lead.preferred_visit_date || lead.appointment_date || null,
+        appointment_date: lead.appointment_date || lead.preferred_visit_date || null,
+        appointment_time: lead.appointment_time || '10:00 AM - 12:00 PM',
+        consent: lead.consent !== undefined ? (lead.consent ? 1 : 0) : 1,
+        source: lead.source || 'website',
+        status: lead.status || 'new'
+    };
+
+    // 1. Direct PostgreSQL pool if configured
     const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true };
+    if (p) {
+        try {
+            const query = `
+                INSERT INTO leads (
+                    lead_code, customer_name, full_name, phone, phone_number, email,
+                    property_id, property_category, property_requirement, budget, preferred_location,
+                    message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
+                    consent, source, status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                RETURNING *
+            `;
 
-    try {
-        const query = `
-            INSERT INTO leads (
-                lead_code, customer_name, full_name, phone, phone_number, email,
-                property_id, property_category, property_requirement, budget, preferred_location,
-                message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
-                consent, source, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-            RETURNING *
-        `;
+            const values = [
+                leadPayload.lead_code, leadPayload.customer_name, leadPayload.full_name,
+                leadPayload.phone, leadPayload.phone_number, leadPayload.email,
+                leadPayload.property_id, leadPayload.property_category, leadPayload.property_requirement,
+                leadPayload.budget, leadPayload.preferred_location, leadPayload.message,
+                leadPayload.contact_preference, leadPayload.preferred_visit_date,
+                leadPayload.appointment_date, leadPayload.appointment_time,
+                leadPayload.consent, leadPayload.source, leadPayload.status
+            ];
 
-        const values = [
-            lead.lead_code || `SV-LEAD-${Date.now().toString().slice(-6)}`,
-            lead.customer_name || lead.full_name || 'Enquiry Client',
-            lead.full_name || lead.customer_name || 'Enquiry Client',
-            lead.phone || lead.phone_number || '',
-            lead.phone_number || lead.phone || '',
-            lead.email || null,
-            lead.property_id ? parseInt(lead.property_id, 10) : null,
-            lead.property_category || lead.property_requirement || 'Residential Plot',
-            lead.property_requirement || lead.property_category || 'Residential Plot',
-            lead.budget || 'Consult / Market Price',
-            lead.preferred_location || 'Hyderabad',
-            lead.message || null,
-            lead.contact_preference || 'phone',
-            lead.preferred_visit_date || lead.appointment_date || null,
-            lead.appointment_date || lead.preferred_visit_date || null,
-            lead.appointment_time || '10:00 AM - 12:00 PM',
-            lead.consent !== undefined ? (lead.consent ? 1 : 0) : 1,
-            lead.source || 'website',
-            lead.status || 'new'
-        ];
-
-        const res = await p.query(query, values);
-        return { success: true, data: res.rows[0] };
-    } catch (err) {
-        console.error('❌ [POSTGRES] insertLead error:', err.message);
-        return { success: false, error: err.message };
+            const res = await p.query(query, values);
+            return { success: true, data: res.rows[0] };
+        } catch (err) {
+            console.error('❌ [POSTGRES] insertLead pool error:', err.message);
+        }
     }
+
+    // 2. Supabase REST fallback
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { data, error } = await sb.from('leads').insert([leadPayload]).select();
+            if (!error && data && data.length > 0) {
+                return { success: true, data: data[0] };
+            }
+            // Try enquiries table if leads table is not present
+            const enqPayload = {
+                lead_code: leadPayload.lead_code,
+                full_name: leadPayload.full_name,
+                phone_number: leadPayload.phone_number,
+                appointment_date: leadPayload.appointment_date || new Date().toISOString().slice(0, 10),
+                appointment_time: leadPayload.appointment_time,
+                property_requirement: leadPayload.property_requirement,
+                email: leadPayload.email,
+                message: leadPayload.message,
+                status: 'New'
+            };
+            const { data: enqData, error: enqErr } = await sb.from('enquiries').insert([enqPayload]).select();
+            if (!enqErr && enqData && enqData.length > 0) {
+                return { success: true, data: enqData[0] };
+            }
+            if (error || enqErr) {
+                console.error('❌ [SUPABASE] insert error:', (error || enqErr).message);
+                return { success: false, error: (error || enqErr).message };
+            }
+        } catch (sbErr) {
+            console.error('❌ [SUPABASE] insert exception:', sbErr.message);
+            return { success: false, error: sbErr.message };
+        }
+    }
+
+    return { success: false, notConfigured: true };
 }
 
 /**
- * Fetch leads from PostgreSQL with pagination and filters
+ * Fetch leads from PostgreSQL or Supabase
  */
 async function fetchLeads(options = {}) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true, data: [], count: 0 };
+
     const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true, data: [], count: 0 };
+    if (p) {
+        try {
+            const conditions = [];
+            const params = [];
+            let paramIdx = 1;
 
-    try {
-        const conditions = [];
-        const params = [];
-        let paramIdx = 1;
+            if (options.status) {
+                conditions.push(`LOWER(status) = LOWER($${paramIdx++})`);
+                params.push(options.status);
+            }
 
-        if (options.status) {
-            conditions.push(`LOWER(status) = LOWER($${paramIdx++})`);
-            params.push(options.status);
+            if (options.category) {
+                conditions.push(`LOWER(property_category) = LOWER($${paramIdx++})`);
+                params.push(options.category);
+            }
+
+            if (options.search) {
+                const s = `%${options.search}%`;
+                conditions.push(`(customer_name ILIKE $${paramIdx} OR phone ILIKE $${paramIdx} OR email ILIKE $${paramIdx} OR lead_code ILIKE $${paramIdx})`);
+                paramIdx++;
+                params.push(s);
+            }
+
+            const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+            // Get total count
+            const countRes = await p.query(`SELECT COUNT(*) as count FROM leads ${whereClause}`, params);
+            const total = parseInt(countRes.rows[0]?.count || 0, 10);
+
+            // Fetch paginated rows
+            let query = `SELECT * FROM leads ${whereClause} ORDER BY id DESC`;
+            if (options.limit) {
+                query += ` LIMIT $${paramIdx++}`;
+                params.push(parseInt(options.limit, 10));
+            }
+            if (options.offset) {
+                query += ` OFFSET $${paramIdx++}`;
+                params.push(parseInt(options.offset, 10));
+            }
+
+            const rowsRes = await p.query(query, params);
+            return { success: true, data: rowsRes.rows, count: total };
+        } catch (err) {
+            console.error('❌ [POSTGRES] fetchLeads pool error:', err.message);
         }
-
-        if (options.category) {
-            conditions.push(`LOWER(property_category) = LOWER($${paramIdx++})`);
-            params.push(options.category);
-        }
-
-        if (options.search) {
-            const s = `%${options.search}%`;
-            conditions.push(`(customer_name ILIKE $${paramIdx} OR phone ILIKE $${paramIdx} OR email ILIKE $${paramIdx} OR lead_code ILIKE $${paramIdx})`);
-            paramIdx++;
-            params.push(s);
-        }
-
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-        // Get total count
-        const countRes = await p.query(`SELECT COUNT(*) as count FROM leads ${whereClause}`, params);
-        const total = parseInt(countRes.rows[0]?.count || 0, 10);
-
-        // Fetch paginated rows
-        let query = `SELECT * FROM leads ${whereClause} ORDER BY id DESC`;
-        if (options.limit) {
-            query += ` LIMIT $${paramIdx++}`;
-            params.push(parseInt(options.limit, 10));
-        }
-        if (options.offset) {
-            query += ` OFFSET $${paramIdx++}`;
-            params.push(parseInt(options.offset, 10));
-        }
-
-        const rowsRes = await p.query(query, params);
-        return { success: true, data: rowsRes.rows, count: total };
-    } catch (err) {
-        console.error('❌ [POSTGRES] fetchLeads error:', err.message);
-        return { success: false, error: err.message, data: [], count: 0 };
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            let query = sb.from('leads').select('*', { count: 'exact' });
+            if (options.status) query = query.ilike('status', options.status);
+            if (options.search) {
+                const s = `%${options.search}%`;
+                query = query.or(`customer_name.ilike.${s},phone.ilike.${s},email.ilike.${s}`);
+            }
+            query = query.order('id', { ascending: false });
+            if (options.limit) {
+                const from = options.offset || 0;
+                const to = from + options.limit - 1;
+                query = query.range(from, to);
+            }
+            const { data, count, error } = await query;
+            if (!error && data) {
+                return { success: true, data, count: count || data.length };
+            }
+
+            // Fallback to enquiries table
+            const { data: enqData, count: enqCount, error: enqErr } = await sb.from('enquiries').select('*', { count: 'exact' }).order('id', { ascending: false });
+            if (!enqErr && enqData) {
+                const mapped = enqData.map(e => ({
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name,
+                    customer_name: e.full_name,
+                    phone: e.phone_number,
+                    phone_number: e.phone_number,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_requirement,
+                    status: (e.status || 'New').toLowerCase(),
+                    created_at: e.created_at,
+                    email: e.email,
+                    message: e.message
+                }));
+                return { success: true, data: mapped, count: enqCount || mapped.length };
+            }
+        } catch (sbErr) {
+            console.error('❌ [SUPABASE] fetchLeads error:', sbErr.message);
+        }
+    }
+
+    return { success: false, notConfigured: true, data: [], count: 0 };
 }
 
 /**
- * Get aggregated lead stats from PostgreSQL
+ * Get aggregated lead stats
  */
 async function getLeadStats() {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true };
-    const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true };
 
-    try {
-        const res = await p.query(`
-            SELECT 
-                COUNT(*) as total,
-                COUNT(*) FILTER (WHERE LOWER(status) = 'new') as new_count,
-                COUNT(*) FILTER (WHERE LOWER(status) = 'converted') as converted_count
-            FROM leads
-        `);
-        const row = res.rows[0] || {};
-        return {
-            success: true,
-            total: parseInt(row.total || 0, 10),
-            newCount: parseInt(row.new_count || 0, 10),
-            convertedCount: parseInt(row.converted_count || 0, 10)
-        };
-    } catch (err) {
-        console.error('❌ [POSTGRES] getLeadStats error:', err.message);
-        return { success: false, error: err.message };
+    const p = getPgPool();
+    if (p) {
+        try {
+            const res = await p.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(*) FILTER (WHERE LOWER(status) = 'new') as new_count,
+                    COUNT(*) FILTER (WHERE LOWER(status) = 'converted') as converted_count
+                FROM leads
+            `);
+            const row = res.rows[0] || {};
+            return {
+                success: true,
+                total: parseInt(row.total || 0, 10),
+                newCount: parseInt(row.new_count || 0, 10),
+                convertedCount: parseInt(row.converted_count || 0, 10)
+            };
+        } catch (err) {
+            console.error('❌ [POSTGRES] getLeadStats error:', err.message);
+        }
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { count: total } = await sb.from('leads').select('*', { count: 'exact', head: true });
+            const { count: newCount } = await sb.from('leads').select('*', { count: 'exact', head: true }).ilike('status', 'new');
+            return { success: true, total: total || 0, newCount: newCount || 0, convertedCount: 0 };
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message };
+        }
+    }
+
+    return { success: false, notConfigured: true };
 }
 
 /**
@@ -326,15 +473,49 @@ async function getLeadStats() {
  */
 async function getLeadById(id) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true, data: null };
-    const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true, data: null };
 
-    try {
-        const res = await p.query('SELECT * FROM leads WHERE id = $1', [id]);
-        return { success: true, data: res.rows[0] || null };
-    } catch (err) {
-        return { success: false, error: err.message, data: null };
+    const p = getPgPool();
+    if (p) {
+        try {
+            const res = await p.query('SELECT * FROM leads WHERE id = $1', [id]);
+            return { success: true, data: res.rows[0] || null };
+        } catch (err) {
+            console.error('❌ [POSTGRES] getLeadById error:', err.message);
+        }
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { data, error } = await sb.from('leads').select('*').eq('id', id).single();
+            if (!error && data) return { success: true, data };
+            const { data: enqData } = await sb.from('enquiries').select('*').eq('id', id).single();
+            if (enqData) {
+                return {
+                    success: true,
+                    data: {
+                        id: enqData.id,
+                        lead_code: enqData.lead_code || `SV-ENQ-${String(enqData.id).padStart(5, '0')}`,
+                        full_name: enqData.full_name,
+                        customer_name: enqData.full_name,
+                        phone: enqData.phone_number,
+                        phone_number: enqData.phone_number,
+                        appointment_date: enqData.appointment_date,
+                        appointment_time: enqData.appointment_time,
+                        property_requirement: enqData.property_requirement,
+                        status: (enqData.status || 'New').toLowerCase(),
+                        created_at: enqData.created_at,
+                        email: enqData.email,
+                        message: enqData.message
+                    }
+                };
+            }
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message, data: null };
+        }
+    }
+
+    return { success: false, notConfigured: true, data: null };
 }
 
 /**
@@ -342,154 +523,238 @@ async function getLeadById(id) {
  */
 async function updateLeadStatus(id, status) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true };
-    const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true };
 
-    try {
-        const res = await p.query(
-            'UPDATE leads SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-            [status, id]
-        );
-        return { success: true, data: res.rows[0] };
-    } catch (err) {
-        return { success: false, error: err.message };
+    const p = getPgPool();
+    if (p) {
+        try {
+            const res = await p.query(
+                'UPDATE leads SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+                [status, id]
+            );
+            return { success: true, data: res.rows[0] };
+        } catch (err) {
+            console.error('❌ [POSTGRES] updateLeadStatus error:', err.message);
+        }
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { data } = await sb.from('leads').update({ status }).eq('id', id).select();
+            if (data && data.length > 0) return { success: true, data: data[0] };
+            const { data: enqData } = await sb.from('enquiries').update({ status }).eq('id', id).select();
+            if (enqData && enqData.length > 0) return { success: true, data: enqData[0] };
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message };
+        }
+    }
+
+    return { success: false, notConfigured: true };
 }
 
 /**
- * Insert an appointment into PostgreSQL
+ * Insert an appointment into PostgreSQL or Supabase
  */
 async function insertAppointment(apt) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true };
-    const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true };
 
-    try {
-        const query = `
-            INSERT INTO appointments (
-                appointment_code, lead_id, property_id, customer_name, phone,
-                notes, requested_date, requested_time, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING *
-        `;
-        const values = [
-            apt.appointment_code || `SV-VISIT-${Date.now().toString().slice(-5)}`,
-            apt.lead_id ? parseInt(apt.lead_id, 10) : null,
-            apt.property_id ? parseInt(apt.property_id, 10) : null,
-            apt.customer_name || 'Site Visit Visitor',
-            apt.phone,
-            apt.notes || null,
-            apt.requested_date,
-            apt.requested_time || null,
-            apt.status || 'requested'
-        ];
-        const res = await p.query(query, values);
-        return { success: true, data: res.rows[0] };
-    } catch (err) {
-        console.error('❌ [POSTGRES] insertAppointment error:', err.message);
-        return { success: false, error: err.message };
+    const payload = {
+        appointment_code: apt.appointment_code || `SV-VISIT-${Date.now().toString().slice(-5)}`,
+        lead_id: apt.lead_id ? parseInt(apt.lead_id, 10) : null,
+        property_id: apt.property_id ? parseInt(apt.property_id, 10) : null,
+        customer_name: apt.customer_name || 'Site Visit Visitor',
+        phone: apt.phone,
+        notes: apt.notes || null,
+        requested_date: apt.requested_date,
+        requested_time: apt.requested_time || null,
+        status: apt.status || 'requested'
+    };
+
+    const p = getPgPool();
+    if (p) {
+        try {
+            const query = `
+                INSERT INTO appointments (
+                    appointment_code, lead_id, property_id, customer_name, phone,
+                    notes, requested_date, requested_time, status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                RETURNING *
+            `;
+            const values = [
+                payload.appointment_code, payload.lead_id, payload.property_id,
+                payload.customer_name, payload.phone, payload.notes,
+                payload.requested_date, payload.requested_time, payload.status
+            ];
+            const res = await p.query(query, values);
+            return { success: true, data: res.rows[0] };
+        } catch (err) {
+            console.error('❌ [POSTGRES] insertAppointment error:', err.message);
+        }
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { data, error } = await sb.from('appointments').insert([payload]).select();
+            if (!error && data && data.length > 0) {
+                return { success: true, data: data[0] };
+            }
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message };
+        }
+    }
+
+    return { success: false, notConfigured: true };
 }
 
 /**
- * Fetch appointments from PostgreSQL
+ * Fetch appointments from PostgreSQL or Supabase
  */
 async function fetchAppointments(options = {}) {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true, data: [], count: 0 };
+
     const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true, data: [], count: 0 };
+    if (p) {
+        try {
+            const conditions = [];
+            const params = [];
+            let paramIdx = 1;
 
-    try {
-        const conditions = [];
-        const params = [];
-        let paramIdx = 1;
+            if (options.status) {
+                conditions.push(`LOWER(status) = LOWER($${paramIdx++})`);
+                params.push(options.status);
+            }
 
-        if (options.status) {
-            conditions.push(`LOWER(status) = LOWER($${paramIdx++})`);
-            params.push(options.status);
+            const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+            const countRes = await p.query(`SELECT COUNT(*) as count FROM appointments ${whereClause}`, params);
+            const total = parseInt(countRes.rows[0]?.count || 0, 10);
+
+            let query = `SELECT * FROM appointments ${whereClause} ORDER BY requested_date ASC, id DESC`;
+            if (options.limit) {
+                query += ` LIMIT $${paramIdx++}`;
+                params.push(parseInt(options.limit, 10));
+            }
+            if (options.offset) {
+                query += ` OFFSET $${paramIdx++}`;
+                params.push(parseInt(options.offset, 10));
+            }
+
+            const rowsRes = await p.query(query, params);
+            return { success: true, data: rowsRes.rows, count: total };
+        } catch (err) {
+            console.error('❌ [POSTGRES] fetchAppointments error:', err.message);
         }
-
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-        const countRes = await p.query(`SELECT COUNT(*) as count FROM appointments ${whereClause}`, params);
-        const total = parseInt(countRes.rows[0]?.count || 0, 10);
-
-        let query = `SELECT * FROM appointments ${whereClause} ORDER BY requested_date ASC, id DESC`;
-        if (options.limit) {
-            query += ` LIMIT $${paramIdx++}`;
-            params.push(parseInt(options.limit, 10));
-        }
-        if (options.offset) {
-            query += ` OFFSET $${paramIdx++}`;
-            params.push(parseInt(options.offset, 10));
-        }
-
-        const rowsRes = await p.query(query, params);
-        return { success: true, data: rowsRes.rows, count: total };
-    } catch (err) {
-        console.error('❌ [POSTGRES] fetchAppointments error:', err.message);
-        return { success: false, error: err.message, data: [], count: 0 };
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            let query = sb.from('appointments').select('*', { count: 'exact' });
+            if (options.status) query = query.ilike('status', options.status);
+            query = query.order('id', { ascending: false });
+            const { data, count, error } = await query;
+            if (!error && data) return { success: true, data, count: count || data.length };
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message, data: [], count: 0 };
+        }
+    }
+
+    return { success: false, notConfigured: true, data: [], count: 0 };
 }
 
 /**
- * Get appointment stats from PostgreSQL
+ * Get appointment stats
  */
 async function getAppointmentStats() {
     if (!isPostgresConfigured()) return { success: false, notConfigured: true };
-    const p = getPgPool();
-    if (!p) return { success: false, notConfigured: true };
 
-    try {
-        const res = await p.query(`
-            SELECT 
-                COUNT(*) as total,
-                COUNT(*) FILTER (WHERE LOWER(status) IN ('requested', 'confirmed')) as pending_count
-            FROM appointments
-        `);
-        const row = res.rows[0] || {};
-        return {
-            success: true,
-            total: parseInt(row.total || 0, 10),
-            pendingCount: parseInt(row.pending_count || 0, 10)
-        };
-    } catch (err) {
-        return { success: false, error: err.message };
+    const p = getPgPool();
+    if (p) {
+        try {
+            const res = await p.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(*) FILTER (WHERE LOWER(status) IN ('requested', 'confirmed')) as pending_count
+                FROM appointments
+            `);
+            const row = res.rows[0] || {};
+            return {
+                success: true,
+                total: parseInt(row.total || 0, 10),
+                pendingCount: parseInt(row.pending_count || 0, 10)
+            };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
     }
+
+    const sb = getSupabaseClient();
+    if (sb) {
+        try {
+            const { count: total } = await sb.from('appointments').select('*', { count: 'exact', head: true });
+            const { count: pendingCount } = await sb.from('appointments').select('*', { count: 'exact', head: true }).in('status', ['requested', 'confirmed']);
+            return { success: true, total: total || 0, pendingCount: pendingCount || 0 };
+        } catch (sbErr) {
+            return { success: false, error: sbErr.message };
+        }
+    }
+
+    return { success: false, notConfigured: true };
 }
 
 /**
- * Test connectivity to PostgreSQL
+ * Test connectivity
  */
 async function testConnection() {
-    if (!isPostgresConfigured()) {
-        return {
-            connected: false,
-            message: 'PostgreSQL/Supabase DATABASE_URL not configured'
-        };
-    }
-    const p = getPgPool();
-    if (!p) return { connected: false, message: 'Could not create connection pool' };
-
-    try {
-        const client = await p.connect();
-        try {
-            const res = await client.query('SELECT NOW() as now, current_database() as db');
-            return {
-                connected: true,
-                database: res.rows[0]?.db,
-                serverTime: res.rows[0]?.now
-            };
-        } finally {
-            client.release();
+    if (isDirectPostgresConfigured()) {
+        const p = getPgPool();
+        if (p) {
+            try {
+                const client = await p.connect();
+                try {
+                    const res = await client.query('SELECT NOW() as now, current_database() as db');
+                    return {
+                        connected: true,
+                        type: 'postgresql',
+                        database: res.rows[0]?.db,
+                        serverTime: res.rows[0]?.now
+                    };
+                } finally {
+                    client.release();
+                }
+            } catch (err) {
+                return { connected: false, type: 'postgresql', error: err.message };
+            }
         }
-    } catch (err) {
-        return { connected: false, error: err.message };
     }
+
+    if (isSupabaseConfigured()) {
+        const sb = getSupabaseClient();
+        if (sb) {
+            try {
+                const { data, error } = await sb.from('leads').select('id').limit(1);
+                if (!error) return { connected: true, type: 'supabase_rest', table: 'leads' };
+                const { error: enqErr } = await sb.from('enquiries').select('id').limit(1);
+                if (!enqErr) return { connected: true, type: 'supabase_rest', table: 'enquiries' };
+                return { connected: false, type: 'supabase_rest', error: (error || enqErr).message };
+            } catch (sbErr) {
+                return { connected: false, type: 'supabase_rest', error: sbErr.message };
+            }
+        }
+    }
+
+    return {
+        connected: false,
+        message: 'Neither PostgreSQL connection string nor Supabase API keys are configured in environment variables'
+    };
 }
 
 module.exports = {
     isPostgresConfigured,
+    isDirectPostgresConfigured,
+    isSupabaseConfigured,
     getPgPool,
+    getSupabaseClient,
     initializePostgresTables,
     insertLead,
     fetchLeads,
