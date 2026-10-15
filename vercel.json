@@ -8,8 +8,12 @@
   ],
   "functions": {
     "api/index.js": {
-      "runtime": "nodejs22.x",
-      "includeFiles": "views/**,database/**,data/**,public/**"
+      "includeFiles": [
+        "views/**",
+        "public/**",
+        "database/**",
+        "data/**"
+      ]
     }
   }
 }

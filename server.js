@@ -147,10 +147,16 @@ app.use(session({
 
 // ── View Engine ───────────────────────────────────────────
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+const viewsDir = fs.existsSync(path.join(__dirname, 'views'))
+    ? path.join(__dirname, 'views')
+    : path.join(process.cwd(), 'views');
+app.set('views', viewsDir);
 
 // ── Static Files ──────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: false }));
+const publicDir = fs.existsSync(path.join(__dirname, 'public'))
+    ? path.join(__dirname, 'public')
+    : path.join(process.cwd(), 'public');
+app.use(express.static(publicDir, { maxAge: 0, etag: false }));
 
 // ── Global Middleware ─────────────────────────────────────
 app.use(loadUser);
@@ -225,7 +231,11 @@ app.use('/api/notifications', apiNotificationRoutes);
 
 // ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => {
-    res.status(404).render('public/404', { title: 'Page Not Found' });
+    try {
+        res.status(404).render('public/404', { title: 'Page Not Found' });
+    } catch (e) {
+        res.status(404).send('<!DOCTYPE html><html><head><title>404 - Not Found</title></head><body style="font-family:sans-serif;text-align:center;padding:50px;"><h1>404 - Page Not Found</h1><p><a href="/">Return to Home</a></p></body></html>');
+    }
 });
 
 // ── Error Handler ─────────────────────────────────────────
@@ -234,7 +244,14 @@ app.use((err, req, res, next) => {
     if (req.path.startsWith('/api/')) {
         return res.status(500).json({ error: 'Internal server error' });
     }
-    res.status(500).render('public/error', { title: 'Error', error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong' });
+    try {
+        res.status(500).render('public/error', {
+            title: 'Error',
+            error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+        });
+    } catch (renderErr) {
+        res.status(500).send(`<!DOCTYPE html><html><head><title>500 - Server Error</title></head><body style="font-family:sans-serif;text-align:center;padding:50px;"><h1>500 - Server Error</h1><p>${err.message || 'Something went wrong.'}</p><p><a href="/">Return to Home</a></p></body></html>`);
+    }
 });
 
 // ── Start (Dual Port Binding: Listen on 3000 and 4000) ────

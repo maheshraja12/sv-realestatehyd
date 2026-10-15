@@ -11,19 +11,31 @@ const fs = require('fs');
 let DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH;
 if (process.env.VERCEL) {
     DB_PATH = '/tmp/svrealestate.db';
-    const bundledDb = path.join(__dirname, '..', 'data', 'svrealestate.db');
-    if (!fs.existsSync('/tmp/svrealestate.db') && fs.existsSync(bundledDb)) {
-        try {
-            fs.copyFileSync(bundledDb, '/tmp/svrealestate.db');
-        } catch (e) {
-            console.warn('Notice: Could not copy bundled db to /tmp:', e.message);
+    const bundledCandidates = [
+        path.join(__dirname, '..', 'data', 'svrealestate.db'),
+        path.join(process.cwd(), 'data', 'svrealestate.db')
+    ];
+    if (!fs.existsSync('/tmp/svrealestate.db')) {
+        for (const candidate of bundledCandidates) {
+            if (fs.existsSync(candidate)) {
+                try {
+                    fs.copyFileSync(candidate, '/tmp/svrealestate.db');
+                    break;
+                } catch (e) {
+                    console.warn('Notice: Could not copy bundled db to /tmp:', e.message);
+                }
+            }
         }
     }
 } else if (!DB_PATH) {
     DB_PATH = path.join(__dirname, '..', 'data', 'svrealestate.db');
 }
 
-const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+const schemaCandidates = [
+    path.join(__dirname, 'schema.sql'),
+    path.join(process.cwd(), 'database', 'schema.sql')
+];
+const SCHEMA_PATH = schemaCandidates.find(p => fs.existsSync(p)) || schemaCandidates[0];
 
 // Ensure data directory exists
 const dataDir = path.dirname(DB_PATH);
@@ -122,6 +134,7 @@ function createMemoryDb() {
 
     const memLeads = [];
     const memAppointments = [];
+    const memSessions = new Map();
     const memSettings = {
         business_name: 'SV Real Estates Hyderabad',
         business_phone: '+91-9876543210',
@@ -171,6 +184,14 @@ function createMemoryDb() {
                     return [];
                 },
                 get: (...params) => {
+                    if (s.includes('from sessions where sid =')) {
+                        const sid = params[0];
+                        const sessRow = memSessions.get(sid);
+                        if (sessRow && sessRow.expired_at > Date.now()) {
+                            return { sess: sessRow.sess };
+                        }
+                        return null;
+                    }
                     if (s.includes('count(*) as count from properties')) {
                         return { count: memProperties.length };
                     }
@@ -202,6 +223,19 @@ function createMemoryDb() {
                     return null;
                 },
                 run: (...params) => {
+                    if (s.includes('insert into sessions')) {
+                        memSessions.set(params[0], { sess: params[1], expired_at: params[2] });
+                        return { changes: 1 };
+                    }
+                    if (s.includes('delete from sessions')) {
+                        memSessions.delete(params[0]);
+                        return { changes: 1 };
+                    }
+                    if (s.includes('update sessions set expired_at')) {
+                        const sessRow = memSessions.get(params[1]);
+                        if (sessRow) sessRow.expired_at = params[0];
+                        return { changes: 1 };
+                    }
                     return { lastInsertRowid: Date.now(), changes: 1 };
                 }
             };
@@ -241,8 +275,14 @@ function initializeDb() {
         console.log('✅ Fallback memory data store initialized');
         return database;
     }
-    const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-    database.exec(schema);
+    if (fs.existsSync(SCHEMA_PATH)) {
+        try {
+            const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+            database.exec(schema);
+        } catch (schemaErr) {
+            console.warn('⚠️ Schema exec notice:', schemaErr.message);
+        }
+    }
 
     // Auto-migrate any newly added columns if table already existed
     try {
