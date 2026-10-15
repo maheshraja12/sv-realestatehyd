@@ -2,6 +2,7 @@
  * Lead Management API
  */
 const express = require('express');
+const crypto = require('node:crypto');
 const router = express.Router();
 const { getDb } = require('../../database/db');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
@@ -17,6 +18,11 @@ const {
 
 // Generate unique lead code
 function generateLeadCode() {
+    // Vercel serverless instances do not share SQLite state. Use a collision-resistant
+    // reference code there; the persistent cloud database is the source of truth.
+    if (process.env.VERCEL) {
+        return `SV-LEAD-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    }
     const db = getDb();
     const lastLead = db.prepare("SELECT lead_code FROM leads ORDER BY id DESC LIMIT 1").get();
     let nextNum = 1;
@@ -36,6 +42,16 @@ router.post('/public', async (req, res) => {
         const data = sanitizeObject(req.body);
         const errors = validateEnquiryData(data);
         if (errors.length > 0) return res.status(400).json({ errors });
+
+        // SQLite files under /tmp are temporary and isolated between Vercel function
+        // instances. Never tell a customer an enquiry was saved unless a persistent
+        // database is configured for the deployed app.
+        if (process.env.VERCEL && !isPostgresConfigured() && !isMySqlConfigured()) {
+            console.error('❌ [ENQUIRY] Vercel has no persistent database configured. Set DATABASE_URL/POSTGRES_URL or Supabase credentials, or configure MySQL.');
+            return res.status(503).json({
+                error: 'Enquiry service is temporarily unavailable because persistent database storage is not configured. Please call our office directly.'
+            });
+        }
 
         const leadCode = generateLeadCode();
 
@@ -104,6 +120,12 @@ router.post('/public', async (req, res) => {
                 console.log(`✅ [POSTGRES] Successfully stored cloud lead #${pgRecord ? pgRecord.id : 'OK'} for ${customerName}`);
             } else if (!pgResult.notConfigured) {
                 console.error('❌ [POSTGRES] insertLead failed:', pgResult.error);
+                // Do not fall back to ephemeral SQLite on Vercel and falsely report success.
+                if (process.env.VERCEL && !isMySqlConfigured()) {
+                    return res.status(500).json({ error: 'We could not save your enquiry to the database. Please try again or call our office.' });
+                }
+            } else if (process.env.VERCEL && !isMySqlConfigured()) {
+                return res.status(503).json({ error: 'Persistent enquiry storage is not configured. Please call our office.' });
             }
         }
 
