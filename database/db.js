@@ -144,6 +144,7 @@ function createMemoryDb() {
     };
 
     return {
+        isMemory: true,
         exec: () => {},
         pragma: () => [],
         close: () => {},
@@ -251,9 +252,11 @@ function getDb() {
             try {
                 db = new DatabaseSync(DB_PATH);
                 try { db.exec('PRAGMA foreign_keys = ON;'); } catch {}
-                try { db.exec('PRAGMA journal_mode = WAL;'); } catch {
+                try { db.exec('PRAGMA journal_mode = MEMORY;'); } catch {
                     try { db.exec('PRAGMA journal_mode = DELETE;'); } catch {}
                 }
+                try { db.exec('PRAGMA synchronous = OFF;'); } catch {}
+                try { db.exec('PRAGMA temp_store = MEMORY;'); } catch {}
                 try { db.exec('PRAGMA busy_timeout = 5000;'); } catch {}
                 db.pragma = function (cmd) {
                     try { return db.exec(`PRAGMA ${cmd};`); } catch { return []; }
@@ -270,53 +273,59 @@ function getDb() {
 }
 
 function initializeDb() {
-    const database = getDb();
-    if (!DatabaseSync) {
-        console.log('✅ Fallback memory data store initialized');
-        return database;
-    }
-    if (fs.existsSync(SCHEMA_PATH)) {
-        try {
-            const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-            database.exec(schema);
-        } catch (schemaErr) {
-            console.warn('⚠️ Schema exec notice:', schemaErr.message);
-        }
-    }
-
-    // Auto-migrate any newly added columns if table already existed
     try {
-        const columns = database.prepare('PRAGMA table_info(leads)').all().map(c => c.name);
-        const requiredCols = [
-            { name: 'full_name', type: 'TEXT' },
-            { name: 'phone_number', type: 'TEXT' },
-            { name: 'appointment_date', type: 'TEXT' },
-            { name: 'appointment_time', type: 'TEXT' },
-            { name: 'property_requirement', type: 'TEXT' }
-        ];
-        for (const col of requiredCols) {
-            if (!columns.includes(col.name)) {
-                database.exec(`ALTER TABLE leads ADD COLUMN ${col.name} ${col.type};`);
+        const database = getDb();
+        if (!DatabaseSync || database.isMemory) {
+            console.log('✅ Fallback memory data store initialized');
+            return database;
+        }
+        if (fs.existsSync(SCHEMA_PATH)) {
+            try {
+                const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+                database.exec(schema);
+            } catch (schemaErr) {
+                console.warn('⚠️ Schema exec notice:', schemaErr.message);
             }
         }
-    } catch (e) {
-        // Table created freshly from schema.sql
-    }
 
-    // Auto-seed if database is fresh (e.g. freshly created in /tmp or new environment)
-    try {
-        const propCount = database.prepare('SELECT COUNT(*) as count FROM properties').get().count;
-        if (propCount === 0) {
-            console.log('🌱 Fresh database detected, auto-seeding properties and admin...');
-            const { seed } = require('./seed');
-            seed(database);
+        // Auto-migrate any newly added columns if table already existed
+        try {
+            const columns = database.prepare('PRAGMA table_info(leads)').all().map(c => c.name);
+            const requiredCols = [
+                { name: 'full_name', type: 'TEXT' },
+                { name: 'phone_number', type: 'TEXT' },
+                { name: 'appointment_date', type: 'TEXT' },
+                { name: 'appointment_time', type: 'TEXT' },
+                { name: 'property_requirement', type: 'TEXT' }
+            ];
+            for (const col of requiredCols) {
+                if (!columns.includes(col.name)) {
+                    database.exec(`ALTER TABLE leads ADD COLUMN ${col.name} ${col.type};`);
+                }
+            }
+        } catch (e) {
+            // Table created freshly from schema.sql
         }
-    } catch (seedErr) {
-        console.warn('⚠️ Auto-seed notice:', seedErr.message);
-    }
 
-    console.log('✅ Database initialized successfully');
-    return database;
+        // Auto-seed if database is fresh (e.g. freshly created in /tmp or new environment)
+        try {
+            const propCount = database.prepare('SELECT COUNT(*) as count FROM properties').get().count;
+            if (propCount === 0) {
+                console.log('🌱 Fresh database detected, auto-seeding properties and admin...');
+                const { seed } = require('./seed');
+                seed(database);
+            }
+        } catch (seedErr) {
+            console.warn('⚠️ Auto-seed notice:', seedErr.message);
+        }
+
+        console.log('✅ Database initialized successfully');
+        return database;
+    } catch (globalDbErr) {
+        console.warn('⚠️ initializeDb global fallback to memory:', globalDbErr.message);
+        db = createMemoryDb();
+        return db;
+    }
 }
 
 function closeDb() {

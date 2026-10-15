@@ -16,9 +16,17 @@ const { initializeMySql, isMySqlConfigured } = require('./database/mysql');
 const { loadUser } = require('./middleware/auth');
 
 // Initialize database
-initializeDb();
+try {
+    initializeDb();
+} catch (e) {
+    console.warn('DB init notice:', e.message);
+}
 if (isMySqlConfigured()) {
-    initializeMySql().catch(err => console.warn('MySQL init notice:', err.message));
+    try {
+        initializeMySql().catch(err => console.warn('MySQL init notice:', err.message));
+    } catch (e) {
+        console.warn('MySQL init notice:', e.message);
+    }
 }
 
 const app = express();
@@ -130,8 +138,19 @@ class SqliteSessionStore extends Store {
 }
 
 const { getDb } = require('./database/db');
+let sessionStore;
+if (process.env.VERCEL) {
+    sessionStore = new session.MemoryStore();
+} else {
+    try {
+        sessionStore = new SqliteSessionStore(getDb());
+    } catch (e) {
+        sessionStore = new session.MemoryStore();
+    }
+}
+
 app.use(session({
-    store: new SqliteSessionStore(getDb()),
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
