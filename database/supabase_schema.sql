@@ -107,15 +107,33 @@ ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous visitors (public website) to submit leads and appointments
+-- Allow anonymous & authenticated to insert, select, and update leads and appointments
 DROP POLICY IF EXISTS "Public can insert leads" ON public.leads;
 CREATE POLICY "Public can insert leads" ON public.leads FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read leads" ON public.leads;
+CREATE POLICY "Public can read leads" ON public.leads FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public can update leads" ON public.leads;
+CREATE POLICY "Public can update leads" ON public.leads FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public can insert enquiries" ON public.enquiries;
 CREATE POLICY "Public can insert enquiries" ON public.enquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public can read enquiries" ON public.enquiries;
+CREATE POLICY "Public can read enquiries" ON public.enquiries FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public can update enquiries" ON public.enquiries;
+CREATE POLICY "Public can update enquiries" ON public.enquiries FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Public can insert appointments" ON public.appointments;
 CREATE POLICY "Public can insert appointments" ON public.appointments FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read appointments" ON public.appointments;
+CREATE POLICY "Public can read appointments" ON public.appointments FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public can update appointments" ON public.appointments;
+CREATE POLICY "Public can update appointments" ON public.appointments FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- Allow service_role and postgres full access to everything
 DROP POLICY IF EXISTS "Service role full access leads" ON public.leads;
