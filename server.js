@@ -191,6 +191,7 @@ app.use((req, res, next) => {
     res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'info@svbuildingmaterials.com';
     res.locals.businessWhatsapp = process.env.BUSINESS_WHATSAPP || '919346423434';
     res.locals.businessAddress = process.env.BUSINESS_ADDRESS || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085';
+    res.locals.businessInstagram = process.env.BUSINESS_INSTAGRAM || 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr';
     res.locals.path = req.path;
     res.locals.csrfToken = ''; // Placeholder, set per-form as needed
 

@@ -263,5 +263,6 @@ INSERT OR REPLACE INTO settings (key, value) VALUES
     ('business_email', 'info@svbuildingmaterials.com'),
     ('business_whatsapp', '919346423434'),
     ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
+    ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'),
     ('smtp_configured', '0'),
     ('whatsapp_configured', '0');

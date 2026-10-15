@@ -19,7 +19,7 @@
                     <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="social-icon text-whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
                     <a href="tel:<%= businessPhone %>" class="social-icon" title="Call Us"><i class="fas fa-phone"></i></a>
                     <a href="mailto:<%= businessEmail %>" class="social-icon" title="Email Us"><i class="fas fa-envelope"></i></a>
-                    <a href="#" class="social-icon" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="<%= typeof businessInstagram !== 'undefined' && businessInstagram ? businessInstagram : 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr' %>" target="_blank" rel="noopener noreferrer" class="social-icon" title="Follow us on Instagram"><i class="fab fa-instagram"></i></a>
                     <a href="#" class="social-icon" title="YouTube"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
@@ -73,6 +73,13 @@
                         <div>
                             <span>Email Enquiries</span>
                             <a href="mailto:<%= businessEmail %>"><%= businessEmail %></a>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fab fa-instagram text-gold"></i>
+                        <div>
+                            <span>Instagram Profile</span>
+                            <a href="<%= typeof businessInstagram !== 'undefined' && businessInstagram ? businessInstagram : 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr' %>" target="_blank" rel="noopener noreferrer">@sv.realestatehyd</a>
                         </div>
                     </li>
                     <li>

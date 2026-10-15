@@ -7,6 +7,7 @@
                 <a href="mailto:<%= businessEmail %>"><i class="fas fa-envelope text-gold"></i> <%= businessEmail %></a>
             </div>
             <div class="topbar-right">
+                <a href="<%= typeof businessInstagram !== 'undefined' && businessInstagram ? businessInstagram : 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr' %>" target="_blank" rel="noopener noreferrer" class="topbar-link" title="Follow on Instagram"><i class="fab fa-instagram text-gold"></i> @sv.realestatehyd</a>
                 <a href="tel:<%= businessPhone %>" class="topbar-link"><i class="fas fa-phone-alt text-gold"></i> <%= businessPhone %></a>
                 <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="topbar-link text-whatsapp"><i class="fab fa-whatsapp"></i> Chat on WhatsApp</a>
                 <% if (typeof currentUser !== 'undefined' && currentUser) { %>

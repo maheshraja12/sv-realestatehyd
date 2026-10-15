@@ -422,7 +422,7 @@ router.post('/settings', (req, res) => {
         const db = getDb();
         const allowedKeys = [
             'business_name', 'business_phone', 'business_email',
-            'business_whatsapp', 'business_address', 'smtp_host',
+            'business_whatsapp', 'business_address', 'business_instagram', 'smtp_host',
             'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_configured'
         ];
 
