@@ -6,6 +6,11 @@ const router = express.Router();
 const { getDb } = require('../../database/db');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
 const { sanitizeObject, validatePhone } = require('../../middleware/validation');
+const {
+    isPostgresConfigured,
+    insertAppointment: insertPgAppointment,
+    fetchAppointments: fetchPgAppointments
+} = require('../../database/postgres');
 
 function generateAppointmentCode() {
     const db = getDb();
@@ -19,7 +24,7 @@ function generateAppointmentCode() {
 }
 
 // POST /api/appointments/public — Request site visit (public)
-router.post('/public', (req, res) => {
+router.post('/public', async (req, res) => {
     try {
         const db = getDb();
         const data = sanitizeObject(req.body);
@@ -32,6 +37,26 @@ router.post('/public', (req, res) => {
         }
 
         const appointmentCode = generateAppointmentCode();
+
+        // ── PostgreSQL / Supabase Cloud Database Persistence ──────
+        if (isPostgresConfigured()) {
+            try {
+                await insertPgAppointment({
+                    appointment_code: appointmentCode,
+                    lead_id: data.lead_id ? parseInt(data.lead_id, 10) : null,
+                    property_id: data.property_id ? parseInt(data.property_id, 10) : null,
+                    customer_name: data.customer_name,
+                    phone: data.phone,
+                    notes: data.notes || null,
+                    requested_date: data.requested_date,
+                    requested_time: data.requested_time || null,
+                    status: 'requested'
+                });
+                console.log(`✅ [POSTGRES] Stored appointment ${appointmentCode} in cloud DB`);
+            } catch (pgErr) {
+                console.error('❌ [POSTGRES] insertAppointment error:', pgErr.message);
+            }
+        }
 
         const result = db.prepare(`
             INSERT INTO appointments (
@@ -71,9 +96,34 @@ router.post('/public', (req, res) => {
 });
 
 // GET /api/appointments — List appointments (admin)
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const db = getDb();
     const status = req.query.status || '';
+
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgAppointments({ status });
+            if (pgResult.success && pgResult.data.length > 0) {
+                const appointments = pgResult.data.map(a => ({
+                    id: a.id,
+                    appointment_code: a.appointment_code,
+                    customer_name: a.customer_name,
+                    phone: a.phone,
+                    requested_date: a.requested_date,
+                    requested_time: a.requested_time,
+                    confirmed_date: a.confirmed_date,
+                    confirmed_time: a.confirmed_time,
+                    status: a.status,
+                    notes: a.notes,
+                    property_title: 'Direct Enquiry',
+                    agent_name: 'Unassigned'
+                }));
+                return res.json({ appointments });
+            }
+        } catch (pgErr) {
+            console.error('Error fetching appointments from PostgreSQL in API:', pgErr);
+        }
+    }
     
     let where = '1=1';
     const params = [];

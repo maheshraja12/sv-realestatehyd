@@ -7,6 +7,13 @@ const { getDb } = require('../../database/db');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
 const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
+const { 
+    isPostgresConfigured, 
+    insertLead: insertPgLead, 
+    fetchLeads: fetchPgLeads, 
+    getLeadById: getPgLeadById, 
+    updateLeadStatus: updatePgLeadStatus 
+} = require('../../database/postgres');
 
 // Generate unique lead code
 function generateLeadCode() {
@@ -68,6 +75,37 @@ router.post('/public', async (req, res) => {
         const contactPref = (data.contact_preference && validPrefs.includes(data.contact_preference)) ? data.contact_preference : 'phone';
 
         console.log(`\n🔔 [NEW ENQUIRY RECEIVED] Code: ${leadCode} | Name: ${customerName} | Phone: ${cleanPhone} | Requirement: ${propertyReq} | Date: ${appointmentDate || 'Immediate'} ${appointmentTime}`);
+
+        // ── PostgreSQL / Supabase Cloud Database Persistence ──────
+        let pgRecord = null;
+        if (isPostgresConfigured()) {
+            const pgResult = await insertPgLead({
+                lead_code: leadCode,
+                customer_name: customerName,
+                full_name: customerName,
+                phone: cleanPhone,
+                phone_number: cleanPhone,
+                email: data.email || null,
+                property_id: data.property_id,
+                property_category: propertyReq,
+                property_requirement: propertyReq,
+                budget: data.budget || 'Consult / Market Price',
+                preferred_location: data.preferred_location || 'Hyderabad',
+                message: data.message || `Requirement: ${propertyReq}`,
+                contact_preference: contactPref,
+                appointment_date: appointmentDate,
+                appointment_time: appointmentTime,
+                source: source,
+                status: 'new'
+            });
+
+            if (pgResult.success) {
+                pgRecord = pgResult.data;
+                console.log(`✅ [POSTGRES] Successfully stored cloud lead #${pgRecord ? pgRecord.id : 'OK'} for ${customerName}`);
+            } else if (!pgResult.notConfigured) {
+                console.error('❌ [POSTGRES] insertLead failed:', pgResult.error);
+            }
+        }
 
         // ── MySQL Database Persistence ────────────────────────────
         let mysqlRecord = null;
@@ -189,6 +227,44 @@ router.get('/', requireAuth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 25;
     const offset = (page - 1) * limit;
 
+    // Check PostgreSQL / Supabase cloud first
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgLeads({
+                status: req.query.status,
+                search: req.query.search,
+                category: req.query.category,
+                limit,
+                offset
+            });
+            if (pgResult.success && pgResult.data.length > 0) {
+                const leads = pgResult.data.map(e => ({
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name || e.customer_name,
+                    customer_name: e.customer_name || e.full_name,
+                    phone_number: e.phone_number || e.phone,
+                    phone: e.phone || e.phone_number,
+                    email: e.email,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_category || e.property_requirement,
+                    budget: e.budget,
+                    preferred_location: e.preferred_location,
+                    message: e.message,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    property_title: null,
+                    agent_name: 'Unassigned'
+                }));
+                return res.json({ leads, total: pgResult.count, page, totalPages: Math.ceil(pgResult.count / limit) });
+            }
+        } catch (pgErr) {
+            console.error('Error fetching leads from PostgreSQL in API:', pgErr);
+        }
+    }
+
     if (isMySqlConfigured()) {
         try {
             const sqlResult = await fetchEnquiries({
@@ -247,6 +323,39 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
     const db = getDb();
     let lead = null;
+
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await getPgLeadById(req.params.id);
+            if (pgResult.success && pgResult.data) {
+                const e = pgResult.data;
+                lead = {
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name || e.customer_name,
+                    customer_name: e.customer_name || e.full_name,
+                    phone_number: e.phone_number || e.phone,
+                    phone: e.phone || e.phone_number,
+                    email: e.email,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_category || e.property_requirement,
+                    budget: e.budget,
+                    preferred_location: e.preferred_location,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    source: e.source || 'website',
+                    message: e.message || `Requirement: ${e.property_requirement}`,
+                    property_title: null,
+                    agent_name: 'Unassigned'
+                };
+                return res.json({ lead, notes: [], statusHistory: [] });
+            }
+        } catch (pgErr) {
+            console.error('Error fetching lead detail from PostgreSQL in API:', pgErr);
+        }
+    }
 
     if (isMySqlConfigured()) {
         try {
@@ -324,6 +433,13 @@ const handleStatusUpdate = (req, res) => {
         INSERT INTO lead_notes (lead_id, user_id, note, note_type)
         VALUES (?, ?, ?, 'status_change')
     `).run(req.params.id, req.session.userId, `Status changed from "${lead.status}" to "${status}"`);
+
+    // Sync to PostgreSQL / Supabase if configured
+    if (isPostgresConfigured()) {
+        updatePgLeadStatus(req.params.id, status).catch(pgErr => {
+            console.error('PostgreSQL status update error:', pgErr);
+        });
+    }
 
     // Sync to MySQL if configured
     if (isMySqlConfigured()) {

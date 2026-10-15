@@ -173,10 +173,14 @@
                         </div>
                         <div class="backup-item">
                             <div>
-                                <strong>Database Engine</strong>
-                                <p class="text-muted">SQLite WAL Mode Active. Instant local reads with zero cloud lock-in.</p>
+                                <strong>Cloud Database Persistence</strong>
+                                <p class="text-muted"><%= (typeof postgresConfigured !== 'undefined' && postgresConfigured) ? 'PostgreSQL / Supabase Cloud Active. All leads, appointments, and sessions are permanently saved across Vercel serverless requests.' : 'Local Database active. For live Vercel deployments, add your Supabase / PostgreSQL DATABASE_URL in Vercel Environment Variables to persist leads and sessions permanently.' %></p>
                             </div>
-                            <span class="status-badge status-published"><i class="fas fa-check"></i> Operational</span>
+                            <% if (typeof postgresConfigured !== 'undefined' && postgresConfigured) { %>
+                            <span class="status-badge status-published"><i class="fas fa-check-circle"></i> Cloud Connected</span>
+                            <% } else { %>
+                            <span class="status-badge status-draft"><i class="fas fa-info-circle"></i> Local Fallback</span>
+                            <% } %>
                         </div>
                     </div>
                 </div>

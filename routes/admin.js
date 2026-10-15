@@ -11,6 +11,14 @@ const {
     getEnquiryById, 
     getEnquiryStats 
 } = require('../database/mysql');
+const {
+    isPostgresConfigured,
+    fetchLeads: fetchPgLeads,
+    getLeadById: getPgLeadById,
+    getLeadStats: getPgLeadStats,
+    fetchAppointments: fetchPgAppointments,
+    getAppointmentStats: getPgAppointmentStats
+} = require('../database/postgres');
 
 // All admin routes require authentication
 router.use(requireAuth);
@@ -37,8 +45,42 @@ router.get('/dashboard', async (req, res) => {
         ORDER BY l.id DESC LIMIT 10
     `).all();
 
-    // If MySQL is configured, fetch live stats and recent enquiries from MySQL
-    if (isMySqlConfigured()) {
+    // If PostgreSQL / Supabase is configured, fetch live stats and recent leads from PostgreSQL
+    if (isPostgresConfigured()) {
+        try {
+            const pgStats = await getPgLeadStats();
+            if (pgStats.success) {
+                stats.totalLeads = pgStats.total;
+                stats.newLeads = pgStats.newCount;
+            }
+
+            const pgAptStats = await getPgAppointmentStats();
+            if (pgAptStats.success) {
+                stats.siteVisitsScheduled = pgAptStats.pendingCount;
+            }
+
+            const pgRecent = await fetchPgLeads({ limit: 10 });
+            if (pgRecent.success && pgRecent.data.length > 0) {
+                recentLeads = pgRecent.data.map(e => ({
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name || e.customer_name,
+                    customer_name: e.customer_name || e.full_name,
+                    phone_number: e.phone_number || e.phone,
+                    phone: e.phone || e.phone_number,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_category || e.property_requirement,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    property_title: null
+                }));
+            }
+        } catch (pgErr) {
+            console.error('Error fetching PostgreSQL dashboard data:', pgErr);
+        }
+    } else if (isMySqlConfigured()) {
         try {
             const sqlStats = await getEnquiryStats();
             if (sqlStats.success) {
@@ -182,7 +224,40 @@ router.get('/leads', async (req, res) => {
     let leads = [];
     let total = 0;
 
-    if (isMySqlConfigured()) {
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgLeads({
+                status,
+                search,
+                category,
+                limit,
+                offset
+            });
+            if (pgResult.success && pgResult.data.length > 0) {
+                total = pgResult.count;
+                leads = pgResult.data.map(e => ({
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name || e.customer_name,
+                    customer_name: e.customer_name || e.full_name,
+                    phone_number: e.phone_number || e.phone,
+                    phone: e.phone || e.phone_number,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_category || e.property_requirement,
+                    budget: e.budget,
+                    preferred_location: e.preferred_location,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    property_title: null,
+                    agent_name: 'Unassigned'
+                }));
+            }
+        } catch (pgErr) {
+            console.error('Error fetching leads from PostgreSQL:', pgErr);
+        }
+    } else if (isMySqlConfigured()) {
         try {
             const sqlResult = await fetchEnquiries({
                 status,
@@ -214,8 +289,8 @@ router.get('/leads', async (req, res) => {
         }
     }
 
-    // Fallback to local DB if MySQL not configured or returns empty on default view
-    if (!isMySqlConfigured() || (leads.length === 0 && !search && !status && !category)) {
+    // Fallback to local DB if cloud DB not configured or returns empty on default view
+    if ((!isPostgresConfigured() && !isMySqlConfigured()) || (leads.length === 0 && !search && !status && !category)) {
         let where = '1=1';
         const params = [];
 
@@ -272,7 +347,37 @@ router.get('/leads/:id', async (req, res) => {
     const db = getDb();
     let lead = null;
 
-    if (isMySqlConfigured()) {
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await getPgLeadById(req.params.id);
+            if (pgResult.success && pgResult.data) {
+                const e = pgResult.data;
+                lead = {
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    full_name: e.full_name || e.customer_name,
+                    customer_name: e.customer_name || e.full_name,
+                    phone_number: e.phone_number || e.phone,
+                    phone: e.phone || e.phone_number,
+                    email: e.email,
+                    appointment_date: e.appointment_date,
+                    appointment_time: e.appointment_time,
+                    property_requirement: e.property_requirement,
+                    property_category: e.property_category || e.property_requirement,
+                    budget: e.budget,
+                    preferred_location: e.preferred_location,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    source: e.source || 'website',
+                    message: e.message || `Requirement: ${e.property_requirement}`,
+                    property_title: null,
+                    agent_name: 'Unassigned'
+                };
+            }
+        } catch (pgErr) {
+            console.error('Error fetching lead detail from PostgreSQL:', pgErr);
+        }
+    } else if (isMySqlConfigured()) {
         try {
             const sqlResult = await getEnquiryById(req.params.id);
             if (sqlResult.success && sqlResult.data) {
@@ -356,7 +461,7 @@ router.get('/leads/:id', async (req, res) => {
 });
 
 // GET /admin/appointments
-router.get('/appointments', (req, res) => {
+router.get('/appointments', async (req, res) => {
     const db = getDb();
     const status = req.query.status || '';
     const page = parseInt(req.query.page) || 1;
@@ -370,17 +475,48 @@ router.get('/appointments', (req, res) => {
         params.push(status);
     }
 
-    const total = db.prepare(`SELECT COUNT(*) as count FROM appointments a WHERE ${where}`).get(...params).count;
-    const appointments = db.prepare(`
-        SELECT a.*, p.title as property_title, p.property_code,
-            u.name as agent_name
-        FROM appointments a
-        LEFT JOIN properties p ON a.property_id = p.id
-        LEFT JOIN users u ON a.assigned_agent_id = u.id
-        WHERE ${where}
-        ORDER BY a.requested_date ASC, a.created_at DESC
-        LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    let total = 0;
+    let appointments = [];
+
+    if (isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgAppointments({ status, limit, offset });
+            if (pgResult.success && pgResult.data.length > 0) {
+                total = pgResult.count;
+                appointments = pgResult.data.map(a => ({
+                    id: a.id,
+                    appointment_code: a.appointment_code,
+                    customer_name: a.customer_name,
+                    phone: a.phone,
+                    requested_date: a.requested_date,
+                    requested_time: a.requested_time,
+                    confirmed_date: a.confirmed_date,
+                    confirmed_time: a.confirmed_time,
+                    status: a.status,
+                    notes: a.notes,
+                    property_title: 'Direct Enquiry',
+                    property_code: 'SV-DIRECT',
+                    agent_name: 'Unassigned'
+                }));
+            }
+        } catch (pgErr) {
+            console.error('Error fetching appointments from PostgreSQL:', pgErr);
+        }
+    }
+
+    if (!isPostgresConfigured() || appointments.length === 0) {
+        total = db.prepare(`SELECT COUNT(*) as count FROM appointments a WHERE ${where}`).get(...params).count;
+        appointments = db.prepare(`
+            SELECT a.*, p.title as property_title, p.property_code,
+                u.name as agent_name
+            FROM appointments a
+            LEFT JOIN properties p ON a.property_id = p.id
+            LEFT JOIN users u ON a.assigned_agent_id = u.id
+            WHERE ${where}
+            ORDER BY a.requested_date ASC, a.created_at DESC
+            LIMIT ? OFFSET ?
+        `).all(...params, limit, offset);
+    }
 
     const totalPages = Math.ceil(total / limit);
     const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
@@ -412,6 +548,7 @@ router.get('/settings', (req, res) => {
         settings,
         message,
         error,
+        postgresConfigured: isPostgresConfigured(),
         unreadNotifications: 0
     });
 });

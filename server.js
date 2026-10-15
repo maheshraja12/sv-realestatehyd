@@ -138,8 +138,23 @@ class SqliteSessionStore extends Store {
 }
 
 const { getDb } = require('./database/db');
+const { isPostgresConfigured, getPgPool } = require('./database/postgres');
+
 let sessionStore;
-if (process.env.VERCEL) {
+if (isPostgresConfigured()) {
+    try {
+        const PgSession = require('connect-pg-simple')(session);
+        sessionStore = new PgSession({
+            pool: getPgPool(),
+            tableName: 'session',
+            createTableIfMissing: true
+        });
+        console.log('✅ [SESSION] Persistent PostgreSQL/Supabase session store active');
+    } catch (pgSessErr) {
+        console.warn('⚠️ [SESSION] PgSession fallback to memory:', pgSessErr.message);
+        sessionStore = new session.MemoryStore();
+    }
+} else if (process.env.VERCEL) {
     sessionStore = new session.MemoryStore();
 } else {
     try {

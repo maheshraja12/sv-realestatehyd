@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../database/db');
 const { sanitize, validatePhone } = require('../../middleware/validation');
+const { isPostgresConfigured, insertLead: insertPgLead } = require('../../database/postgres');
 
 // POST /api/chatbot/search — Search properties by criteria
 router.post('/search', (req, res) => {
@@ -67,7 +68,7 @@ router.post('/search', (req, res) => {
 });
 
 // POST /api/chatbot/enquiry — Submit enquiry via chatbot
-router.post('/enquiry', (req, res) => {
+router.post('/enquiry', async (req, res) => {
     try {
         const db = getDb();
         const { customer_name, phone, property_id, message, budget, preferred_location } = req.body;
@@ -93,6 +94,30 @@ router.post('/enquiry', (req, res) => {
         if (property_id) {
             const prop = db.prepare('SELECT category FROM properties WHERE id = ?').get(property_id);
             if (prop) propertyCategory = prop.category;
+        }
+
+        // ── PostgreSQL / Supabase Cloud Database Persistence ──────
+        if (isPostgresConfigured()) {
+            try {
+                await insertPgLead({
+                    lead_code: leadCode,
+                    customer_name: sanitize(customer_name),
+                    full_name: sanitize(customer_name),
+                    phone: sanitize(phone),
+                    phone_number: sanitize(phone),
+                    property_id: property_id ? parseInt(property_id) : null,
+                    property_category: propertyCategory,
+                    property_requirement: propertyCategory || 'General Property',
+                    budget: budget || null,
+                    preferred_location: preferred_location || null,
+                    message: message ? sanitize(message) : 'Enquiry via AI chatbot',
+                    source: 'chatbot',
+                    status: 'new'
+                });
+                console.log(`✅ [POSTGRES] Chatbot enquiry ${leadCode} stored in cloud DB`);
+            } catch (pgErr) {
+                console.error('❌ [POSTGRES] Chatbot lead insert error:', pgErr.message);
+            }
         }
 
         const result = db.prepare(`
