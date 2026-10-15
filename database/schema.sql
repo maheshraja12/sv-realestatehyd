@@ -256,11 +256,12 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- Default settings
-INSERT OR IGNORE INTO settings (key, value) VALUES
-    ('business_name', 'SV Real Estates Hyderabad'),
-    ('business_phone', '+91-9876543210'),
-    ('business_email', 'info@svrealestate.com'),
-    ('business_whatsapp', '919876543210'),
-    ('business_address', 'Hyderabad, Telangana, India'),
+INSERT OR REPLACE INTO settings (key, value) VALUES
+    ('business_name', 'Sri Venkateswara Building Material Traders'),
+    ('business_tagline', 'Building Construction & Materials Supplier'),
+    ('business_phone', '+91 9346423434'),
+    ('business_email', 'info@svbuildingmaterials.com'),
+    ('business_whatsapp', '919346423434'),
+    ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
     ('smtp_configured', '0'),
     ('whatsapp_configured', '0');

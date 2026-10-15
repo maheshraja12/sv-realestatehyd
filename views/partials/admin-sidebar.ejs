@@ -1,7 +1,7 @@
 <nav class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-brand">
         <i class="fas fa-building"></i>
-        <span>SV Real Estates</span>
+        <span><%= typeof businessName !== 'undefined' ? businessName : 'Sri Venkateswara' %></span>
     </div>
     <ul class="sidebar-nav">
         <li class="<%= path === '/admin/dashboard' ? 'active' : '' %>">

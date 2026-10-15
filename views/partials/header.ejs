@@ -2,7 +2,7 @@
     <div class="header-topbar">
         <div class="container topbar-inner">
             <div class="topbar-left">
-                <span><i class="fas fa-map-marker-alt text-gold"></i> Hyderabad, Telangana</span>
+                <span><i class="fas fa-map-marker-alt text-gold"></i> KPHB Colony, Kukatpally, Hyderabad</span>
                 <span class="topbar-sep">•</span>
                 <a href="mailto:<%= businessEmail %>"><i class="fas fa-envelope text-gold"></i> <%= businessEmail %></a>
             </div>
@@ -25,8 +25,8 @@
                     <span class="gold-monogram">SV</span>
                 </div>
                 <div class="brand-text">
-                    <span class="brand-title">SV REAL ESTATES</span>
-                    <span class="brand-subtitle">HYDERABAD • LUXURY LIVING</span>
+                    <span class="brand-title"><%= businessName %></span>
+                    <span class="brand-subtitle"><%= typeof businessTagline !== 'undefined' ? businessTagline : 'Building Construction & Materials Supplier' %></span>
                 </div>
             </a>
 

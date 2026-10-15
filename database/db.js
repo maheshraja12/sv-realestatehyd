@@ -136,11 +136,12 @@ function createMemoryDb() {
     const memAppointments = [];
     const memSessions = new Map();
     const memSettings = {
-        business_name: 'SV Real Estates Hyderabad',
-        business_phone: '+91-9876543210',
-        business_email: 'info@svrealestate.com',
-        business_whatsapp: '919876543210',
-        business_address: 'Road No. 36, Jubilee Hills, Hyderabad, Telangana, India'
+        business_name: 'Sri Venkateswara Building Material Traders',
+        business_tagline: 'Building Construction & Materials Supplier',
+        business_phone: '+91 9346423434',
+        business_email: 'info@svbuildingmaterials.com',
+        business_whatsapp: '919346423434',
+        business_address: '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'
     };
 
     return {

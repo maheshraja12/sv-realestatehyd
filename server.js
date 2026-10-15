@@ -185,10 +185,12 @@ app.use(loadUser);
 
 // Make common data available to all views
 app.use((req, res, next) => {
-    res.locals.businessName = process.env.BUSINESS_NAME || 'SV Real Estates Hyderabad';
-    res.locals.businessPhone = process.env.BUSINESS_PHONE || '+91-9876543210';
-    res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'info@svrealestate.com';
-    res.locals.businessWhatsapp = process.env.BUSINESS_WHATSAPP || '919876543210';
+    res.locals.businessName = process.env.BUSINESS_NAME || 'Sri Venkateswara Building Material Traders';
+    res.locals.businessTagline = process.env.BUSINESS_TAGLINE || 'Building Construction & Materials Supplier';
+    res.locals.businessPhone = process.env.BUSINESS_PHONE || '+91 9346423434';
+    res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'info@svbuildingmaterials.com';
+    res.locals.businessWhatsapp = process.env.BUSINESS_WHATSAPP || '919346423434';
+    res.locals.businessAddress = process.env.BUSINESS_ADDRESS || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085';
     res.locals.path = req.path;
     res.locals.csrfToken = ''; // Placeholder, set per-form as needed
 

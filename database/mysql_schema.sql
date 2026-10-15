@@ -162,6 +162,15 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+INSERT INTO settings (`key`, `value`) VALUES
+('business_name', 'Sri Venkateswara Building Material Traders'),
+('business_tagline', 'Building Construction & Materials Supplier'),
+('business_phone', '+91 9346423434'),
+('business_email', 'info@svbuildingmaterials.com'),
+('business_whatsapp', '919346423434'),
+('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
 -- 7. Notifications
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,

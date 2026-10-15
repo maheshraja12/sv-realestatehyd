@@ -8,12 +8,12 @@
                         <span class="gold-monogram">SV</span>
                     </div>
                     <div class="brand-text">
-                        <span class="brand-title">SV REAL ESTATES</span>
-                        <span class="brand-subtitle">HYDERABAD</span>
+                        <span class="brand-title"><%= businessName %></span>
+                        <span class="brand-subtitle"><%= typeof businessTagline !== 'undefined' ? businessTagline : 'Building Construction & Materials Supplier' %></span>
                     </div>
                 </a>
                 <p class="footer-desc">
-                    Hyderabad's trusted advisory for luxury villas, gated community plots, premium high-rise apartments, and commercial investments across West & North Hyderabad corridor.
+                    Hyderabad's trusted supplier for building construction materials, cement, steel, bricks, sand, and prime properties across Hyderabad.
                 </p>
                 <div class="footer-socials">
                     <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="social-icon text-whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
@@ -78,8 +78,8 @@
                     <li>
                         <i class="fas fa-building text-gold"></i>
                         <div>
-                            <span>Corporate Office</span>
-                            <p>Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033</p>
+                            <span>Office / Store</span>
+                            <p><%= typeof businessAddress !== 'undefined' ? businessAddress : '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085' %></p>
                         </div>
                     </li>
                 </ul>
@@ -89,7 +89,7 @@
 
     <div class="footer-bottom">
         <div class="container footer-bottom-inner">
-            <p>&copy; <%= new Date().getFullYear() %> SV Real Estates Hyderabad. All rights reserved. RERA Registered Advisory.</p>
+            <p>&copy; <%= new Date().getFullYear() %> <%= businessName %>. All rights reserved.</p>
             <div class="footer-bottom-links">
                 <a href="/about">About Us</a>
                 <a href="/services">Services</a>
@@ -101,7 +101,7 @@
 </footer>
 
 <!-- Floating WhatsApp Action -->
-<a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Real%20Estates,%20I%20am%20looking%20for%20property%20consultation." target="_blank" class="floating-whatsapp" aria-label="Contact via WhatsApp">
+<a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20Sri%20Venkateswara%20Building%20Material%20Traders,%20I%20am%20looking%20for%20information." target="_blank" class="floating-whatsapp" aria-label="Contact via WhatsApp">
     <i class="fab fa-whatsapp"></i>
     <span class="whatsapp-tooltip">Chat with us</span>
 </a>
