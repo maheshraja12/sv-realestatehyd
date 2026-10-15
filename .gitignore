@@ -4,10 +4,8 @@ node_modules/
 .env.local
 .env.*.local
 database/.env
-data/
 public/uploads/
 logs/
-*.db
 *.db-wal
 *.db-shm
 .DS_Store
