@@ -176,6 +176,9 @@ const publicDir = fs.existsSync(path.join(__dirname, 'public'))
     ? path.join(__dirname, 'public')
     : path.join(process.cwd(), 'public');
 app.use(express.static(publicDir, { maxAge: 0, etag: false }));
+if (process.env.VERCEL) {
+    app.use('/uploads', express.static('/tmp/uploads', { maxAge: 0, etag: false }));
+}
 
 // ── Global Middleware ─────────────────────────────────────
 app.use(loadUser);

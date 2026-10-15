@@ -6,15 +6,31 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'properties');
+const isVercel = Boolean(process.env.VERCEL);
+const BASE_UPLOAD_DIR = isVercel
+    ? path.join('/tmp', 'uploads')
+    : path.join(__dirname, '..', 'public', 'uploads');
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR = path.join(BASE_UPLOAD_DIR, 'properties');
+const DOCS_DIR = path.join(BASE_UPLOAD_DIR, 'documents');
+
+// Ensure upload directories exist safely without throwing on read-only filesystems
+function ensureDir(dirPath) {
+    try {
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+    } catch (e) {
+        // Safe bypass on read-only serverless filesystems
+    }
 }
+
+ensureDir(UPLOAD_DIR);
+ensureDir(DOCS_DIR);
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        ensureDir(UPLOAD_DIR);
         cb(null, UPLOAD_DIR);
     },
     filename: (req, file, cb) => {
@@ -43,13 +59,9 @@ const upload = multer({
 });
 
 // Brochure/document upload
-const DOCS_DIR = path.join(__dirname, '..', 'public', 'uploads', 'documents');
-if (!fs.existsSync(DOCS_DIR)) {
-    fs.mkdirSync(DOCS_DIR, { recursive: true });
-}
-
 const docStorage = multer.diskStorage({
     destination: (req, file, cb) => {
+        ensureDir(DOCS_DIR);
         cb(null, DOCS_DIR);
     },
     filename: (req, file, cb) => {
