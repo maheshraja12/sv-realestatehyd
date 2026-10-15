@@ -4,6 +4,12 @@
  * Seamlessly supports both direct PostgreSQL connection pooling (pg) and Supabase REST API (@supabase/supabase-js).
  */
 require('dotenv').config();
+
+// Ensure Node.js TLS allows self-signed intermediate certificates in Supabase / Cloud Postgres chains
+if (process.env.VERCEL || process.env.NODE_ENV === 'production' || process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const { Pool } = require('pg');
 let createClient;
 try {
@@ -68,23 +74,44 @@ function getSupabaseClient() {
 
 function getPoolConfig() {
     if (rawConnectionString) {
-        const isCloudHost = rawConnectionString.includes('supabase.co') ||
-                            rawConnectionString.includes('neon.tech') ||
-                            rawConnectionString.includes('vercel-storage.com') ||
-                            rawConnectionString.includes('render.com') ||
-                            rawConnectionString.includes('railway.app') ||
-                            rawConnectionString.includes('aivencloud.com') ||
-                            rawConnectionString.includes('amazonaws.com') ||
-                            process.env.PGSSLMODE === 'require' ||
-                            process.env.NODE_ENV === 'production';
+        try {
+            const parsed = new URL(rawConnectionString);
+            const isCloudHost = parsed.hostname.includes('supabase') ||
+                                parsed.hostname.includes('neon.tech') ||
+                                parsed.hostname.includes('vercel-storage.com') ||
+                                parsed.hostname.includes('render.com') ||
+                                parsed.hostname.includes('railway.app') ||
+                                parsed.hostname.includes('aivencloud.com') ||
+                                parsed.hostname.includes('amazonaws.com') ||
+                                process.env.PGSSLMODE === 'require' ||
+                                process.env.NODE_ENV === 'production' ||
+                                process.env.VERCEL;
 
-        return {
-            connectionString: rawConnectionString,
-            max: 10,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 10000,
-            ssl: isCloudHost ? { rejectUnauthorized: false } : undefined
-        };
+            return {
+                host: parsed.hostname,
+                port: parseInt(parsed.port, 10) || 5432,
+                user: decodeURIComponent(parsed.username || 'postgres'),
+                password: decodeURIComponent(parsed.password || ''),
+                database: parsed.pathname ? parsed.pathname.replace(/^\//, '') : 'postgres',
+                max: 10,
+                idleTimeoutMillis: 30000,
+                connectionTimeoutMillis: 10000,
+                ssl: isCloudHost ? { rejectUnauthorized: false } : undefined
+            };
+        } catch (err) {
+            // Fallback if URL parsing failed: strip query params that conflict with pg SSL
+            const cleanConnectionString = rawConnectionString
+                .replace(/[?&]sslmode=[^&]+/g, '')
+                .replace(/[?&]ssl=[^&]+/g, '');
+
+            return {
+                connectionString: cleanConnectionString,
+                max: 10,
+                idleTimeoutMillis: 30000,
+                connectionTimeoutMillis: 10000,
+                ssl: { rejectUnauthorized: false }
+            };
+        }
     }
 
     const host = process.env.PGHOST || 'localhost';
@@ -93,10 +120,11 @@ function getPoolConfig() {
     const password = process.env.PGPASSWORD || '';
     const database = process.env.PGDATABASE || 'postgres';
 
-    const isCloudHost = host.includes('supabase.co') ||
+    const isCloudHost = host.includes('supabase') ||
                         host.includes('neon.tech') ||
                         host.includes('vercel-storage.com') ||
-                        process.env.NODE_ENV === 'production';
+                        process.env.NODE_ENV === 'production' ||
+                        process.env.VERCEL;
 
     return {
         host,

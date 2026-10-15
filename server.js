@@ -3,6 +3,11 @@
  */
 require('dotenv').config();
 
+// Ensure Node.js TLS allows self-signed intermediate certificates in Supabase / Cloud Postgres chains
+if (process.env.VERCEL || process.env.NODE_ENV === 'production' || process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
@@ -141,11 +146,12 @@ const { getDb } = require('./database/db');
 const { isPostgresConfigured, getPgPool } = require('./database/postgres');
 
 let sessionStore;
-if (isPostgresConfigured()) {
+const pgPool = getPgPool();
+if (pgPool) {
     try {
         const PgSession = require('connect-pg-simple')(session);
         sessionStore = new PgSession({
-            pool: getPgPool(),
+            pool: pgPool,
             tableName: 'session',
             createTableIfMissing: true
         });
