@@ -12,10 +12,14 @@ const path = require('path');
 const fs = require('fs');
 
 const { initializeDb } = require('./database/db');
+const { initializeMySql, isMySqlConfigured } = require('./database/mysql');
 const { loadUser } = require('./middleware/auth');
 
 // Initialize database
 initializeDb();
+if (isMySqlConfigured()) {
+    initializeMySql().catch(err => console.warn('MySQL init notice:', err.message));
+}
 
 const app = express();
 app.set('trust proxy', 1);

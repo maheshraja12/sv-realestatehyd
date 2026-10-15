@@ -6,7 +6,7 @@ const router = express.Router();
 const { getDb } = require('../../database/db');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
-const { insertEnquiry, fetchEnquiries, getEnquiryById, isSupabaseConfigured, updateEnquiryStatus } = require('../../database/supabase');
+const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
 
 // Generate unique lead code
 function generateLeadCode() {
@@ -69,27 +69,29 @@ router.post('/public', async (req, res) => {
 
         console.log(`\n🔔 [NEW ENQUIRY RECEIVED] Code: ${leadCode} | Name: ${customerName} | Phone: ${cleanPhone} | Requirement: ${propertyReq} | Date: ${appointmentDate || 'Immediate'} ${appointmentTime}`);
 
-        // ── Supabase PostgreSQL Persistence ──────────────────
-        let supabaseRecord = null;
-        if (isSupabaseConfigured()) {
+        // ── MySQL Database Persistence ────────────────────────────
+        let mysqlRecord = null;
+        if (isMySqlConfigured()) {
             const todayStr = new Date().toISOString().slice(0, 10);
-            const sbResult = await insertEnquiry({
+            const sqlResult = await insertEnquiry({
                 full_name: customerName,
                 phone_number: cleanPhone,
                 appointment_date: appointmentDate || todayStr,
                 appointment_time: appointmentTime,
                 property_requirement: propertyReq,
+                email: data.email || null,
+                message: data.message || null,
                 status: 'New'
             });
 
-            if (!sbResult.success && !sbResult.notConfigured) {
-                console.error('❌ Supabase insert failed:', sbResult.error);
+            if (!sqlResult.success && !sqlResult.notConfigured) {
+                console.error('❌ MySQL insert failed:', sqlResult.error);
                 return res.status(500).json({ 
-                    error: `Database error: Failed to save enquiry to Supabase (${sbResult.error})` 
+                    error: `Database error: Failed to save enquiry to MySQL (${sqlResult.error})` 
                 });
             }
-            supabaseRecord = sbResult.data;
-            console.log(`✅ [SUPABASE] Successfully stored enquiry #${supabaseRecord ? supabaseRecord.id : 'OK'} for ${customerName}`);
+            mysqlRecord = sqlResult.data;
+            console.log(`✅ [MYSQL] Successfully stored enquiry #${mysqlRecord ? mysqlRecord.id : 'OK'} for ${customerName}`);
         }
 
         const result = db.prepare(`
@@ -187,18 +189,18 @@ router.get('/', requireAuth, async (req, res) => {
     const limit = parseInt(req.query.limit) || 25;
     const offset = (page - 1) * limit;
 
-    if (isSupabaseConfigured()) {
+    if (isMySqlConfigured()) {
         try {
-            const sbResult = await fetchEnquiries({
+            const sqlResult = await fetchEnquiries({
                 status: req.query.status,
                 search: req.query.search,
                 limit,
                 offset
             });
-            if (sbResult.success && sbResult.data.length > 0) {
-                const leads = sbResult.data.map(e => ({
+            if (sqlResult.success && sqlResult.data.length > 0) {
+                const leads = sqlResult.data.map(e => ({
                     id: e.id,
-                    lead_code: `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
                     full_name: e.full_name,
                     customer_name: e.full_name,
                     phone_number: e.phone_number,
@@ -212,10 +214,10 @@ router.get('/', requireAuth, async (req, res) => {
                     property_title: null,
                     agent_name: 'Unassigned'
                 }));
-                return res.json({ leads, total: sbResult.count, page, totalPages: Math.ceil(sbResult.count / limit) });
+                return res.json({ leads, total: sqlResult.count, page, totalPages: Math.ceil(sqlResult.count / limit) });
             }
-        } catch (sbErr) {
-            console.error('Error fetching leads from Supabase in API:', sbErr);
+        } catch (sqlErr) {
+            console.error('Error fetching leads from MySQL in API:', sqlErr);
         }
     }
 
@@ -246,14 +248,14 @@ router.get('/:id', requireAuth, async (req, res) => {
     const db = getDb();
     let lead = null;
 
-    if (isSupabaseConfigured()) {
+    if (isMySqlConfigured()) {
         try {
-            const sbResult = await getEnquiryById(req.params.id);
-            if (sbResult.success && sbResult.data) {
-                const e = sbResult.data;
+            const sqlResult = await getEnquiryById(req.params.id);
+            if (sqlResult.success && sqlResult.data) {
+                const e = sqlResult.data;
                 lead = {
                     id: e.id,
-                    lead_code: `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
                     full_name: e.full_name,
                     customer_name: e.full_name,
                     phone_number: e.phone_number,
@@ -264,15 +266,15 @@ router.get('/:id', requireAuth, async (req, res) => {
                     property_category: e.property_requirement,
                     status: (e.status || 'New').toLowerCase(),
                     created_at: e.created_at,
-                    source: 'website',
-                    message: `Requirement: ${e.property_requirement}`,
+                    source: e.source || 'website',
+                    message: e.message || `Requirement: ${e.property_requirement}`,
                     property_title: null,
                     agent_name: 'Unassigned'
                 };
                 return res.json({ lead, notes: [], statusHistory: [] });
             }
-        } catch (sbErr) {
-            console.error('Error fetching lead detail from Supabase in API:', sbErr);
+        } catch (sqlErr) {
+            console.error('Error fetching lead detail from MySQL in API:', sqlErr);
         }
     }
 
@@ -323,10 +325,10 @@ const handleStatusUpdate = (req, res) => {
         VALUES (?, ?, ?, 'status_change')
     `).run(req.params.id, req.session.userId, `Status changed from "${lead.status}" to "${status}"`);
 
-    // Sync to Supabase if configured
-    if (isSupabaseConfigured()) {
-        updateEnquiryStatus(req.params.id, status).catch(sbErr => {
-            console.error('Supabase status update error:', sbErr);
+    // Sync to MySQL if configured
+    if (isMySqlConfigured()) {
+        updateEnquiryStatus(req.params.id, status).catch(sqlErr => {
+            console.error('MySQL status update error:', sqlErr);
         });
     }
 

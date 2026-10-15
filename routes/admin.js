@@ -6,11 +6,11 @@ const router = express.Router();
 const { getDb } = require('../database/db');
 const { requireAuth } = require('../middleware/auth');
 const { 
-    isSupabaseConfigured, 
+    isMySqlConfigured, 
     fetchEnquiries, 
     getEnquiryById, 
     getEnquiryStats 
-} = require('../database/supabase');
+} = require('../database/mysql');
 
 // All admin routes require authentication
 router.use(requireAuth);
@@ -37,20 +37,20 @@ router.get('/dashboard', async (req, res) => {
         ORDER BY l.id DESC LIMIT 10
     `).all();
 
-    // If Supabase is configured, fetch live stats and recent enquiries from Supabase PostgreSQL
-    if (isSupabaseConfigured()) {
+    // If MySQL is configured, fetch live stats and recent enquiries from MySQL
+    if (isMySqlConfigured()) {
         try {
-            const sbStats = await getEnquiryStats();
-            if (sbStats.success) {
-                stats.totalLeads = sbStats.total;
-                stats.newLeads = sbStats.newCount;
+            const sqlStats = await getEnquiryStats();
+            if (sqlStats.success) {
+                stats.totalLeads = sqlStats.total;
+                stats.newLeads = sqlStats.newCount;
             }
 
-            const sbRecent = await fetchEnquiries({ limit: 10 });
-            if (sbRecent.success && sbRecent.data.length > 0) {
-                recentLeads = sbRecent.data.map(e => ({
+            const sqlRecent = await fetchEnquiries({ limit: 10 });
+            if (sqlRecent.success && sqlRecent.data.length > 0) {
+                recentLeads = sqlRecent.data.map(e => ({
                     id: e.id,
-                    lead_code: `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
                     full_name: e.full_name,
                     customer_name: e.full_name,
                     phone_number: e.phone_number,
@@ -64,8 +64,8 @@ router.get('/dashboard', async (req, res) => {
                     property_title: null
                 }));
             }
-        } catch (sbErr) {
-            console.error('Error fetching Supabase dashboard data:', sbErr);
+        } catch (sqlErr) {
+            console.error('Error fetching MySQL dashboard data:', sqlErr);
         }
     }
 
@@ -182,19 +182,19 @@ router.get('/leads', async (req, res) => {
     let leads = [];
     let total = 0;
 
-    if (isSupabaseConfigured()) {
+    if (isMySqlConfigured()) {
         try {
-            const sbResult = await fetchEnquiries({
+            const sqlResult = await fetchEnquiries({
                 status,
                 search,
                 limit,
                 offset
             });
-            if (sbResult.success) {
-                total = sbResult.count;
-                leads = sbResult.data.map(e => ({
+            if (sqlResult.success) {
+                total = sqlResult.count;
+                leads = sqlResult.data.map(e => ({
                     id: e.id,
-                    lead_code: `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
                     full_name: e.full_name,
                     customer_name: e.full_name,
                     phone_number: e.phone_number,
@@ -209,13 +209,13 @@ router.get('/leads', async (req, res) => {
                     agent_name: 'Unassigned'
                 }));
             }
-        } catch (sbErr) {
-            console.error('Error fetching leads from Supabase:', sbErr);
+        } catch (sqlErr) {
+            console.error('Error fetching leads from MySQL:', sqlErr);
         }
     }
 
-    // Fallback to local DB if Supabase not configured or returns empty on default view
-    if (!isSupabaseConfigured() || (leads.length === 0 && !search && !status && !category)) {
+    // Fallback to local DB if MySQL not configured or returns empty on default view
+    if (!isMySqlConfigured() || (leads.length === 0 && !search && !status && !category)) {
         let where = '1=1';
         const params = [];
 
@@ -244,7 +244,7 @@ router.get('/leads', async (req, res) => {
             LIMIT ? OFFSET ?
         `).all(...params, limit, offset);
 
-        if (!isSupabaseConfigured() || leads.length === 0) {
+        if (!isMySqlConfigured() || leads.length === 0) {
             total = localTotal;
             leads = localLeads;
         }
@@ -272,27 +272,27 @@ router.get('/leads/:id', async (req, res) => {
     const db = getDb();
     let lead = null;
 
-    if (isSupabaseConfigured()) {
+    if (isMySqlConfigured()) {
         try {
-            const sbResult = await getEnquiryById(req.params.id);
-            if (sbResult.success && sbResult.data) {
-                const e = sbResult.data;
+            const sqlResult = await getEnquiryById(req.params.id);
+            if (sqlResult.success && sqlResult.data) {
+                const e = sqlResult.data;
                 lead = {
                     id: e.id,
-                    lead_code: `SV-ENQ-${String(e.id).padStart(5, '0')}`,
+                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
                     full_name: e.full_name,
                     customer_name: e.full_name,
                     phone_number: e.phone_number,
                     phone: e.phone_number,
-                    email: null,
+                    email: e.email || null,
                     appointment_date: e.appointment_date,
                     appointment_time: e.appointment_time,
                     property_requirement: e.property_requirement,
                     property_category: e.property_requirement,
                     status: (e.status || 'New').toLowerCase(),
                     created_at: e.created_at,
-                    source: 'website',
-                    message: `Requirement: ${e.property_requirement}`,
+                    source: e.source || 'website',
+                    message: e.message || `Requirement: ${e.property_requirement}`,
                     property_title: null,
                     property_code: null,
                     property_price: null,
@@ -301,8 +301,8 @@ router.get('/leads/:id', async (req, res) => {
                     agent_name: 'Unassigned'
                 };
             }
-        } catch (sbErr) {
-            console.error('Error fetching lead detail from Supabase:', sbErr);
+        } catch (sqlErr) {
+            console.error('Error fetching lead detail from MySQL:', sqlErr);
         }
     }
 
