@@ -18,6 +18,7 @@ const { loadUser } = require('./middleware/auth');
 initializeDb();
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // ── Security ──────────────────────────────────────────────
@@ -233,28 +234,30 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start (Dual Port Binding: Listen on 3000 and 4000) ────
-const PRIMARY_PORT = parseInt(process.env.PORT) || 3000;
-const ALT_PORT = PRIMARY_PORT === 3000 ? 4000 : 3000;
+if (require.main === module && !process.env.VERCEL && process.env.NODE_ENV !== 'test') {
+    const PRIMARY_PORT = parseInt(process.env.PORT) || 3000;
+    const ALT_PORT = PRIMARY_PORT === 3000 ? 4000 : 3000;
 
-app.listen(PRIMARY_PORT, () => {
-    console.log(`
+    app.listen(PRIMARY_PORT, () => {
+        console.log(`
 ╔══════════════════════════════════════════════════╗
 ║   SV Real Estates Hyderabad                      ║
 ║   Primary Server: http://localhost:${PRIMARY_PORT}        ║
 ║   Admin Leads:    http://localhost:${PRIMARY_PORT}/admin/leads  ║
 ╚══════════════════════════════════════════════════╝`);
-});
+    });
 
-try {
-    const mirrorServer = app.listen(ALT_PORT, () => {
-        console.log(`🚀 Also listening on mirror port: http://localhost:${ALT_PORT}`);
-        console.log(`🔑 Mirror Admin: http://localhost:${ALT_PORT}/admin/leads`);
-    });
-    mirrorServer.on('error', (err) => {
-        console.log(`Note: Port ${ALT_PORT} not bound (${err.message}). Primary http://localhost:${PRIMARY_PORT} active.`);
-    });
-} catch (e) {
-    console.log(`Note: Port ${ALT_PORT} skipped. Primary http://localhost:${PRIMARY_PORT} active.`);
+    try {
+        const mirrorServer = app.listen(ALT_PORT, () => {
+            console.log(`🚀 Also listening on mirror port: http://localhost:${ALT_PORT}`);
+            console.log(`🔑 Mirror Admin: http://localhost:${ALT_PORT}/admin/leads`);
+        });
+        mirrorServer.on('error', (err) => {
+            console.log(`Note: Port ${ALT_PORT} not bound (${err.message}). Primary http://localhost:${PRIMARY_PORT} active.`);
+        });
+    } catch (e) {
+        console.log(`Note: Port ${ALT_PORT} skipped. Primary http://localhost:${PRIMARY_PORT} active.`);
+    }
 }
 
 module.exports = app;

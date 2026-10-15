@@ -3,13 +3,31 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'svrealestate.db');
+let DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH;
+if (process.env.VERCEL) {
+    DB_PATH = '/tmp/svrealestate.db';
+    const bundledDb = path.join(__dirname, '..', 'data', 'svrealestate.db');
+    if (!fs.existsSync('/tmp/svrealestate.db') && fs.existsSync(bundledDb)) {
+        try {
+            fs.copyFileSync(bundledDb, '/tmp/svrealestate.db');
+        } catch (e) {
+            console.warn('Notice: Could not copy bundled db to /tmp:', e.message);
+        }
+    }
+} else if (!DB_PATH) {
+    DB_PATH = path.join(__dirname, '..', 'data', 'svrealestate.db');
+}
+
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 // Ensure data directory exists
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+    try {
+        fs.mkdirSync(dataDir, { recursive: true });
+    } catch (e) {
+        // Read-only filesystem or already exists
+    }
 }
 
 let db;
@@ -19,7 +37,11 @@ function getDb() {
         db = new DatabaseSync(DB_PATH);
         // SQLite pragmas
         db.exec('PRAGMA foreign_keys = ON;');
-        db.exec('PRAGMA journal_mode = WAL;');
+        try {
+            db.exec('PRAGMA journal_mode = WAL;');
+        } catch {
+            try { db.exec('PRAGMA journal_mode = DELETE;'); } catch {}
+        }
         db.exec('PRAGMA busy_timeout = 5000;');
 
         // Polyfill pragma method for any legacy callers
@@ -52,6 +74,18 @@ function initializeDb() {
         }
     } catch (e) {
         // Table created freshly from schema.sql
+    }
+
+    // Auto-seed if database is fresh (e.g. freshly created in /tmp or new environment)
+    try {
+        const propCount = database.prepare('SELECT COUNT(*) as count FROM properties').get().count;
+        if (propCount === 0) {
+            console.log('🌱 Fresh database detected, auto-seeding properties and admin...');
+            const { seed } = require('./seed');
+            seed(database);
+        }
+    } catch (seedErr) {
+        console.warn('⚠️ Auto-seed notice:', seedErr.message);
     }
 
     console.log('✅ Database initialized successfully');

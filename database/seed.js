@@ -6,11 +6,14 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { initializeDb, getDb, closeDb } = require('./db');
 
-async function seed() {
+function seed(existingDb) {
     try {
-        console.log('🔄 Initializing database schema...');
-        initializeDb();
-        const db = getDb();
+        let db = existingDb;
+        if (!db) {
+            console.log('🔄 Initializing database schema...');
+            initializeDb();
+            db = getDb();
+        }
 
         const email = process.env.ADMIN_EMAIL || 'admin@svrealestate.com';
         const password = process.env.ADMIN_PASSWORD || 'Admin@SV2024';
@@ -19,8 +22,7 @@ async function seed() {
         // 1. Admin User
         let adminUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
         if (!adminUser) {
-            const salt = await bcrypt.genSalt(12);
-            const hash = await bcrypt.hash(password, salt);
+            const hash = bcrypt.hashSync(password, 10);
             const res = db.prepare(`
                 INSERT INTO users (name, email, password_hash, role, is_active)
                 VALUES (?, ?, ?, 'admin', 1)
@@ -34,8 +36,7 @@ async function seed() {
         // 2. Senior Agent User
         let agentUser = db.prepare('SELECT id FROM users WHERE email = ?').get('agent@svrealestate.com');
         if (!agentUser) {
-            const salt = await bcrypt.genSalt(12);
-            const hash = await bcrypt.hash('Agent@SV2024', salt);
+            const hash = bcrypt.hashSync('Agent@SV2024', 10);
             const res = db.prepare(`
                 INSERT INTO users (name, email, password_hash, role, is_active)
                 VALUES (?, ?, ?, 'agent', 1)
@@ -468,7 +469,8 @@ Currently in high demand with an estimated rental yield of 8.5% p.a.`,
             VALUES (?, 'lead', 'New High-Value Enquiry', 'Dr. Suresh Varma requested visit for Jubilee Hills Villa', '/admin/leads/1', 0)
         `).run(adminUser.id);
 
-        console.log(`
+        if (!existingDb) {
+            console.log(`
 🎉 Database ready!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Admin Login Credentials:
@@ -476,13 +478,20 @@ Admin Login Credentials:
   Email:    ${email}
   Password: ${password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        `);
-
-        closeDb();
+            `);
+            closeDb();
+        }
+        return true;
     } catch (err) {
         console.error('❌ Seed failed:', err);
-        process.exit(1);
+        if (!existingDb) process.exit(1);
+        return false;
     }
 }
 
-seed();
+if (require.main === module) {
+    seed();
+}
+
+module.exports = { seed };
+
