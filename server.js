@@ -3,11 +3,7 @@
  */
 require('dotenv').config();
 
-// Ensure Node.js TLS allows self-signed intermediate certificates in Supabase / Cloud Postgres chains
-if (process.env.VERCEL || process.env.NODE_ENV === 'production' || process.env.DATABASE_URL || process.env.POSTGRES_URL) {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
-
+// Database TLS certificate verification remains enabled in production.
 const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
