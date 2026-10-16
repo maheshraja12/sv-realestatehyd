@@ -5,11 +5,7 @@
  */
 require('dotenv').config();
 
-// Ensure Node.js TLS allows self-signed intermediate certificates in Supabase / Cloud Postgres chains
-if (process.env.VERCEL || process.env.NODE_ENV === 'production' || process.env.DATABASE_URL || process.env.POSTGRES_URL) {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
-
+// Keep Node.js TLS certificate verification enabled. Never disable TLS verification globally in production.
 const { Pool } = require('pg');
 let createClient;
 try {
@@ -96,7 +92,7 @@ function getPoolConfig() {
                 max: 10,
                 idleTimeoutMillis: 30000,
                 connectionTimeoutMillis: 10000,
-                ssl: isCloudHost ? { rejectUnauthorized: false } : undefined
+                ssl: isCloudHost ? { rejectUnauthorized: true } : undefined
             };
         } catch (err) {
             // Fallback if URL parsing failed: strip query params that conflict with pg SSL
@@ -109,7 +105,7 @@ function getPoolConfig() {
                 max: 10,
                 idleTimeoutMillis: 30000,
                 connectionTimeoutMillis: 10000,
-                ssl: { rejectUnauthorized: false }
+                ssl: { rejectUnauthorized: true }
             };
         }
     }
@@ -135,7 +131,7 @@ function getPoolConfig() {
         max: 10,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
-        ssl: isCloudHost ? { rejectUnauthorized: false } : undefined
+        ssl: isCloudHost ? { rejectUnauthorized: true } : undefined
     };
 }
 
