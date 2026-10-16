@@ -136,7 +136,8 @@ router.post('/public', async (req, res) => {
 
         // ── MySQL Database Persistence ────────────────────────────
         let mysqlRecord = null;
-        if (isMySqlConfigured()) {
+        // PostgreSQL is primary when configured; use MySQL only as a fallback, not a second write.
+        if (isMySqlConfigured() && !persistentSaved) {
             const todayStr = new Date().toISOString().slice(0, 10);
             const sqlResult = await insertEnquiry({
                 full_name: customerName,
