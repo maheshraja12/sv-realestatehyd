@@ -71,15 +71,18 @@ router.post('/public', async (req, res) => {
         const propertyReq = data.property_requirement || data.property_category || 'Residential Plot';
 
         // Prevent rapid accidental double-clicks (same phone within 2 seconds)
-        const recent = db.prepare(`
-            SELECT id FROM leads 
-            WHERE (phone = ? OR phone_number = ?) AND created_at > datetime('now', '-2 seconds')
-        `).get(cleanPhone, cleanPhone);
-        if (recent) {
-            return res.status(409).json({ 
-                error: 'Enquiry received! Our team will contact you shortly.',
-                lead_code: null
-            });
+        // A Vercel /tmp SQLite file is instance-local and must not be used for duplicate checks.
+        if (!process.env.VERCEL) {
+            const recent = db.prepare(`
+                SELECT id FROM leads
+                WHERE (phone = ? OR phone_number = ?) AND created_at > datetime('now', '-2 seconds')
+            `).get(cleanPhone, cleanPhone);
+            if (recent) {
+                return res.status(409).json({
+                    error: 'Enquiry received! Our team will contact you shortly.',
+                    lead_code: null
+                });
+            }
         }
 
         // Normalize source to allowed enum values in DB schema
@@ -94,6 +97,7 @@ router.post('/public', async (req, res) => {
 
         // ── PostgreSQL / Supabase Cloud Database Persistence ──────
         let pgRecord = null;
+        let persistentSaved = false;
         if (isPostgresConfigured()) {
             const pgResult = await insertPgLead({
                 lead_code: leadCode,
@@ -117,6 +121,7 @@ router.post('/public', async (req, res) => {
 
             if (pgResult.success) {
                 pgRecord = pgResult.data;
+                persistentSaved = true;
                 console.log(`✅ [POSTGRES] Successfully stored cloud lead #${pgRecord ? pgRecord.id : 'OK'} for ${customerName}`);
             } else if (!pgResult.notConfigured) {
                 console.error('❌ [POSTGRES] insertLead failed:', pgResult.error);
@@ -151,10 +156,22 @@ router.post('/public', async (req, res) => {
                 });
             }
             mysqlRecord = sqlResult.data;
+            if (sqlResult.success) persistentSaved = true;
             console.log(`✅ [MYSQL] Successfully stored enquiry #${mysqlRecord ? mysqlRecord.id : 'OK'} for ${customerName}`);
         }
 
-        const result = db.prepare(`
+        // Vercel's local filesystem is ephemeral. Only return success after the cloud database confirms
+        // the write; do not depend on a local SQLite insert for production success.
+        let result;
+        if (process.env.VERCEL) {
+            if (!persistentSaved) {
+                return res.status(503).json({
+                    error: 'We could not confirm that your enquiry was saved. Please try again or call our office.'
+                });
+            }
+            result = { lastInsertRowid: (pgRecord && pgRecord.id) || (mysqlRecord && mysqlRecord.id) || null };
+        } else {
+            const result = db.prepare(`
             INSERT INTO leads (
                 lead_code, customer_name, full_name, phone, phone_number, email, property_id,
                 property_category, property_requirement, budget, preferred_location,
@@ -229,6 +246,7 @@ router.post('/public', async (req, res) => {
             `/admin/leads/${result.lastInsertRowid}`
         );
         
+        }
         res.status(201).json({
             message: `Thank you for contacting SV Real Estates Hyderabad. Your enquiry has been received.`,
             lead_code: leadCode,
