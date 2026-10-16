@@ -1,8 +1,13 @@
 <!-- Universal Shared Enquiry & Appointment Modal -->
-<div class="modal-backdrop-custom" id="enquiryModalBackdrop" style="display:none;" onclick="closeEnquiryModal()"></div>
+<div class="modal-backdrop-custom" id="enquiryModalBackdrop" style="display:none;" onclick="closeEnquiryModal(event)"></div>
 <div class="modal-wrapper-custom" id="enquiryModal" style="display:none;" onclick="handleModalWrapperClick(event)">
     <div class="modal-dialog-custom" onclick="event.stopPropagation()">
-        <button type="button" class="modal-close-btn" onclick="closeEnquiryModal()" aria-label="Close dialog">&times;</button>
+        <button type="button" class="modal-close-btn" id="modalCloseBtn" onclick="closeEnquiryModal(event)" aria-label="Close dialog" title="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
         
         <div class="modal-header-custom">
             <span class="modal-tag" id="modalBadge">DIRECT ENQUIRY</span>
@@ -72,9 +77,12 @@
                 </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="modal-footer-custom" style="margin-top:18px;">
-                <button type="submit" id="modalSubmitBtn" class="btn btn-gold btn-block btn-large">
+            <!-- Submit and Cancel Buttons -->
+            <div class="modal-footer-custom modal-actions-grid" style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+                <button type="button" id="modalCancelBtn" class="btn btn-cancel-custom" onclick="closeEnquiryModal(event)" title="Cancel and close dialog">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" id="modalSubmitBtn" class="btn btn-gold btn-large" style="flex:1;">
                     <i class="fas fa-paper-plane"></i> <span id="submitBtnText">Submit Enquiry</span>
                 </button>
             </div>
@@ -91,7 +99,7 @@
                 <a id="successWhatsAppLink" href="#" target="_blank" class="btn btn-whatsapp">
                     <i class="fab fa-whatsapp"></i> Chat on WhatsApp
                 </a>
-                <button type="button" class="btn btn-ghost" onclick="closeEnquiryModal()">Done</button>
+                <button type="button" class="btn btn-ghost" onclick="closeEnquiryModal(event)">Done</button>
             </div>
         </div>
     </div>

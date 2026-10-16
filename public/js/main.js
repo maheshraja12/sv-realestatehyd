@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initEscapeHandler();
     initButtonAutoBindings();
     initDateInputs();
+    initAutoEnquiryPopup();
 });
 
 function initDateInputs() {
@@ -158,7 +159,10 @@ function showModalBase() {
     document.body.style.overflow = 'hidden';
 }
 
-function closeEnquiryModal() {
+function closeEnquiryModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
     const modal = document.getElementById('enquiryModal');
     const backdrop = document.getElementById('enquiryModalBackdrop');
     const errorAlert = document.getElementById('modalErrorAlert');
@@ -166,11 +170,15 @@ function closeEnquiryModal() {
     if (backdrop) backdrop.style.display = 'none';
     if (errorAlert) errorAlert.style.display = 'none';
     document.body.style.overflow = '';
+
+    try {
+        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+    } catch (err) {}
 }
 
 function handleModalWrapperClick(e) {
     if (e.target.id === 'enquiryModal' || e.target.classList.contains('modal-wrapper-custom')) {
-        closeEnquiryModal();
+        closeEnquiryModal(e);
     }
 }
 
@@ -262,6 +270,10 @@ async function handlePublicEnquirySubmit(e) {
         const result = await res.json();
 
         if (res.ok) {
+            try {
+                sessionStorage.setItem('sv_enquiry_submitted', 'true');
+                sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+            } catch (err) {}
             openEnquirySuccessModal(result.lead_code || 'SV-LEAD-SUCCESS', fullName, appointmentDate, appointmentTime, propertyRequirement);
             form.reset();
         } else {
@@ -309,6 +321,16 @@ function openEnquirySuccessModal(refCode, name, date, time, req) {
 
 // ── Auto-Bind All Enquiry Buttons Across Document ───────────
 function initButtonAutoBindings() {
+    // Modal Close and Cancel buttons
+    const closeBtn = document.getElementById('modalCloseBtn');
+    if (closeBtn) {
+        closeBtn.onclick = (e) => closeEnquiryModal(e);
+    }
+    const cancelBtn = document.getElementById('modalCancelBtn');
+    if (cancelBtn) {
+        cancelBtn.onclick = (e) => closeEnquiryModal(e);
+    }
+
     // 1. Header CTA button
     const headerCta = document.querySelector('.btn-header-cta');
     if (headerCta) {
@@ -321,6 +343,8 @@ function initButtonAutoBindings() {
     // 2. Any button or link with enquiry / consultation / visit intent
     document.querySelectorAll('button, a').forEach(el => {
         if (el.classList.contains('modal-close-btn') || 
+            el.id === 'modalCancelBtn' ||
+            el.classList.contains('btn-cancel-custom') ||
             el.type === 'submit' || 
             el.closest('form') ||
             el.closest('.nav-links') ||
@@ -353,7 +377,40 @@ function initButtonAutoBindings() {
 function initEscapeHandler() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            closeEnquiryModal();
+            closeEnquiryModal(e);
         }
     });
+}
+
+// ── Auto Enquiry Popup on Website Entry ──────────────────────
+function initAutoEnquiryPopup() {
+    // 1. Never show on admin portal pages
+    if (window.location.pathname.startsWith('/admin')) {
+        return;
+    }
+
+    // 2. Do not show if user already submitted an enquiry
+    try {
+        if (sessionStorage.getItem('sv_enquiry_submitted')) {
+            return;
+        }
+    } catch (e) {}
+
+    const isHomePage = window.location.pathname === '/' || window.location.pathname === '' || window.location.pathname === '/home';
+
+    // 3. For subpages, avoid nagging if already dismissed in this session
+    try {
+        if (!isHomePage && sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
+            return;
+        }
+    } catch (e) {}
+
+    // 4. Smooth, elegant entrance after page initial paint
+    setTimeout(() => {
+        const modal = document.getElementById('enquiryModal');
+        const backdrop = document.getElementById('enquiryModalBackdrop');
+        if (modal && backdrop && modal.style.display !== 'flex') {
+            openEnquiryModal();
+        }
+    }, 800);
 }
