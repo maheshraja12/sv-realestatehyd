@@ -10,7 +10,7 @@ const { upload } = require('../../middleware/upload');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
-const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, setCloudPropertyStatus } = require('../../database/cloud-leads');
+const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, uploadCloudPropertyImage, setCloudPropertyStatus } = require('../../database/cloud-leads');
 
 // Generate unique property code
 function generatePropertyCode(category) {
@@ -298,8 +298,19 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/properties/:id/images — Upload images
-router.post('/:id/images', requireAuth, upload.array('images', 20), (req, res) => {
+router.post('/:id/images', requireAuth, upload.array('images', 20), async (req, res) => {
     try {
+        if (process.env.VERCEL) {
+            if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+            if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No images uploaded' });
+            const images = [];
+            for (const file of req.files) {
+                const saved = await uploadCloudPropertyImage(req.params.id, file);
+                if (!saved.success) return res.status(502).json({ error: saved.error || 'Property image upload failed.' });
+                images.push(saved.image);
+            }
+            return res.json({ images, message: `${images.length} image(s) uploaded to persistent storage` });
+        }
         const db = getDb();
         const property = db.prepare('SELECT id FROM properties WHERE id = ?').get(req.params.id);
         if (!property) return res.status(404).json({ error: 'Property not found' });
