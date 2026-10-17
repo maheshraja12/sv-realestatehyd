@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node database/seed.js"
+    "seed": "node database/seed.js",
+    "test": "node --test tests/workflow.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

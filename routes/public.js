@@ -99,8 +99,15 @@ router.get('/properties', async (req, res) => {
     const params = [];
 
     if (search) {
-        where += ' AND (title LIKE ? OR locality LIKE ? OR city LIKE ? OR description LIKE ?)';
-        params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        const s = search.trim();
+        const bhkMatch = s.match(/^(\d)\s*bhk$/i);
+        if (bhkMatch) {
+            where += ' AND bedrooms = ?';
+            params.push(parseInt(bhkMatch[1]));
+        } else {
+            where += ' AND (title LIKE ? OR locality LIKE ? OR city LIKE ? OR description LIKE ? OR category LIKE ?)';
+            params.push(`%${s}%`, `%${s}%`, `%${s}%`, `%${s}%`, `%${s}%`);
+        }
     }
     if (category) {
         where += ' AND category = ?';
@@ -127,8 +134,12 @@ router.get('/properties', async (req, res) => {
         params.push(parseFloat(maxPrice));
     }
     if (bedrooms) {
-        where += ' AND bedrooms >= ?';
-        params.push(parseInt(bedrooms));
+        if (bedrooms === '5' || bedrooms === '5+') {
+            where += ' AND bedrooms >= 5';
+        } else {
+            where += ' AND bedrooms = ?';
+            params.push(parseInt(bedrooms));
+        }
     }
 
     let orderBy = 'published_at DESC';

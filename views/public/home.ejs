@@ -34,7 +34,7 @@
             </h1>
             
             <p class="hero-subtitle animate-fade-up">
-                Explore handpicked luxury villas in Jubilee Hills, HMDA & RERA approved plots in Kokapet, and prime high-rises across the Financial District.
+                Explore handpicked luxury villas, HMDA approved plots, and 2BHK, 3BHK, 4BHK homes across Hyderabad • Starting at realistic rates from ₹70 Lakhs in every area.
             </p>
 
             <!-- Hero Search Filter Bar -->
@@ -44,37 +44,56 @@
                         <label><i class="fas fa-th-large text-gold"></i> Category</label>
                         <select name="category">
                             <option value="">All Categories</option>
+                            <option value="apartment">Apartments / Flats</option>
                             <option value="villa">Luxury Villas</option>
                             <option value="residential_plot">Residential Plots</option>
-                            <option value="apartment">High-Rise Apartments</option>
-                            <option value="independent_house">Independent Houses</option>
-                            <option value="commercial">Commercial Land / Space</option>
+                            <option value="commercial">Commercial Space</option>
+                        </select>
+                    </div>
+
+                    <div class="search-field">
+                        <label><i class="fas fa-bed text-gold"></i> Bedrooms</label>
+                        <select name="bedrooms">
+                            <option value="">Any BHK</option>
+                            <option value="2">2 BHK (from ₹70L)</option>
+                            <option value="3">3 BHK</option>
+                            <option value="4">4 BHK</option>
+                            <option value="5">5+ BHK</option>
                         </select>
                     </div>
 
                     <div class="search-field">
                         <label><i class="fas fa-map-marker-alt text-gold"></i> Locality</label>
-                        <input type="text" name="locality" placeholder="e.g. Kokapet, Jubilee Hills">
+                        <input type="text" name="locality" placeholder="Kokapet, Tellapur, Bachupally...">
                     </div>
 
                     <div class="search-field">
-                        <label><i class="fas fa-rupee-sign text-gold"></i> Max Budget</label>
-                        <select name="max_price">
-                            <option value="">Any Budget</option>
-                            <option value="10000000">Up to ₹1 Cr</option>
-                            <option value="25000000">Up to ₹2.5 Cr</option>
-                            <option value="50000000">Up to ₹5 Cr</option>
-                            <option value="100000000">Up to ₹10 Cr</option>
-                            <option value="200000000">Up to ₹20 Cr</option>
+                        <label><i class="fas fa-rupee-sign text-gold"></i> Budget</label>
+                        <select name="min_price">
+                            <option value="">Any Budget (from ₹70L)</option>
+                            <option value="7000000">₹70 Lakhs+</option>
+                            <option value="10000000">₹1 Crore+</option>
+                            <option value="20000000">₹2 Crore+</option>
+                            <option value="50000000">₹5 Crore+</option>
                         </select>
                     </div>
 
                     <div class="search-field btn-field">
                         <button type="submit" class="btn btn-gold btn-hero-search">
-                            <i class="fas fa-search"></i> Search Properties
+                            <i class="fas fa-search"></i> Search
                         </button>
                     </div>
                 </form>
+
+                <!-- Popular Search Badges -->
+                <div class="hero-quick-tags">
+                    <span>Popular Searches:</span>
+                    <a href="/properties?bedrooms=2&category=apartment">2 BHK Flats (from ₹70L)</a>
+                    <a href="/properties?bedrooms=3&locality=Tellapur">3 BHK in Tellapur</a>
+                    <a href="/properties?category=villa">Luxury Villas</a>
+                    <a href="/properties?category=residential_plot">HMDA Plots</a>
+                    <a href="/properties?locality=Kokapet">Kokapet Neopolis</a>
+                </div>
             </div>
 
             <!-- Quick Stats Counters -->

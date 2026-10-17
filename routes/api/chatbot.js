@@ -37,7 +37,14 @@ router.post('/search', (req, res) => {
         if (category) { where += ' AND category = ?'; params.push(sanitize(category)); }
         if (min_budget) { where += ' AND price >= ?'; params.push(parseFloat(min_budget)); }
         if (max_budget) { where += ' AND price <= ?'; params.push(parseFloat(max_budget)); }
-        if (bedrooms) { where += ' AND bedrooms >= ?'; params.push(parseInt(bedrooms)); }
+        if (bedrooms) {
+            if (bedrooms === '5' || bedrooms === '5+' || parseInt(bedrooms) >= 5) {
+                where += ' AND bedrooms >= 5';
+            } else {
+                where += ' AND bedrooms = ?';
+                params.push(parseInt(bedrooms));
+            }
+        }
         if (location) {
             where += ' AND (locality LIKE ? OR city LIKE ?)';
             params.push(`%${sanitize(location)}%`, `%${sanitize(location)}%`);

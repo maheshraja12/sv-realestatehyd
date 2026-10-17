@@ -257,10 +257,10 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Default settings
 INSERT OR REPLACE INTO settings (key, value) VALUES
-    ('business_name', 'Sri Venkateswara Building Material Traders'),
-    ('business_tagline', 'Building Construction & Materials Supplier'),
+    ('business_name', 'Sri Venkateswara Real Estates & Building Materials'),
+    ('business_tagline', 'Luxury Properties, Gated Communities & Building Construction'),
     ('business_phone', '+91 9346423434'),
-    ('business_email', 'info@svbuildingmaterials.com'),
+    ('business_email', 'svsrivenkateswara99@gmail.com'),
     ('business_whatsapp', '919346423434'),
     ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
     ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'),

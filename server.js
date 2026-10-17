@@ -206,10 +206,10 @@ app.use(loadUser);
 
 // Make common data available to all views
 app.use((req, res, next) => {
-    res.locals.businessName = process.env.BUSINESS_NAME || 'Sri Venkateswara Building Material Traders';
-    res.locals.businessTagline = process.env.BUSINESS_TAGLINE || 'Building Construction & Materials Supplier';
+    res.locals.businessName = process.env.BUSINESS_NAME || 'Sri Venkateswara Real Estates & Building Materials';
+    res.locals.businessTagline = process.env.BUSINESS_TAGLINE || 'Luxury Properties, Gated Communities & Building Construction';
     res.locals.businessPhone = process.env.BUSINESS_PHONE || '+91 9346423434';
-    res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'info@svbuildingmaterials.com';
+    res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'svsrivenkateswara99@gmail.com';
     res.locals.businessWhatsapp = process.env.BUSINESS_WHATSAPP || '919346423434';
     res.locals.businessAddress = process.env.BUSINESS_ADDRESS || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085';
     res.locals.businessInstagram = process.env.BUSINESS_INSTAGRAM || 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr';
@@ -274,6 +274,28 @@ app.use('/api/leads', apiLeadRoutes);
 app.use('/api/appointments', apiAppointmentRoutes);
 app.use('/api/dashboard', apiDashboardRoutes);
 app.use('/api/notifications', apiNotificationRoutes);
+
+// GET /api/health — System health check (safe, no secret leakage)
+app.get('/api/health', (req, res) => {
+    let cloudConfigured = false;
+    try {
+        const { cloudLeadsConfigured } = require('./database/cloud-leads');
+        cloudConfigured = cloudLeadsConfigured();
+    } catch (e) {
+        cloudConfigured = false;
+    }
+    res.json({
+        status: 'ok',
+        service: 'SV Real Estates Hyderabad API',
+        timestamp: new Date().toISOString(),
+        environment: process.env.VERCEL ? 'production-vercel' : (process.env.NODE_ENV || 'development'),
+        database: {
+            cloud_configured: cloudConfigured,
+            engine: process.env.VERCEL ? 'supabase-edge' : 'sqlite-local'
+        },
+        uptime_seconds: Math.floor(process.uptime())
+    });
+});
 
 // ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => {

@@ -392,8 +392,8 @@ h1, h2, h3, h4 {
 
 .hero-search-form {
     display: grid;
-    grid-template-columns: 1.2fr 1.2fr 1.2fr 1fr;
-    gap: 16px;
+    grid-template-columns: 1.1fr 1fr 1.2fr 1fr 0.9fr;
+    gap: 14px;
     align-items: flex-end;
 }
 
@@ -431,7 +431,40 @@ h1, h2, h3, h4 {
 
 .btn-hero-search {
     width: 100%;
-    padding: 13px 20px;
+    padding: 13px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.hero-quick-tags {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.hero-quick-tags a {
+    color: var(--gold);
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    transition: var(--transition);
+}
+
+.hero-quick-tags a:hover {
+    background: var(--gold);
+    color: #0b0c10;
+    border-color: var(--gold);
 }
 
 /* ── Stats Row ── */
@@ -926,6 +959,52 @@ h1, h2, h3, h4 {
     color: var(--text-muted);
     max-width: 650px;
     margin: 0 auto;
+}
+
+/* ── Quick Catalog Navigation Pills ── */
+.quick-catalog-pills {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+
+.catalog-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.catalog-pill i {
+    color: var(--gold);
+}
+
+.catalog-pill:hover {
+    border-color: var(--gold);
+    color: var(--gold-light);
+    transform: translateY(-2px);
+}
+
+.catalog-pill.active {
+    background: var(--gold-gradient);
+    color: #0b0c10;
+    border-color: var(--gold);
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.35);
+}
+
+.catalog-pill.active i {
+    color: #0b0c10;
 }
 
 /* ── Catalog Page Filter ── */

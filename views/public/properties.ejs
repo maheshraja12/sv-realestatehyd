@@ -20,22 +20,47 @@
     <!-- Page Header -->
     <section class="page-banner">
         <div class="container page-banner-inner">
-            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS</span>
+            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS • MINIMUM ₹70 LAKHS</span>
             <h1 class="page-title">Properties in <span class="gold-gradient-text">Hyderabad</span></h1>
-            <p class="page-subtitle">Handpicked, legally vetted, premium homes, plots, and investment opportunities.</p>
+            <p class="page-subtitle">Verified Luxury Villas, HMDA Plots, and 2BHK, 3BHK, 4BHK Homes across Hyderabad starting at realistic prices from ₹70 Lakhs.</p>
         </div>
     </section>
 
     <!-- Main Content & Filter Bar -->
     <section class="section properties-catalog-section">
         <div class="container">
+            <!-- Quick Filter Navigation Pills -->
+            <div class="quick-catalog-pills">
+                <a href="/properties" class="catalog-pill <%= !filters.category && !filters.bedrooms ? 'active' : '' %>">
+                    <i class="fas fa-th-large"></i> All Listings
+                </a>
+                <a href="/properties?bedrooms=2&category=apartment" class="catalog-pill <%= filters.bedrooms === '2' ? 'active' : '' %>">
+                    <i class="fas fa-bed"></i> 2 BHK Flats
+                </a>
+                <a href="/properties?bedrooms=3&category=apartment" class="catalog-pill <%= filters.bedrooms === '3' ? 'active' : '' %>">
+                    <i class="fas fa-bed"></i> 3 BHK Flats
+                </a>
+                <a href="/properties?bedrooms=4&category=apartment" class="catalog-pill <%= filters.bedrooms === '4' ? 'active' : '' %>">
+                    <i class="fas fa-bed"></i> 4 BHK Sky Homes
+                </a>
+                <a href="/properties?category=villa" class="catalog-pill <%= filters.category === 'villa' ? 'active' : '' %>">
+                    <i class="fas fa-house-chimney-window"></i> Luxury Villas
+                </a>
+                <a href="/properties?category=residential_plot" class="catalog-pill <%= filters.category === 'residential_plot' ? 'active' : '' %>">
+                    <i class="fas fa-vector-square"></i> HMDA & DTCP Plots
+                </a>
+                <a href="/properties?category=commercial" class="catalog-pill <%= filters.category === 'commercial' ? 'active' : '' %>">
+                    <i class="fas fa-city"></i> Commercial
+                </a>
+            </div>
+
             <!-- Filter Box -->
             <div class="catalog-filter-card">
                 <form action="/properties" method="GET" class="catalog-filter-form" id="filterForm">
                     <div class="filter-row-top">
                         <div class="filter-input-wrap search-keyword">
                             <i class="fas fa-search"></i>
-                            <input type="text" name="search" value="<%= filters.search %>" placeholder="Search by property title, locality, keywords...">
+                            <input type="text" name="search" value="<%= filters.search %>" placeholder="Search by area (e.g. Kokapet, Tellapur, Bachupally), BHK, or property name...">
                         </div>
                         <div class="filter-input-wrap">
                             <select name="sort" onchange="this.form.submit()">
@@ -54,11 +79,58 @@
                                 <option value="">All Categories</option>
                                 <option value="villa" <%= filters.category === 'villa' ? 'selected' : '' %>>Luxury Villas</option>
                                 <option value="residential_plot" <%= filters.category === 'residential_plot' ? 'selected' : '' %>>Residential Plots</option>
-                                <option value="apartment" <%= filters.category === 'apartment' ? 'selected' : '' %>>Apartments</option>
+                                <option value="apartment" <%= filters.category === 'apartment' ? 'selected' : '' %>>Apartments / Flats</option>
                                 <option value="independent_house" <%= filters.category === 'independent_house' ? 'selected' : '' %>>Independent Houses</option>
                                 <option value="commercial" <%= filters.category === 'commercial' ? 'selected' : '' %>>Commercial</option>
-                                <option value="agricultural_land" <%= filters.category === 'agricultural_land' ? 'selected' : '' %>>Farm / Agri Land</option>
-                                <option value="rental" <%= filters.category === 'rental' ? 'selected' : '' %>>Rentals</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-bed text-gold"></i> Bedrooms / BHK</label>
+                            <select name="bedrooms" onchange="this.form.submit()">
+                                <option value="">Any BHK</option>
+                                <option value="2" <%= filters.bedrooms === '2' ? 'selected' : '' %>>2 BHK</option>
+                                <option value="3" <%= filters.bedrooms === '3' ? 'selected' : '' %>>3 BHK</option>
+                                <option value="4" <%= filters.bedrooms === '4' ? 'selected' : '' %>>4 BHK</option>
+                                <option value="5" <%= filters.bedrooms === '5' ? 'selected' : '' %>>5+ BHK</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-map-pin text-gold"></i> Locality</label>
+                            <select name="locality" onchange="this.form.submit()">
+                                <option value="">All Localities in Hyderabad</option>
+                                <% localities.forEach(loc => { %>
+                                <option value="<%= loc.locality %>" <%= filters.locality === loc.locality ? 'selected' : '' %>><%= loc.locality %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-rupee-sign text-gold"></i> Min Budget</label>
+                            <select name="min_price" onchange="this.form.submit()">
+                                <option value="">Min: Any (from ₹70 Lakhs)</option>
+                                <option value="7000000" <%= filters.minPrice === '7000000' ? 'selected' : '' %>>₹70 Lakhs</option>
+                                <option value="10000000" <%= filters.minPrice === '10000000' ? 'selected' : '' %>>₹1 Crore</option>
+                                <option value="15000000" <%= filters.minPrice === '15000000' ? 'selected' : '' %>>₹1.5 Crore</option>
+                                <option value="20000000" <%= filters.minPrice === '20000000' ? 'selected' : '' %>>₹2 Crore</option>
+                                <option value="30000000" <%= filters.minPrice === '30000000' ? 'selected' : '' %>>₹3 Crore</option>
+                                <option value="50000000" <%= filters.minPrice === '50000000' ? 'selected' : '' %>>₹5 Crore</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-col">
+                            <label><i class="fas fa-rupee-sign text-gold"></i> Max Budget</label>
+                            <select name="max_price" onchange="this.form.submit()">
+                                <option value="">Max: Any Price</option>
+                                <option value="8500000" <%= filters.maxPrice === '8500000' ? 'selected' : '' %>>Up to ₹85 Lakhs</option>
+                                <option value="10000000" <%= filters.maxPrice === '10000000' ? 'selected' : '' %>>Up to ₹1 Cr</option>
+                                <option value="15000000" <%= filters.maxPrice === '15000000' ? 'selected' : '' %>>Up to ₹1.5 Cr</option>
+                                <option value="20000000" <%= filters.maxPrice === '20000000' ? 'selected' : '' %>>Up to ₹2 Cr</option>
+                                <option value="30000000" <%= filters.maxPrice === '30000000' ? 'selected' : '' %>>Up to ₹3 Cr</option>
+                                <option value="50000000" <%= filters.maxPrice === '50000000' ? 'selected' : '' %>>Up to ₹5 Cr</option>
+                                <option value="100000000" <%= filters.maxPrice === '100000000' ? 'selected' : '' %>>Up to ₹10 Cr</option>
+                                <option value="200000000" <%= filters.maxPrice === '200000000' ? 'selected' : '' %>>Up to ₹20 Cr+</option>
                             </select>
                         </div>
 
@@ -69,39 +141,6 @@
                                 <option value="sale" <%= filters.purpose === 'sale' ? 'selected' : '' %>>For Sale</option>
                                 <option value="rent" <%= filters.purpose === 'rent' ? 'selected' : '' %>>For Rent</option>
                                 <option value="lease" <%= filters.purpose === 'lease' ? 'selected' : '' %>>For Lease</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-col">
-                            <label><i class="fas fa-map-pin text-gold"></i> Locality</label>
-                            <select name="locality" onchange="this.form.submit()">
-                                <option value="">All Localities</option>
-                                <% localities.forEach(loc => { %>
-                                <option value="<%= loc.locality %>" <%= filters.locality === loc.locality ? 'selected' : '' %>><%= loc.locality %></option>
-                                <% }) %>
-                            </select>
-                        </div>
-
-                        <div class="filter-col">
-                            <label><i class="fas fa-bed text-gold"></i> Bedrooms</label>
-                            <select name="bedrooms" onchange="this.form.submit()">
-                                <option value="">Any BHK</option>
-                                <option value="2" <%= filters.bedrooms === '2' ? 'selected' : '' %>>2+ BHK</option>
-                                <option value="3" <%= filters.bedrooms === '3' ? 'selected' : '' %>>3+ BHK</option>
-                                <option value="4" <%= filters.bedrooms === '4' ? 'selected' : '' %>>4+ BHK</option>
-                                <option value="5" <%= filters.bedrooms === '5' ? 'selected' : '' %>>5+ BHK</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-col">
-                            <label><i class="fas fa-rupee-sign text-gold"></i> Max Price</label>
-                            <select name="max_price" onchange="this.form.submit()">
-                                <option value="">Any Price</option>
-                                <option value="5000000" <%= filters.maxPrice === '5000000' ? 'selected' : '' %>>Up to ₹50 Lakh</option>
-                                <option value="10000000" <%= filters.maxPrice === '10000000' ? 'selected' : '' %>>Up to ₹1 Cr</option>
-                                <option value="25000000" <%= filters.maxPrice === '25000000' ? 'selected' : '' %>>Up to ₹2.5 Cr</option>
-                                <option value="50000000" <%= filters.maxPrice === '50000000' ? 'selected' : '' %>>Up to ₹5 Cr</option>
-                                <option value="100000000" <%= filters.maxPrice === '100000000' ? 'selected' : '' %>>Up to ₹10 Cr</option>
                             </select>
                         </div>
 
@@ -116,13 +155,16 @@
             <!-- Results Info Header -->
             <div class="catalog-info-bar">
                 <span class="results-count">
-                    Showing <strong><%= properties.length %></strong> of <strong><%= total %></strong> properties
+                    Showing <strong><%= properties.length %></strong> of <strong><%= total %></strong> properties in Hyderabad
                 </span>
-                <% if (filters.category || filters.locality || filters.search || filters.purpose) { %>
+                <% if (filters.category || filters.locality || filters.search || filters.purpose || filters.bedrooms || filters.minPrice || filters.maxPrice) { %>
                 <div class="active-chips">
                     <span class="active-label">Active Filters:</span>
                     <% if (filters.category) { %><span class="filter-pill"><%= filters.category.replace(/_/g, ' ') %></span><% } %>
-                    <% if (filters.locality) { %><span class="filter-pill"><%= filters.locality %></span><% } %>
+                    <% if (filters.bedrooms) { %><span class="filter-pill"><%= filters.bedrooms %> BHK</span><% } %>
+                    <% if (filters.locality) { %><span class="filter-pill"><i class="fas fa-map-marker-alt"></i> <%= filters.locality %></span><% } %>
+                    <% if (filters.minPrice) { %><span class="filter-pill">Min: ₹<%= (filters.minPrice / 100000).toFixed(0) %>L</span><% } %>
+                    <% if (filters.maxPrice) { %><span class="filter-pill">Max: ₹<%= filters.maxPrice >= 10000000 ? (filters.maxPrice / 10000000).toFixed(1) + 'Cr' : (filters.maxPrice / 100000).toFixed(0) + 'L' %></span><% } %>
                     <% if (filters.purpose) { %><span class="filter-pill"><%= filters.purpose %></span><% } %>
                     <% if (filters.search) { %><span class="filter-pill">"<%= filters.search %>"</span><% } %>
                     <a href="/properties" class="clear-all-link">Clear All</a>
@@ -222,7 +264,7 @@
             <% if (totalPages > 1) { %>
             <div class="pagination-wrapper">
                 <% if (page > 1) { %>
-                <a href="?page=<%= page - 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
+                <a href="?page=<%= page - 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&min_price=<%= filters.minPrice %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
                     <i class="fas fa-chevron-left"></i> Previous
                 </a>
                 <% } %>
@@ -232,7 +274,7 @@
                 </div>
 
                 <% if (page < totalPages) { %>
-                <a href="?page=<%= page + 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
+                <a href="?page=<%= page + 1 %>&category=<%= filters.category %>&locality=<%= filters.locality %>&purpose=<%= filters.purpose %>&search=<%= filters.search %>&sort=<%= filters.sort %>&min_price=<%= filters.minPrice %>&max_price=<%= filters.maxPrice %>&bedrooms=<%= filters.bedrooms %>" class="btn btn-pagination">
                     Next <i class="fas fa-chevron-right"></i>
                 </a>
                 <% } %>

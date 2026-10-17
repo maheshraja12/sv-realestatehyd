@@ -151,15 +151,35 @@ async function processUserMessage(msg, typingId) {
     if (lower.includes('villa')) category = 'villa';
     else if (lower.includes('plot')) category = 'residential_plot';
     else if (lower.includes('apartment') || lower.includes('flat')) category = 'apartment';
-    else if (lower.includes('commercial')) category = 'commercial';
+    else if (lower.includes('commercial') || lower.includes('office') || lower.includes('showroom')) category = 'commercial';
+
+    let bedrooms = '';
+    if (lower.includes('2bhk') || lower.includes('2 bhk') || lower.includes('2 bedroom')) bedrooms = '2';
+    else if (lower.includes('3bhk') || lower.includes('3 bhk') || lower.includes('3 bedroom')) bedrooms = '3';
+    else if (lower.includes('4bhk') || lower.includes('4 bhk') || lower.includes('4 bedroom')) bedrooms = '4';
+    else if (lower.includes('5bhk') || lower.includes('5 bhk') || lower.includes('5 bedroom')) bedrooms = '5';
 
     let location = '';
     if (lower.includes('jubilee')) location = 'Jubilee Hills';
+    else if (lower.includes('banjara')) location = 'Banjara Hills';
     else if (lower.includes('kokapet')) location = 'Kokapet';
+    else if (lower.includes('financial district') || lower.includes('nanakramguda')) location = 'Financial District';
     else if (lower.includes('gachibowli')) location = 'Gachibowli';
+    else if (lower.includes('madhapur') || lower.includes('hitec')) location = 'Madhapur';
+    else if (lower.includes('kondapur')) location = 'Kondapur';
     else if (lower.includes('tellapur')) location = 'Tellapur';
+    else if (lower.includes('kollur')) location = 'Kollur';
+    else if (lower.includes('mokila')) location = 'Mokila';
     else if (lower.includes('shankarpally')) location = 'Shankarpally';
+    else if (lower.includes('bachupally')) location = 'Bachupally';
+    else if (lower.includes('miyapur')) location = 'Miyapur';
+    else if (lower.includes('kompally')) location = 'Kompally';
     else if (lower.includes('shamshabad')) location = 'Shamshabad';
+    else if (lower.includes('manikonda')) location = 'Manikonda';
+    else if (lower.includes('puppalaguda')) location = 'Puppalaguda';
+    else if (lower.includes('nallagandla')) location = 'Nallagandla';
+    else if (lower.includes('gandipet')) location = 'Gandipet';
+    else if (lower.includes('pragathi')) location = 'Pragathi Nagar';
 
     const res = await fetch('/api/chatbot/search', {
         method: 'POST',
@@ -167,7 +187,8 @@ async function processUserMessage(msg, typingId) {
         body: JSON.stringify({
             query: msg,
             category: category || undefined,
-            location: location || undefined
+            location: location || undefined,
+            bedrooms: bedrooms || undefined
         })
     });
 
