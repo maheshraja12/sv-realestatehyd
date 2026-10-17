@@ -4,9 +4,22 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
+const { cloudLeadsConfigured, listCloudProperties } = require('../database/cloud-leads');
 
 // GET / — Homepage
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).render('public/error', { title: 'Properties temporarily unavailable', error: 'The property database is not configured.' });
+        const result = await listCloudProperties({ public: true, limit: 100, offset: 0 });
+        if (!result.success) return res.status(502).render('public/error', { title: 'Properties temporarily unavailable', error: 'We could not load property listings right now.' });
+        const all = result.properties || [];
+        const featuredProperties = all.filter(p => Number(p.is_featured) === 1).slice(0, 6);
+        const latestProperties = all.slice(0, 8);
+        const counts = new Map();
+        all.forEach(p => counts.set(p.category, (counts.get(p.category) || 0) + 1));
+        const categoryCounts = Array.from(counts, ([category, count]) => ({ category, count }));
+        return res.render('public/home', { title: 'SV Real Estates Hyderabad — Premium Properties in Hyderabad', featuredProperties, latestProperties, categoryCounts });
+    }
     const db = getDb();
     
     const featuredProperties = db.prepare(`
@@ -43,7 +56,30 @@ router.get('/', (req, res) => {
 });
 
 // GET /properties — Property Listings
-router.get('/properties', (req, res) => {
+router.get('/properties', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).render('public/error', { title: 'Properties temporarily unavailable', error: 'The property database is not configured.' });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 12;
+        const offset = (page - 1) * limit;
+        const category = req.query.category || '';
+        const purpose = req.query.purpose || '';
+        const city = req.query.city || '';
+        const locality = req.query.locality || '';
+        const minPrice = req.query.min_price || '';
+        const maxPrice = req.query.max_price || '';
+        const bedrooms = req.query.bedrooms || '';
+        const search = req.query.search || '';
+        const sort = req.query.sort || 'newest';
+        const result = await listCloudProperties({ public: true, limit, offset, category, purpose, city, locality, min_price: minPrice, max_price: maxPrice, bedrooms, search, sort });
+        if (!result.success) return res.status(502).render('public/error', { title: 'Properties temporarily unavailable', error: result.error || 'We could not load property listings right now.' });
+        const localitiesResult = await listCloudProperties({ public: true, limit: 100, offset: 0 });
+        const localities = Array.from(new Set((localitiesResult.properties || []).map(p => p.locality).filter(Boolean))).sort().map(locality => ({ locality }));
+        const properties = result.properties || [];
+        const total = Number(result.total || 0);
+        const totalPages = Math.ceil(total / limit) || 1;
+        return res.render('public/properties', { title: 'Properties — SV Real Estates Hyderabad', properties, page, totalPages, total, filters: { category, purpose, city, locality, minPrice, maxPrice, bedrooms, search, sort }, localities });
+    }
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
     const limit = 12;
@@ -129,7 +165,22 @@ router.get('/properties', (req, res) => {
 });
 
 // GET /properties/:id — Property Detail
-router.get('/properties/:id', (req, res) => {
+router.get('/properties/:id', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).render('public/error', { title: 'Property temporarily unavailable', error: 'The property database is not configured.' });
+        const result = await listCloudProperties({ public: true, id: req.params.id, limit: 1, offset: 0 });
+        const property = result.success ? result.property : null;
+        if (!property) return res.status(result.success ? 404 : 502).render('public/404', { title: 'Property Not Found' });
+        const images = property.images || [];
+        let similarProperties = [];
+        if (property.category) {
+            const similar = await listCloudProperties({ public: true, category: property.category, limit: 8, offset: 0 });
+            if (similar.success) similarProperties = (similar.properties || []).filter(p => String(p.id) !== String(property.id)).slice(0, 4);
+        }
+        const amenities = Array.isArray(property.amenities) ? property.amenities : (() => { try { return JSON.parse(property.amenities || '[]'); } catch { return []; } })();
+        delete property.admin_notes; delete property.created_by;
+        return res.render('public/property-detail', { title: `${property.title} — SV Real Estates Hyderabad`, property, images, amenities, similarProperties });
+    }
     const db = getDb();
     
     // Support both numeric ID and property_code
@@ -187,7 +238,16 @@ router.get('/services', (req, res) => {
 });
 
 // GET /locations
-router.get('/locations', (req, res) => {
+router.get('/locations', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).render('public/error', { title: 'Locations temporarily unavailable', error: 'The property database is not configured.' });
+        const result = await listCloudProperties({ public: true, limit: 100, offset: 0 });
+        if (!result.success) return res.status(502).render('public/error', { title: 'Locations temporarily unavailable', error: 'We could not load locations right now.' });
+        const grouped = new Map();
+        (result.properties || []).forEach(p => { if (!p.locality) return; const key = `${p.locality}|${p.city || 'Hyderabad'}`; const old = grouped.get(key) || { locality: p.locality, city: p.city || 'Hyderabad', property_count: 0 }; old.property_count++; grouped.set(key, old); });
+        const locationData = Array.from(grouped.values()).sort((a, b) => b.property_count - a.property_count);
+        return res.render('public/locations', { title: 'Locations — SV Real Estates Hyderabad', locationData });
+    }
     const db = getDb();
     const locationData = db.prepare(`
         SELECT locality, city, COUNT(*) as property_count
