@@ -33,7 +33,7 @@ async function callCloud(method, payloadOrQuery) {
     } else if (method === 'PATCH') {
         init.headers['content-type'] = 'application/json';
         Object.entries(payloadOrQuery || {}).forEach(([key, value]) => {
-            if (['resource', 'id', 'operation'].includes(key) && value !== undefined && value !== null && value !== '') {
+            if (['resource', 'id', 'operation', 'image_id'].includes(key) && value !== undefined && value !== null && value !== '') {
                 url.searchParams.set(key, String(value));
             }
         });
@@ -41,6 +41,7 @@ async function callCloud(method, payloadOrQuery) {
         delete patch.resource;
         delete patch.id;
         delete patch.operation;
+        delete patch.image_id;
         init.body = JSON.stringify(patch);
     } else {
         Object.entries(payloadOrQuery || {}).forEach(([key, value]) => {
@@ -133,6 +134,32 @@ async function setCloudPropertyStatus(id, operation) {
     return callCloud('PATCH', { resource: 'properties', id, operation });
 }
 
+async function setCloudPropertyCoverImage(id, imageId) {
+    return callCloud('PATCH', { resource: 'properties', id, operation: 'cover-image', image_id: imageId });
+}
+
+async function deleteCloudPropertyImage(id, imageId) {
+    const endpoint = getEndpoint();
+    if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
+    const url = new URL(endpoint.url);
+    url.searchParams.set('resource', 'properties');
+    url.searchParams.set('id', String(id));
+    url.searchParams.set('image_id', String(imageId));
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'x-sv-edge-token': endpoint.token, accept: 'application/json' },
+            signal: AbortSignal.timeout(12000)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.success === false) return { success: false, error: body.error || 'Could not delete property image.' };
+        return { success: true, ...body };
+    } catch (error) {
+        console.error('[CLOUD PROPERTIES] Image delete failed:', error.message);
+        return { success: false, error: 'Could not reach the production properties database.' };
+    }
+}
+
 async function deleteCloudProperty(id) {
     const endpoint = getEndpoint();
     if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
@@ -157,5 +184,6 @@ async function deleteCloudProperty(id) {
 module.exports = {
     cloudLeadsConfigured, submitCloudLead, listCloudLeads,
     listCloudProperties, createCloudProperty, updateCloudProperty,
-    uploadCloudPropertyImage, setCloudPropertyStatus, deleteCloudProperty
+    uploadCloudPropertyImage, setCloudPropertyStatus, setCloudPropertyCoverImage,
+    deleteCloudPropertyImage, deleteCloudProperty
 };
