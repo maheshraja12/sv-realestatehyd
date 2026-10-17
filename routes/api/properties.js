@@ -10,7 +10,7 @@ const { upload } = require('../../middleware/upload');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
-const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, uploadCloudPropertyImage, setCloudPropertyStatus } = require('../../database/cloud-leads');
+const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, uploadCloudPropertyImage, setCloudPropertyStatus, setCloudPropertyCoverImage, deleteCloudPropertyImage, deleteCloudProperty } = require('../../database/cloud-leads');
 
 // Generate unique property code
 function generatePropertyCode(category) {
@@ -346,7 +346,12 @@ router.post('/:id/images', requireAuth, upload.array('images', 20), async (req, 
 });
 
 // PUT /api/properties/:id/images/:imageId/cover — Set cover image
-router.put('/:id/images/:imageId/cover', requireAuth, (req, res) => {
+router.put('/:id/images/:imageId/cover', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        const result = await setCloudPropertyCoverImage(req.params.id, req.params.imageId);
+        if (!result.success) return res.status(502).json({ error: result.error || 'Could not set cover image.' });
+        return res.json({ message: 'Cover image updated' });
+    }
     const db = getDb();
     db.prepare('UPDATE property_images SET is_cover = 0 WHERE property_id = ?').run(req.params.id);
     db.prepare('UPDATE property_images SET is_cover = 1 WHERE id = ? AND property_id = ?').run(req.params.imageId, req.params.id);
@@ -354,7 +359,12 @@ router.put('/:id/images/:imageId/cover', requireAuth, (req, res) => {
 });
 
 // DELETE /api/properties/:id/images/:imageId — Delete image
-router.delete('/:id/images/:imageId', requireAuth, (req, res) => {
+router.delete('/:id/images/:imageId', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        const result = await deleteCloudPropertyImage(req.params.id, req.params.imageId);
+        if (!result.success) return res.status(502).json({ error: result.error || 'Could not delete property image.' });
+        return res.json({ message: 'Image deleted' });
+    }
     const db = getDb();
     const image = db.prepare('SELECT * FROM property_images WHERE id = ? AND property_id = ?').get(req.params.imageId, req.params.id);
     if (!image) return res.status(404).json({ error: 'Image not found' });
@@ -468,7 +478,12 @@ router.post('/:id/duplicate', requireAuth, (req, res) => {
 });
 
 // DELETE /api/properties/:id — Delete
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        const result = await deleteCloudProperty(req.params.id);
+        if (!result.success) return res.status(502).json({ error: result.error || 'Could not delete property.' });
+        return res.json({ message: 'Property deleted' });
+    }
     const db = getDb();
     const property = db.prepare('SELECT title FROM properties WHERE id = ?').get(req.params.id);
     if (!property) return res.status(404).json({ error: 'Property not found' });
