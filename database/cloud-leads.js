@@ -98,6 +98,33 @@ async function createCloudProperty(property) {
     return callCloud('POST', { resource: 'properties', ...property });
 }
 
+async function uploadCloudPropertyImage(propertyId, file) {
+    const endpoint = getEndpoint();
+    if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
+    try {
+        const buffer = require('node:fs').readFileSync(file.path);
+        const response = await fetch(endpoint.url, {
+            method: 'POST',
+            headers: { 'x-sv-edge-token': endpoint.token, 'content-type': 'application/json', accept: 'application/json' },
+            body: JSON.stringify({
+                resource: 'properties',
+                action: 'upload-image',
+                property_id: String(propertyId),
+                filename: file.originalname,
+                content_type: file.mimetype,
+                data_base64: buffer.toString('base64')
+            }),
+            signal: AbortSignal.timeout(25000)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.success === false) return { success: false, error: body.error || 'Image upload failed.' };
+        return { success: true, ...body };
+    } catch (error) {
+        console.error('[CLOUD PROPERTIES] Image upload failed:', error.message);
+        return { success: false, error: 'Could not upload image to persistent storage.' };
+    }
+}
+
 async function updateCloudProperty(id, patch) {
     return callCloud('PATCH', { resource: 'properties', id, ...patch });
 }
@@ -130,5 +157,5 @@ async function deleteCloudProperty(id) {
 module.exports = {
     cloudLeadsConfigured, submitCloudLead, listCloudLeads,
     listCloudProperties, createCloudProperty, updateCloudProperty,
-    setCloudPropertyStatus, deleteCloudProperty
+    uploadCloudPropertyImage, setCloudPropertyStatus, deleteCloudProperty
 };
