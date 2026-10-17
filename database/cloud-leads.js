@@ -84,6 +84,9 @@ async function listCloudProperties(options = {}) {
         purpose: options.purpose,
         city: options.city,
         availability: options.availability,
+        min_price: options.min_price,
+        max_price: options.max_price,
+        bedrooms: options.bedrooms,
         search: options.search,
         limit: options.limit || 24,
         offset: options.offset || 0
