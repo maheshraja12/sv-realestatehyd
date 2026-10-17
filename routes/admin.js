@@ -26,6 +26,51 @@ router.use(requireAuth);
 
 // GET /admin/dashboard
 router.get('/dashboard', async (req, res) => {
+    if (process.env.VERCEL && cloudLeadsConfigured()) {
+        const [allPropertiesResult, publishedResult, leadResult, recentPropertiesResult] = await Promise.all([
+            listCloudProperties({ public: false, limit: 100, offset: 0 }),
+            listCloudProperties({ public: true, limit: 100, offset: 0 }),
+            listCloudLeads({ limit: 100, offset: 0 }),
+            listCloudProperties({ public: false, limit: 5, offset: 0 })
+        ]);
+        if ([allPropertiesResult, publishedResult, leadResult, recentPropertiesResult].some(r => !r.success)) {
+            console.error('[ADMIN DASHBOARD] Could not load all production data');
+            return res.status(502).send('Could not load dashboard data from the production database. Please refresh shortly.');
+        }
+        const allProperties = allPropertiesResult.properties || [];
+        const publishedProperties = publishedResult.properties || [];
+        const cloudLeads = leadResult.data || [];
+        const stats = {
+            totalProperties: Number(allPropertiesResult.total || 0),
+            publishedProperties: Number(publishedResult.total || 0),
+            draftProperties: allProperties.filter(p => p.status === 'draft').length,
+            totalLeads: Number(leadResult.count || 0),
+            newLeads: cloudLeads.filter(l => String(l.status || 'new').toLowerCase() === 'new').length,
+            followUpsDue: 0,
+            siteVisitsScheduled: 0,
+            closedLeads: cloudLeads.filter(l => String(l.status || '').toLowerCase() === 'converted').length
+        };
+        const recentLeads = cloudLeads.slice(0, 10).map(e => ({
+            id: e.id,
+            lead_code: e.lead_code,
+            full_name: e.full_name || e.customer_name,
+            customer_name: e.customer_name || e.full_name,
+            phone_number: e.phone_number || e.phone,
+            phone: e.phone || e.phone_number,
+            appointment_date: e.appointment_date,
+            appointment_time: e.appointment_time,
+            property_requirement: e.property_requirement,
+            property_category: e.property_category || e.property_requirement,
+            status: (e.status || 'new').toLowerCase(),
+            created_at: e.created_at,
+            property_title: null
+        }));
+        const recentProperties = recentPropertiesResult.properties || [];
+        return res.render('admin/dashboard', {
+            title: 'Dashboard — SV Real Estates Admin',
+            stats, recentLeads, recentProperties, unreadNotifications: 0
+        });
+    }
     const db = getDb();
     
     let stats = {
