@@ -80,6 +80,7 @@ async function listCloudProperties(options = {}) {
         resource: 'properties',
         public: options.public ? 'true' : 'false',
         id: options.id,
+        status: options.status,
         category: options.category,
         purpose: options.purpose,
         city: options.city,
