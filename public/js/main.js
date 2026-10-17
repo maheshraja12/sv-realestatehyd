@@ -193,6 +193,10 @@ async function handlePublicEnquirySubmit(e) {
     e.preventDefault();
     const form = e.target;
     const submitBtn = document.getElementById('modalSubmitBtn');
+    if (!submitBtn) {
+        alert('The enquiry form did not initialize correctly. Please refresh the page and try again.');
+        return;
+    }
     const originalText = submitBtn.innerHTML;
     const errorAlert = document.getElementById('modalErrorAlert');
     const errorText = document.getElementById('modalErrorText');
@@ -267,7 +271,13 @@ async function handlePublicEnquirySubmit(e) {
             body: JSON.stringify(payload)
         });
 
-        const result = await res.json();
+        const responseText = await res.text();
+        let result = {};
+        try {
+            result = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            result = { error: `The server returned an unexpected response (HTTP ${res.status}). Please refresh and try again.` };
+        }
 
         if (res.ok) {
             try {
