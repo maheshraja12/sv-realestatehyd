@@ -2,8 +2,10 @@
  * Lead Management API
  */
 const express = require('express');
+const crypto = require('node:crypto');
 const router = express.Router();
 const { getDb } = require('../../database/db');
+const { cloudLeadsConfigured, submitCloudLead, listCloudLeads } = require('../../database/cloud-leads');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
 const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
@@ -32,10 +34,65 @@ function generateLeadCode() {
 // POST /api/leads/public — Submit enquiry (public)
 router.post('/public', async (req, res) => {
     try {
-        const db = getDb();
+        const db = process.env.VERCEL ? null : getDb();
         const data = sanitizeObject(req.body);
         const errors = validateEnquiryData(data);
         if (errors.length > 0) return res.status(400).json({ errors });
+
+        // Production submissions must be confirmed by the persistent Supabase database.
+        // Never report success from Vercel's temporary /tmp SQLite database.
+        if (process.env.VERCEL) {
+            if (!cloudLeadsConfigured()) {
+                return res.status(503).json({ error: 'The enquiry service is temporarily unavailable. Please call our office directly.' });
+            }
+
+            const customerName = String(data.full_name || data.customer_name || 'Interested Buyer').trim();
+            const rawPhone = String(data.phone_number || data.phone || '').trim();
+            const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
+            const cleanPhone = digitsOnly.length === 12 && digitsOnly.startsWith('91')
+                ? digitsOnly.slice(2)
+                : (digitsOnly.length >= 10 ? digitsOnly.slice(-10) : rawPhone);
+            const appointmentDate = data.appointment_date || data.preferred_visit_date || null;
+            const appointmentTime = data.appointment_time || '10:00 AM - 12:00 PM';
+            const propertyReq = data.property_requirement || data.property_category || 'Residential Plot';
+            const validSources = ['website', 'chatbot', 'phone', 'walkin', 'referral', 'other'];
+            const validPrefs = ['phone', 'whatsapp', 'email', 'any'];
+            const source = data.source && validSources.includes(data.source) ? data.source : 'website';
+            const contactPref = data.contact_preference && validPrefs.includes(data.contact_preference) ? data.contact_preference : 'phone';
+            const leadCode = `SV-LEAD-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+            const saved = await submitCloudLead({
+                lead_code: leadCode,
+                customer_name: customerName,
+                full_name: customerName,
+                phone: cleanPhone,
+                phone_number: cleanPhone,
+                email: data.email || null,
+                property_id: data.property_id || null,
+                property_category: propertyReq,
+                property_requirement: propertyReq,
+                budget: data.budget || 'Consult / Market Price',
+                preferred_location: data.preferred_location || 'Hyderabad',
+                message: data.message || `Requirement: ${propertyReq}`,
+                contact_preference: contactPref,
+                appointment_date: appointmentDate,
+                appointment_time: appointmentTime,
+                source,
+                status: 'new'
+            });
+
+            if (!saved.success || !saved.data) {
+                console.error('[ENQUIRY] Supabase did not confirm persistence:', saved.error || 'No saved row returned');
+                return res.status(503).json({ error: 'We could not confirm that your enquiry was saved. Please try again or call our office.' });
+            }
+
+            console.log(`✅ [SUPABASE] Enquiry saved: ${saved.data.lead_code || leadCode}`);
+            return res.status(201).json({
+                message: 'Thank you for contacting SV Real Estates Hyderabad. Your enquiry has been received.',
+                lead_code: saved.data.lead_code || leadCode,
+                reference: saved.data.lead_code || leadCode
+            });
+        }
 
         const leadCode = generateLeadCode();
 
@@ -226,6 +283,50 @@ router.get('/', requireAuth, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 25;
     const offset = (page - 1) * limit;
+
+    // Production reads always come from the same persistent Supabase database used by public submissions.
+    // Return an empty list as a valid result; never silently replace it with instance-local SQLite.
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) {
+            return res.status(503).json({ error: 'Production enquiry database is not configured.' });
+        }
+        const cloudResult = await listCloudLeads({
+            status: req.query.status,
+            search: req.query.search,
+            category: req.query.category,
+            limit,
+            offset
+        });
+        if (!cloudResult.success) {
+            return res.status(502).json({ error: cloudResult.error || 'Unable to load enquiries from the production database.' });
+        }
+        const leads = (cloudResult.data || []).map(e => ({
+            id: e.id,
+            lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+            full_name: e.full_name || e.customer_name,
+            customer_name: e.customer_name || e.full_name,
+            phone_number: e.phone_number || e.phone,
+            phone: e.phone || e.phone_number,
+            email: e.email,
+            appointment_date: e.appointment_date,
+            appointment_time: e.appointment_time,
+            property_requirement: e.property_requirement,
+            property_category: e.property_category || e.property_requirement,
+            budget: e.budget,
+            preferred_location: e.preferred_location,
+            message: e.message,
+            status: (e.status || 'new').toLowerCase(),
+            created_at: e.created_at,
+            property_title: null,
+            agent_name: 'Unassigned'
+        }));
+        return res.json({
+            leads,
+            total: Number(cloudResult.count || 0),
+            page,
+            totalPages: Math.ceil(Number(cloudResult.count || 0) / limit)
+        });
+    }
 
     // Check PostgreSQL / Supabase cloud first
     if (isPostgresConfigured()) {
