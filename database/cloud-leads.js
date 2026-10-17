@@ -3,7 +3,7 @@
  * Never expose SV_REAL_ESTATE_EDGE_TOKEN to browser code.
  */
 function getEndpoint() {
-    const base = (process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
+    const base = (process.env.SV_REAL_ESTATE_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const token = (process.env.SV_REAL_ESTATE_EDGE_TOKEN || '').trim();
     if (!base.startsWith('https://') || !token) return null;
     return { url: `${base}/functions/v1/leads-api`, token };
