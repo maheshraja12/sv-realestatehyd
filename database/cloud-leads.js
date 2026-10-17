@@ -29,6 +29,7 @@ async function callCloud(method, payloadOrQuery) {
 
     if (method === 'POST') {
         init.headers['content-type'] = 'application/json';
+        if (payloadOrQuery && payloadOrQuery.resource) url.searchParams.set('resource', String(payloadOrQuery.resource));
         init.body = JSON.stringify(payloadOrQuery || {});
     } else if (method === 'PATCH') {
         init.headers['content-type'] = 'application/json';
