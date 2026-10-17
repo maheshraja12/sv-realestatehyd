@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
+const { cloudLeadsConfigured, listCloudLeads } = require('../database/cloud-leads');
 const { requireAuth } = require('../middleware/auth');
 const { 
     isMySqlConfigured, 
@@ -220,6 +221,57 @@ router.get('/leads', async (req, res) => {
     const search = req.query.search || '';
     const status = req.query.status || '';
     const category = req.query.category || '';
+
+    // Production admin listing reads from the same Supabase database as public enquiries.
+    // An empty cloud result is valid and must not fall back to ephemeral SQLite.
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) {
+            return res.status(503).send('Production enquiry database is not configured.');
+        }
+
+        const cloudResult = await listCloudLeads({ status, search, category, limit, offset });
+        if (!cloudResult.success) {
+            console.error('[ADMIN LEADS] Supabase listing failed:', cloudResult.error);
+            return res.status(502).send('Unable to load enquiries from the production database. Please try again shortly.');
+        }
+
+        const leads = (cloudResult.data || []).map(e => ({
+            id: e.id,
+            lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+            full_name: e.full_name || e.customer_name,
+            customer_name: e.customer_name || e.full_name,
+            phone_number: e.phone_number || e.phone,
+            phone: e.phone || e.phone_number,
+            email: e.email,
+            appointment_date: e.appointment_date,
+            appointment_time: e.appointment_time,
+            property_requirement: e.property_requirement,
+            property_category: e.property_category || e.property_requirement,
+            budget: e.budget,
+            preferred_location: e.preferred_location,
+            message: e.message,
+            status: (e.status || 'new').toLowerCase(),
+            created_at: e.created_at,
+            property_title: null,
+            agent_name: 'Unassigned'
+        }));
+        const total = Number(cloudResult.count || 0);
+        const totalPages = Math.ceil(total / limit) || 1;
+        const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
+
+        return res.render('admin/leads', {
+            title: 'Leads — SV Real Estates Admin',
+            leads,
+            agents,
+            page,
+            totalPages,
+            total,
+            search,
+            status,
+            category,
+            unreadNotifications: 0
+        });
+    }
 
     let leads = [];
     let total = 0;
