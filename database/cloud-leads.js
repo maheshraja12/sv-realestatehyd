@@ -85,6 +85,8 @@ async function listCloudProperties(options = {}) {
         category: options.category,
         purpose: options.purpose,
         city: options.city,
+        locality: options.locality,
+        sort: options.sort,
         availability: options.availability,
         min_price: options.min_price,
         max_price: options.max_price,
