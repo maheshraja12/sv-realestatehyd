@@ -30,6 +30,18 @@ async function callCloud(method, payloadOrQuery) {
     if (method === 'POST') {
         init.headers['content-type'] = 'application/json';
         init.body = JSON.stringify(payloadOrQuery || {});
+    } else if (method === 'PATCH') {
+        init.headers['content-type'] = 'application/json';
+        Object.entries(payloadOrQuery || {}).forEach(([key, value]) => {
+            if (['resource', 'id', 'operation'].includes(key) && value !== undefined && value !== null && value !== '') {
+                url.searchParams.set(key, String(value));
+            }
+        });
+        const patch = { ...(payloadOrQuery || {}) };
+        delete patch.resource;
+        delete patch.id;
+        delete patch.operation;
+        init.body = JSON.stringify(patch);
     } else {
         Object.entries(payloadOrQuery || {}).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
