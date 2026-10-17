@@ -346,7 +346,7 @@ router.post('/:id/images', requireAuth, upload.array('images', 20), async (req, 
 });
 
 // PUT /api/properties/:id/images/:imageId/cover — Set cover image
-router.put('/:id/images/:imageId/cover', requireAuth, async (req, res) => {
+router.patch('/:id/images/:imageId/cover', requireAuth, async (req, res) => {
     if (process.env.VERCEL) {
         const result = await setCloudPropertyCoverImage(req.params.id, req.params.imageId);
         if (!result.success) return res.status(502).json({ error: result.error || 'Could not set cover image.' });
