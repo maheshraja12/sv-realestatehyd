@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
-const { cloudLeadsConfigured, listCloudLeads } = require('../database/cloud-leads');
+const { cloudLeadsConfigured, listCloudLeads, listCloudProperties } = require('../database/cloud-leads');
 const { requireAuth } = require('../middleware/auth');
 const { 
     isMySqlConfigured, 
@@ -130,7 +130,26 @@ router.get('/dashboard', async (req, res) => {
 });
 
 // GET /admin/properties
-router.get('/properties', (req, res) => {
+router.get('/properties', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).send('Production properties database is not configured.');
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const category = req.query.category || '';
+        const status = req.query.status || '';
+        const result = await listCloudProperties({ public: false, page, limit, offset, search, category, status });
+        if (!result.success) return res.status(502).send(result.error || 'Could not load production properties.');
+        const properties = (result.properties || []).map(p => ({ ...p, cover_image: p.cover_image || null, lead_count: 0 }));
+        const total = Number(result.total || 0);
+        const totalPages = Math.ceil(total / limit) || 1;
+        return res.render('admin/properties', {
+            title: 'Properties — SV Real Estates Admin',
+            properties, page, totalPages, total, search, category, status,
+            unreadNotifications: 0
+        });
+    }
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
     const limit = 20;
@@ -193,7 +212,18 @@ router.get('/properties/new', (req, res) => {
 });
 
 // GET /admin/properties/:id/edit
-router.get('/properties/:id/edit', (req, res) => {
+router.get('/properties/:id/edit', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).send('Production properties database is not configured.');
+        const result = await listCloudProperties({ public: false, id: req.params.id, limit: 1, offset: 0 });
+        const property = result.success ? result.property : null;
+        if (!property) return res.redirect('/admin/properties');
+        const images = property.images || [];
+        return res.render('admin/property-form', {
+            title: `Edit: ${property.title} — SV Real Estates Admin`,
+            property, images, isEdit: true, unreadNotifications: 0
+        });
+    }
     const db = getDb();
     const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
     
