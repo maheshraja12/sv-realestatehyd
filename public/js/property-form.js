@@ -255,7 +255,7 @@ async function saveProperty(overrideStatus) {
         const data = await res.json();
 
         if (res.ok) {
-            const savedId = isEdit ? propertyId : data.property_id;
+            const savedId = isEdit ? propertyId : data.id;
 
             // If there are pending files for newly created property, upload them now
             if (!isEdit && pendingUploadFiles.length > 0 && savedId) {
