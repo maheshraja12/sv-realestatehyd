@@ -128,7 +128,10 @@ async function uploadCloudPropertyImage(propertyId, file) {
 }
 
 async function updateCloudProperty(id, patch) {
-    return callCloud('PATCH', { resource: 'properties', id, ...patch });
+    const values = { ...patch };
+    if (values.status === 'published' && !values.published_at) values.published_at = new Date().toISOString();
+    if (values.status === 'draft') values.published_at = null;
+    return callCloud('PATCH', { resource: 'properties', id, ...values });
 }
 
 async function setCloudPropertyStatus(id, operation) {
