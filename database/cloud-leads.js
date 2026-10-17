@@ -4,7 +4,7 @@
  */
 function getEndpoint() {
     const base = (process.env.SV_REAL_ESTATE_SUPABASE_URL || '').trim().replace(/\/$/, '');
-    const token = (process.env.SV_REAL_ESTATE_EDGE_TOKEN || '').trim();
+    const token = (process.env.SV_REAL_ESTATE_EDGE_TOKEN_V2 || '').trim();
     if (!base.startsWith('https://') || !token) return null;
     return { url: `${base}/functions/v1/leads-api`, token };
 }
