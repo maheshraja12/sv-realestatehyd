@@ -10,6 +10,7 @@ const { upload } = require('../../middleware/upload');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, setCloudPropertyStatus } = require('../../database/cloud-leads');
 
 // Generate unique property code
 function generatePropertyCode(category) {
@@ -30,7 +31,15 @@ function generatePropertyCode(category) {
 // ── Public Endpoints ──────────────────────────────────────
 
 // GET /api/properties/public — Public property list
-router.get('/public', (req, res) => {
+router.get('/public', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 12));
+        const result = await listCloudProperties({ public: true, page, limit, offset: (page - 1) * limit, category: req.query.category, purpose: req.query.purpose, min_price: req.query.min_price, max_price: req.query.max_price, bedrooms: req.query.bedrooms, search: req.query.search });
+        if (!result.success) return res.status(502).json({ error: result.error || 'Unable to load published properties.' });
+        return res.json({ properties: result.properties || [], total: Number(result.total || 0), page, totalPages: Math.ceil(Number(result.total || 0) / limit) });
+    }
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
@@ -73,7 +82,15 @@ router.get('/public', (req, res) => {
 });
 
 // GET /api/properties/public/:id — Public property detail
-router.get('/public/:id', (req, res) => {
+router.get('/public/:id', async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+        const result = await listCloudProperties({ public: true, id: req.params.id, limit: 1, offset: 0 });
+        const property = result.success ? result.property : null;
+        if (!property) return res.status(result.success ? 404 : 502).json({ error: result.error || 'Property not found.' });
+        delete property.admin_notes; delete property.created_by;
+        return res.json({ property, images: property.images || [] });
+    }
     const db = getDb();
     let property;
     if (isNaN(req.params.id)) {
@@ -96,12 +113,19 @@ router.get('/public/:id', (req, res) => {
 // ── Admin Endpoints (Protected) ──────────────────────────
 
 // POST /api/properties — Create property
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     try {
         const db = getDb();
         const data = sanitizeObject(req.body);
         const errors = validatePropertyData(data);
         if (errors.length > 0) return res.status(400).json({ errors });
+
+        if (process.env.VERCEL) {
+            if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+            const saved = await createCloudProperty({ ...data, created_by: req.session.userId });
+            if (!saved.success) return res.status(502).json({ error: saved.error || 'Failed to save property to production database.' });
+            return res.status(201).json({ id: saved.id, property_code: saved.property_code, message: saved.message || 'Property created successfully' });
+        }
 
         const propertyCode = data.property_code || generatePropertyCode(data.category);
 
@@ -177,8 +201,17 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // PUT /api/properties/:id — Update property
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
     try {
+        if (process.env.VERCEL) {
+            if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+            const data = sanitizeObject(req.body);
+            const errors = validatePropertyData(data);
+            if (errors.length > 0) return res.status(400).json({ errors });
+            const updated = await updateCloudProperty(req.params.id, { ...data, updated_at: new Date().toISOString() });
+            if (!updated.success) return res.status(502).json({ error: updated.error || 'Failed to update property.' });
+            return res.json({ message: 'Property updated successfully' });
+        }
         const db = getDb();
         const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
         if (!property) return res.status(404).json({ error: 'Property not found' });
@@ -349,7 +382,13 @@ router.put('/:id/images/reorder', requireAuth, (req, res) => {
 });
 
 // PATCH /api/properties/:id/publish — Publish
-router.patch('/:id/publish', requireAuth, (req, res) => {
+router.patch('/:id/publish', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+        const result = await setCloudPropertyStatus(req.params.id, 'publish');
+        if (!result.success) return res.status(502).json({ error: result.error || 'Failed to update property status.' });
+        return res.json({ message: 'Property published successfully' });
+    }
     const db = getDb();
     db.prepare("UPDATE properties SET status = 'published', published_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(req.params.id);
     auditLog(db, req.session.userId, req.session.userName, 'publish', 'property', req.params.id, null, req.ip);
@@ -357,7 +396,13 @@ router.patch('/:id/publish', requireAuth, (req, res) => {
 });
 
 // PATCH /api/properties/:id/unpublish — Unpublish
-router.patch('/:id/unpublish', requireAuth, (req, res) => {
+router.patch('/:id/unpublish', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+        const result = await setCloudPropertyStatus(req.params.id, 'unpublish');
+        if (!result.success) return res.status(502).json({ error: result.error || 'Failed to update property status.' });
+        return res.json({ message: 'Property unpublished successfully' });
+    }
     const db = getDb();
     db.prepare("UPDATE properties SET status = 'draft', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
     auditLog(db, req.session.userId, req.session.userName, 'unpublish', 'property', req.params.id, null, req.ip);
@@ -365,7 +410,13 @@ router.patch('/:id/unpublish', requireAuth, (req, res) => {
 });
 
 // PATCH /api/properties/:id/archive — Archive
-router.patch('/:id/archive', requireAuth, (req, res) => {
+router.patch('/:id/archive', requireAuth, async (req, res) => {
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
+        const result = await setCloudPropertyStatus(req.params.id, 'archive');
+        if (!result.success) return res.status(502).json({ error: result.error || 'Failed to update property status.' });
+        return res.json({ message: 'Property archived successfully' });
+    }
     const db = getDb();
     db.prepare("UPDATE properties SET status = 'archived', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
     auditLog(db, req.session.userId, req.session.userName, 'archive', 'property', req.params.id, null, req.ip);
