@@ -255,7 +255,7 @@
                                 <% 
                                 const allAmenities = ['Gated Community', 'Swimming Pool', 'Gym', 'Clubhouse', 'Park', 'Children Play Area', 'Power Backup', '24/7 Security', 'CCTV', 'Intercom', 'Lift', 'Car Parking', 'Visitor Parking', 'Rain Water Harvesting', 'Solar Panels', 'Vastu Compliant', 'Water Supply', 'Sewage Treatment', 'Fire Safety', 'Jogging Track', 'Tennis Court', 'Basketball Court', 'Indoor Games', 'Community Hall', 'Shopping Complex', 'Temple', 'Garden', 'Landscaping'];
                                 let currentAmenities = [];
-                                try { currentAmenities = JSON.parse(property ? property.amenities || '[]' : '[]'); } catch(e) {}
+                                try { currentAmenities = Array.isArray(property && property.amenities) ? property.amenities : JSON.parse(property ? property.amenities || '[]' : '[]'); } catch(e) {}
                                 allAmenities.forEach(a => { %>
                                 <label class="amenity-checkbox">
                                     <input type="checkbox" name="amenity" value="<%= a %>" <%= currentAmenities.includes(a) ? 'checked' : '' %>>
