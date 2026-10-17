@@ -63,4 +63,56 @@ async function listCloudLeads(options = {}) {
     });
 }
 
-module.exports = { cloudLeadsConfigured, submitCloudLead, listCloudLeads };
+async function listCloudProperties(options = {}) {
+    return callCloud('GET', {
+        resource: 'properties',
+        public: options.public ? 'true' : 'false',
+        id: options.id,
+        category: options.category,
+        purpose: options.purpose,
+        city: options.city,
+        availability: options.availability,
+        search: options.search,
+        limit: options.limit || 24,
+        offset: options.offset || 0
+    });
+}
+
+async function createCloudProperty(property) {
+    return callCloud('POST', { resource: 'properties', ...property });
+}
+
+async function updateCloudProperty(id, patch) {
+    return callCloud('PATCH', { resource: 'properties', id, ...patch });
+}
+
+async function setCloudPropertyStatus(id, operation) {
+    return callCloud('PATCH', { resource: 'properties', id, operation });
+}
+
+async function deleteCloudProperty(id) {
+    const endpoint = getEndpoint();
+    if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
+    const url = new URL(endpoint.url);
+    url.searchParams.set('resource', 'properties');
+    url.searchParams.set('id', String(id));
+    try {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'x-sv-edge-token': endpoint.token, accept: 'application/json' },
+            signal: AbortSignal.timeout(12000)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.success === false) return { success: false, error: body.error || 'Could not delete property.' };
+        return { success: true, ...body };
+    } catch (error) {
+        console.error('[CLOUD PROPERTIES] Delete failed:', error.message);
+        return { success: false, error: 'Could not reach the production properties database.' };
+    }
+}
+
+module.exports = {
+    cloudLeadsConfigured, submitCloudLead, listCloudLeads,
+    listCloudProperties, createCloudProperty, updateCloudProperty,
+    setCloudPropertyStatus, deleteCloudProperty
+};
