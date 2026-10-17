@@ -106,17 +106,15 @@ async function uploadCloudPropertyImage(propertyId, file) {
     if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
     try {
         const buffer = require('node:fs').readFileSync(file.path);
-        const response = await fetch(endpoint.url, {
+        const url = new URL(endpoint.url);
+        url.searchParams.set('resource', 'properties');
+        url.searchParams.set('action', 'upload-image');
+        url.searchParams.set('property_id', String(propertyId));
+        url.searchParams.set('filename', String(file.originalname || 'property-image').slice(0, 180));
+        const response = await fetch(url, {
             method: 'POST',
-            headers: { 'x-sv-edge-token': endpoint.token, 'content-type': 'application/json', accept: 'application/json' },
-            body: JSON.stringify({
-                resource: 'properties',
-                action: 'upload-image',
-                property_id: String(propertyId),
-                filename: file.originalname,
-                content_type: file.mimetype,
-                data_base64: buffer.toString('base64')
-            }),
+            headers: { 'x-sv-edge-token': endpoint.token, 'content-type': file.mimetype, accept: 'application/json' },
+            body: buffer,
             signal: AbortSignal.timeout(25000)
         });
         const body = await response.json().catch(() => ({}));
