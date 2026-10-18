@@ -92,71 +92,7 @@ router.get('/dashboard', async (req, res) => {
         ORDER BY l.id DESC LIMIT 10
     `).all();
 
-    // If PostgreSQL / Supabase is configured, fetch live stats and recent leads from PostgreSQL
-    if (isPostgresConfigured()) {
-        try {
-            const pgStats = await getPgLeadStats();
-            if (pgStats.success && pgStats.total > 0) {
-                stats.totalLeads = pgStats.total;
-                stats.newLeads = pgStats.newCount;
-            }
 
-            const pgAptStats = await getPgAppointmentStats();
-            if (pgAptStats.success && (pgAptStats.total > 0 || pgAptStats.pendingCount > 0)) {
-                stats.siteVisitsScheduled = pgAptStats.pendingCount;
-            }
-
-            const pgRecent = await fetchPgLeads({ limit: 10 });
-            if (pgRecent.success && pgRecent.data.length > 0) {
-                recentLeads = pgRecent.data.map(e => ({
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name || e.customer_name,
-                    customer_name: e.customer_name || e.full_name,
-                    phone_number: e.phone_number || e.phone,
-                    phone: e.phone || e.phone_number,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_category || e.property_requirement,
-                    status: (e.status || 'new').toLowerCase(),
-                    created_at: e.created_at,
-                    property_title: null
-                }));
-            }
-        } catch (pgErr) {
-            console.error('Error fetching PostgreSQL dashboard data:', pgErr);
-        }
-    } else if (isMySqlConfigured()) {
-        try {
-            const sqlStats = await getEnquiryStats();
-            if (sqlStats.success && sqlStats.total > 0) {
-                stats.totalLeads = sqlStats.total;
-                stats.newLeads = sqlStats.newCount;
-            }
-
-            const sqlRecent = await fetchEnquiries({ limit: 10 });
-            if (sqlRecent.success && sqlRecent.data.length > 0) {
-                recentLeads = sqlRecent.data.map(e => ({
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name,
-                    customer_name: e.full_name,
-                    phone_number: e.phone_number,
-                    phone: e.phone_number,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_requirement,
-                    status: (e.status || 'New').toLowerCase(),
-                    created_at: e.created_at,
-                    property_title: null
-                }));
-            }
-        } catch (sqlErr) {
-            console.error('Error fetching MySQL dashboard data:', sqlErr);
-        }
-    }
 
     const recentProperties = db.prepare(`
         SELECT * FROM properties ORDER BY updated_at DESC LIMIT 5
@@ -354,109 +290,34 @@ router.get('/leads', async (req, res) => {
         });
     }
 
-    let leads = [];
-    let total = 0;
+    // Local SQLite database query (with filters and pagination)
+    let where = '1=1';
+    const params = [];
 
-    if (isPostgresConfigured()) {
-        try {
-            const pgResult = await fetchPgLeads({
-                status,
-                search,
-                category,
-                limit,
-                offset
-            });
-            if (pgResult.success && pgResult.data.length > 0) {
-                total = pgResult.count;
-                leads = pgResult.data.map(e => ({
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name || e.customer_name,
-                    customer_name: e.customer_name || e.full_name,
-                    phone_number: e.phone_number || e.phone,
-                    phone: e.phone || e.phone_number,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_category || e.property_requirement,
-                    budget: e.budget,
-                    preferred_location: e.preferred_location,
-                    status: (e.status || 'new').toLowerCase(),
-                    created_at: e.created_at,
-                    property_title: null,
-                    agent_name: 'Unassigned'
-                }));
-            }
-        } catch (pgErr) {
-            console.error('Error fetching leads from PostgreSQL:', pgErr);
-        }
-    } else if (isMySqlConfigured()) {
-        try {
-            const sqlResult = await fetchEnquiries({
-                status,
-                search,
-                limit,
-                offset
-            });
-            if (sqlResult.success) {
-                total = sqlResult.count;
-                leads = sqlResult.data.map(e => ({
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name,
-                    customer_name: e.full_name,
-                    phone_number: e.phone_number,
-                    phone: e.phone_number,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_requirement,
-                    status: (e.status || 'New').toLowerCase(),
-                    created_at: e.created_at,
-                    property_title: null,
-                    agent_name: 'Unassigned'
-                }));
-            }
-        } catch (sqlErr) {
-            console.error('Error fetching leads from MySQL:', sqlErr);
-        }
+    if (search) {
+        where += ' AND (l.customer_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ? OR l.lead_code LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (status) {
+        where += ' AND l.status = ?';
+        params.push(status);
+    }
+    if (category) {
+        where += ' AND l.property_category = ?';
+        params.push(category);
     }
 
-    // Fallback to local DB if cloud DB not configured or returns empty
-    if ((!isPostgresConfigured() && !isMySqlConfigured()) || leads.length === 0) {
-        let where = '1=1';
-        const params = [];
-
-        if (search) {
-            where += ' AND (l.customer_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ? OR l.lead_code LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-        }
-        if (status) {
-            where += ' AND l.status = ?';
-            params.push(status);
-        }
-        if (category) {
-            where += ' AND l.property_category = ?';
-            params.push(category);
-        }
-
-        const localTotal = db.prepare(`SELECT COUNT(*) as count FROM leads l WHERE ${where}`).get(...params).count;
-        const localLeads = db.prepare(`
-            SELECT l.*, p.title as property_title, p.property_code as property_code,
-                u.name as agent_name
-            FROM leads l
-            LEFT JOIN properties p ON l.property_id = p.id
-            LEFT JOIN users u ON l.assigned_agent_id = u.id
-            WHERE ${where}
-            ORDER BY l.id DESC
-            LIMIT ? OFFSET ?
-        `).all(...params, limit, offset);
-
-        if (!isMySqlConfigured() || leads.length === 0) {
-            total = localTotal;
-            leads = localLeads;
-        }
-    }
+    const total = db.prepare(`SELECT COUNT(*) as count FROM leads l WHERE ${where}`).get(...params).count;
+    const leads = db.prepare(`
+        SELECT l.*, p.title as property_title, p.property_code as property_code,
+            u.name as agent_name
+        FROM leads l
+        LEFT JOIN properties p ON l.property_id = p.id
+        LEFT JOIN users u ON l.assigned_agent_id = u.id
+        WHERE ${where}
+        ORDER BY l.id DESC
+        LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
 
     const totalPages = Math.ceil(total / limit) || 1;
     const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
@@ -478,83 +339,15 @@ router.get('/leads', async (req, res) => {
 // GET /admin/leads/:id
 router.get('/leads/:id', async (req, res) => {
     const db = getDb();
-    let lead = null;
-
-    if (isPostgresConfigured()) {
-        try {
-            const pgResult = await getPgLeadById(req.params.id);
-            if (pgResult.success && pgResult.data) {
-                const e = pgResult.data;
-                lead = {
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name || e.customer_name,
-                    customer_name: e.customer_name || e.full_name,
-                    phone_number: e.phone_number || e.phone,
-                    phone: e.phone || e.phone_number,
-                    email: e.email,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_category || e.property_requirement,
-                    budget: e.budget,
-                    preferred_location: e.preferred_location,
-                    status: (e.status || 'new').toLowerCase(),
-                    created_at: e.created_at,
-                    source: e.source || 'website',
-                    message: e.message || `Requirement: ${e.property_requirement}`,
-                    property_title: null,
-                    agent_name: 'Unassigned'
-                };
-            }
-        } catch (pgErr) {
-            console.error('Error fetching lead detail from PostgreSQL:', pgErr);
-        }
-    } else if (isMySqlConfigured()) {
-        try {
-            const sqlResult = await getEnquiryById(req.params.id);
-            if (sqlResult.success && sqlResult.data) {
-                const e = sqlResult.data;
-                lead = {
-                    id: e.id,
-                    lead_code: e.lead_code || `SV-ENQ-${String(e.id).padStart(5, '0')}`,
-                    full_name: e.full_name,
-                    customer_name: e.full_name,
-                    phone_number: e.phone_number,
-                    phone: e.phone_number,
-                    email: e.email || null,
-                    appointment_date: e.appointment_date,
-                    appointment_time: e.appointment_time,
-                    property_requirement: e.property_requirement,
-                    property_category: e.property_requirement,
-                    status: (e.status || 'New').toLowerCase(),
-                    created_at: e.created_at,
-                    source: e.source || 'website',
-                    message: e.message || `Requirement: ${e.property_requirement}`,
-                    property_title: null,
-                    property_code: null,
-                    property_price: null,
-                    property_cat: null,
-                    property_locality: null,
-                    agent_name: 'Unassigned'
-                };
-            }
-        } catch (sqlErr) {
-            console.error('Error fetching lead detail from MySQL:', sqlErr);
-        }
-    }
-
-    if (!lead) {
-        lead = db.prepare(`
-            SELECT l.*, p.title as property_title, p.property_code, p.price as property_price,
-                p.category as property_cat, p.locality as property_locality,
-                u.name as agent_name
-            FROM leads l
-            LEFT JOIN properties p ON l.property_id = p.id
-            LEFT JOIN users u ON l.assigned_agent_id = u.id
-            WHERE l.id = ?
-        `).get(req.params.id);
-    }
+    let lead = db.prepare(`
+        SELECT l.*, p.title as property_title, p.property_code, p.price as property_price,
+            p.category as property_cat, p.locality as property_locality,
+            u.name as agent_name
+        FROM leads l
+        LEFT JOIN properties p ON l.property_id = p.id
+        LEFT JOIN users u ON l.assigned_agent_id = u.id
+        WHERE l.id = ?
+    `).get(req.params.id);
 
     if (!lead) {
         return res.redirect('/admin/leads');
@@ -608,48 +401,18 @@ router.get('/appointments', async (req, res) => {
         params.push(status);
     }
 
-    let total = 0;
-    let appointments = [];
-
-    if (isPostgresConfigured()) {
-        try {
-            const pgResult = await fetchPgAppointments({ status, limit, offset });
-            if (pgResult.success && pgResult.data.length > 0) {
-                total = pgResult.count;
-                appointments = pgResult.data.map(a => ({
-                    id: a.id,
-                    appointment_code: a.appointment_code,
-                    customer_name: a.customer_name,
-                    phone: a.phone,
-                    requested_date: a.requested_date,
-                    requested_time: a.requested_time,
-                    confirmed_date: a.confirmed_date,
-                    confirmed_time: a.confirmed_time,
-                    status: a.status,
-                    notes: a.notes,
-                    property_title: 'Direct Enquiry',
-                    property_code: 'SV-DIRECT',
-                    agent_name: 'Unassigned'
-                }));
-            }
-        } catch (pgErr) {
-            console.error('Error fetching appointments from PostgreSQL:', pgErr);
-        }
-    }
-
-    if (!isPostgresConfigured() || appointments.length === 0) {
-        total = db.prepare(`SELECT COUNT(*) as count FROM appointments a WHERE ${where}`).get(...params).count;
-        appointments = db.prepare(`
-            SELECT a.*, p.title as property_title, p.property_code,
-                u.name as agent_name
-            FROM appointments a
-            LEFT JOIN properties p ON a.property_id = p.id
-            LEFT JOIN users u ON a.assigned_agent_id = u.id
-            WHERE ${where}
-            ORDER BY a.requested_date ASC, a.created_at DESC
-            LIMIT ? OFFSET ?
-        `).all(...params, limit, offset);
-    }
+    // Local SQLite appointments query
+    const total = db.prepare(`SELECT COUNT(*) as count FROM appointments a WHERE ${where}`).get(...params).count;
+    const appointments = db.prepare(`
+        SELECT a.*, p.title as property_title, p.property_code,
+            u.name as agent_name
+        FROM appointments a
+        LEFT JOIN properties p ON a.property_id = p.id
+        LEFT JOIN users u ON a.assigned_agent_id = u.id
+        WHERE ${where}
+        ORDER BY a.id DESC
+        LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
 
     const totalPages = Math.ceil(total / limit);
     const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
