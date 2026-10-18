@@ -28,28 +28,50 @@ router.post('/public', async (req, res) => {
     try {
         const db = getDb();
         const data = sanitizeObject(req.body);
+        const customerName = (data.customer_name || data.full_name || data.name || '').trim();
+        const phone = (data.phone || data.phone_number || '').trim();
+        const requestedDate = (data.requested_date || data.preferred_date || data.appointment_date || '').trim();
+        const requestedTime = (data.requested_time || data.preferred_time || data.appointment_time || '10:00 AM - 12:00 PM').trim();
 
-        if (!data.customer_name || !data.phone || !data.requested_date) {
+        if (!customerName || !phone || !requestedDate) {
             return res.status(400).json({ error: 'Name, phone, and preferred date are required' });
         }
-        if (!validatePhone(data.phone)) {
+        if (!validatePhone(phone)) {
             return res.status(400).json({ error: 'Invalid phone number' });
         }
 
         const appointmentCode = generateAppointmentCode();
+
+        let propertyId = null;
+        if (data.property_id) {
+            const pid = parseInt(data.property_id, 10);
+            if (!isNaN(pid)) {
+                const found = db.prepare('SELECT id FROM properties WHERE id = ?').get(pid);
+                if (found) propertyId = pid;
+            }
+        }
+
+        let leadId = null;
+        if (data.lead_id) {
+            const lid = parseInt(data.lead_id, 10);
+            if (!isNaN(lid)) {
+                const found = db.prepare('SELECT id FROM leads WHERE id = ?').get(lid);
+                if (found) leadId = lid;
+            }
+        }
 
         // ── PostgreSQL / Supabase Cloud Database Persistence ──────
         if (isPostgresConfigured()) {
             try {
                 await insertPgAppointment({
                     appointment_code: appointmentCode,
-                    lead_id: data.lead_id ? parseInt(data.lead_id, 10) : null,
-                    property_id: data.property_id ? parseInt(data.property_id, 10) : null,
-                    customer_name: data.customer_name,
-                    phone: data.phone,
+                    lead_id: leadId,
+                    property_id: propertyId,
+                    customer_name: customerName,
+                    phone: phone,
                     notes: data.notes || null,
-                    requested_date: data.requested_date,
-                    requested_time: data.requested_time || null,
+                    requested_date: requestedDate,
+                    requested_time: requestedTime,
                     status: 'requested'
                 });
                 console.log(`✅ [POSTGRES] Stored appointment ${appointmentCode} in cloud DB`);
@@ -65,13 +87,13 @@ router.post('/public', async (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'requested')
         `).run(
             appointmentCode,
-            data.lead_id ? parseInt(data.lead_id) : null,
-            data.property_id ? parseInt(data.property_id) : null,
-            data.customer_name,
-            data.phone,
+            leadId,
+            propertyId,
+            customerName,
+            phone,
             data.notes || null,
-            data.requested_date,
-            data.requested_time || null
+            requestedDate,
+            requestedTime
         );
 
         // Notify admins
