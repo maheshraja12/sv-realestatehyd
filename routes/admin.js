@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 const { cloudLeadsConfigured, listCloudLeads, listCloudProperties } = require('../database/cloud-leads');
+const { enhanceProperty, enhancePropertyList } = require('../database/property-media');
 const { requireAuth } = require('../middleware/auth');
 const { 
     isMySqlConfigured, 
@@ -186,7 +187,8 @@ router.get('/properties', async (req, res) => {
         const status = req.query.status || '';
         const result = await listCloudProperties({ public: false, page, limit, offset, search, category, status });
         if (!result.success) return res.status(502).send(result.error || 'Could not load production properties.');
-        const properties = (result.properties || []).map(p => ({ ...p, cover_image: p.cover_image || null, lead_count: 0 }));
+        let properties = (result.properties || []).map(p => ({ ...p, cover_image: p.cover_image || null, lead_count: 0 }));
+        properties = enhancePropertyList(properties);
         const total = Number(result.total || 0);
         const totalPages = Math.ceil(total / limit) || 1;
         return res.render('admin/properties', {
@@ -220,7 +222,7 @@ router.get('/properties', async (req, res) => {
     }
 
     const total = db.prepare(`SELECT COUNT(*) as count FROM properties WHERE ${where}`).get(...params).count;
-    const properties = db.prepare(`
+    let properties = db.prepare(`
         SELECT p.*, 
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image,
             (SELECT COUNT(*) FROM leads WHERE property_id = p.id) as lead_count
@@ -229,6 +231,7 @@ router.get('/properties', async (req, res) => {
         ORDER BY p.updated_at DESC
         LIMIT ? OFFSET ?
     `).all(...params, limit, offset);
+    properties = enhancePropertyList(properties);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -263,6 +266,7 @@ router.get('/properties/:id/edit', async (req, res) => {
         const result = await listCloudProperties({ public: false, id: req.params.id, limit: 1, offset: 0 });
         const property = result.success ? result.property : null;
         if (!property) return res.redirect('/admin/properties');
+        enhanceProperty(property);
         const images = property.images || [];
         return res.render('admin/property-form', {
             title: `Edit: ${property.title} — SV Real Estates Admin`,
@@ -276,7 +280,9 @@ router.get('/properties/:id/edit', async (req, res) => {
         return res.redirect('/admin/properties');
     }
 
-    const images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    enhanceProperty(property);
+    let images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    if (!images || images.length === 0) images = property.images || [];
 
     res.render('admin/property-form', {
         title: `Edit: ${property.title} — SV Real Estates Admin`,

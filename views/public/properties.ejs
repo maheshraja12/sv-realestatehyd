@@ -20,9 +20,9 @@
     <!-- Page Header -->
     <section class="page-banner">
         <div class="container page-banner-inner">
-            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS • MINIMUM ₹70 LAKHS</span>
+            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS • ₹70 LAKHS TO ₹6 CRORE</span>
             <h1 class="page-title">Properties in <span class="gold-gradient-text">Hyderabad</span></h1>
-            <p class="page-subtitle">Verified Luxury Villas, HMDA Plots, and 2BHK, 3BHK, 4BHK Homes across Hyderabad starting at realistic prices from ₹70 Lakhs.</p>
+            <p class="page-subtitle">Verified Luxury Villas, HMDA Plots, and 2BHK, 3BHK, 4BHK Homes across Hyderabad (₹70 Lakhs to ₹6 Crore).</p>
         </div>
     </section>
 
@@ -115,6 +115,7 @@
                                 <option value="15000000" <%= filters.minPrice === '15000000' ? 'selected' : '' %>>₹1.5 Crore</option>
                                 <option value="20000000" <%= filters.minPrice === '20000000' ? 'selected' : '' %>>₹2 Crore</option>
                                 <option value="30000000" <%= filters.minPrice === '30000000' ? 'selected' : '' %>>₹3 Crore</option>
+                                <option value="40000000" <%= filters.minPrice === '40000000' ? 'selected' : '' %>>₹4 Crore</option>
                                 <option value="50000000" <%= filters.minPrice === '50000000' ? 'selected' : '' %>>₹5 Crore</option>
                             </select>
                         </div>
@@ -122,15 +123,15 @@
                         <div class="filter-col">
                             <label><i class="fas fa-rupee-sign text-gold"></i> Max Budget</label>
                             <select name="max_price" onchange="this.form.submit()">
-                                <option value="">Max: Any Price</option>
+                                <option value="">Max: Any Price (up to ₹6 Cr)</option>
                                 <option value="8500000" <%= filters.maxPrice === '8500000' ? 'selected' : '' %>>Up to ₹85 Lakhs</option>
                                 <option value="10000000" <%= filters.maxPrice === '10000000' ? 'selected' : '' %>>Up to ₹1 Cr</option>
                                 <option value="15000000" <%= filters.maxPrice === '15000000' ? 'selected' : '' %>>Up to ₹1.5 Cr</option>
                                 <option value="20000000" <%= filters.maxPrice === '20000000' ? 'selected' : '' %>>Up to ₹2 Cr</option>
                                 <option value="30000000" <%= filters.maxPrice === '30000000' ? 'selected' : '' %>>Up to ₹3 Cr</option>
+                                <option value="40000000" <%= filters.maxPrice === '40000000' ? 'selected' : '' %>>Up to ₹4 Cr</option>
                                 <option value="50000000" <%= filters.maxPrice === '50000000' ? 'selected' : '' %>>Up to ₹5 Cr</option>
-                                <option value="100000000" <%= filters.maxPrice === '100000000' ? 'selected' : '' %>>Up to ₹10 Cr</option>
-                                <option value="200000000" <%= filters.maxPrice === '200000000' ? 'selected' : '' %>>Up to ₹20 Cr+</option>
+                                <option value="60000000" <%= filters.maxPrice === '60000000' ? 'selected' : '' %>>Up to ₹6 Cr (Max)</option>
                             </select>
                         </div>
 

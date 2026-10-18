@@ -11,6 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const { cloudLeadsConfigured, listCloudProperties, createCloudProperty, updateCloudProperty, uploadCloudPropertyImage, setCloudPropertyStatus, setCloudPropertyCoverImage, deleteCloudPropertyImage, deleteCloudProperty } = require('../../database/cloud-leads');
+const { enhanceProperty, enhancePropertyList } = require('../../database/property-media');
 
 // Generate unique property code
 function generatePropertyCode(category) {
@@ -38,7 +39,8 @@ router.get('/public', async (req, res) => {
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 12));
         const result = await listCloudProperties({ public: true, page, limit, offset: (page - 1) * limit, category: req.query.category, purpose: req.query.purpose, min_price: req.query.min_price, max_price: req.query.max_price, bedrooms: req.query.bedrooms, search: req.query.search });
         if (!result.success) return res.status(502).json({ error: result.error || 'Unable to load published properties.' });
-        return res.json({ properties: result.properties || [], total: Number(result.total || 0), page, totalPages: Math.ceil(Number(result.total || 0) / limit) });
+        const properties = enhancePropertyList(result.properties || []);
+        return res.json({ properties, total: Number(result.total || 0), page, totalPages: Math.ceil(Number(result.total || 0) / limit) });
     }
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
@@ -66,7 +68,7 @@ router.get('/public', async (req, res) => {
     if (bedrooms) { where += ' AND bedrooms >= ?'; params.push(parseInt(bedrooms)); }
 
     const total = db.prepare(`SELECT COUNT(*) as count FROM properties WHERE ${where}`).get(...params).count;
-    const properties = db.prepare(`
+    let properties = db.prepare(`
         SELECT p.id, p.property_code, p.title, p.category, p.purpose, p.short_description,
             p.price, p.price_negotiable, p.city, p.locality, p.plot_area, p.built_up_area,
             p.area_unit, p.bedrooms, p.bathrooms, p.floors, p.facing, p.furnishing,
@@ -77,6 +79,7 @@ router.get('/public', async (req, res) => {
         ORDER BY p.is_featured DESC, p.published_at DESC
         LIMIT ? OFFSET ?
     `).all(...params, limit, offset);
+    properties = enhancePropertyList(properties);
 
     res.json({ properties, total, page, totalPages: Math.ceil(total / limit) });
 });
@@ -88,6 +91,7 @@ router.get('/public/:id', async (req, res) => {
         const result = await listCloudProperties({ public: true, id: req.params.id, limit: 1, offset: 0 });
         const property = result.success ? result.property : null;
         if (!property) return res.status(result.success ? 404 : 502).json({ error: result.error || 'Property not found.' });
+        enhanceProperty(property);
         delete property.admin_notes; delete property.created_by;
         return res.json({ property, images: property.images || [] });
     }
@@ -101,7 +105,9 @@ router.get('/public/:id', async (req, res) => {
 
     if (!property) return res.status(404).json({ error: 'Property not found' });
 
-    const images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    enhanceProperty(property);
+    let images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    if (!images || images.length === 0) images = property.images || [];
     
     // Don't expose admin_notes to public
     delete property.admin_notes;

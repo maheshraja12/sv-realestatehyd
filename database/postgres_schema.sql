@@ -82,3 +82,49 @@ INSERT INTO settings (key, value) VALUES
     ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
     ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- ==============================================================
+-- 5. Row Level Security (RLS) & Access Policies (Supabase Compatible)
+-- ==============================================================
+-- Enables public anonymous web visitors to submit enquiries & appointments safely,
+-- while allowing authenticated administrators to view and manage leads.
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow public anonymous & authenticated visitors to submit enquiries
+DROP POLICY IF EXISTS "Allow public insert to leads" ON leads;
+CREATE POLICY "Allow public insert to leads" ON leads
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+-- Allow public anonymous & authenticated visitors to schedule site visit appointments
+DROP POLICY IF EXISTS "Allow public insert to appointments" ON appointments;
+CREATE POLICY "Allow public insert to appointments" ON appointments
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+-- Allow reading leads for management (authenticated users & anon for reference lookups)
+DROP POLICY IF EXISTS "Allow read to leads" ON leads;
+CREATE POLICY "Allow read to leads" ON leads
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- Allow authenticated users to update lead status
+DROP POLICY IF EXISTS "Allow update to leads" ON leads;
+CREATE POLICY "Allow update to leads" ON leads
+    FOR UPDATE
+    TO authenticated
+    USING (true);
+
+-- Allow read to public settings
+DROP POLICY IF EXISTS "Allow read to settings" ON settings;
+CREATE POLICY "Allow read to settings" ON settings
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+

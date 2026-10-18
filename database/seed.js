@@ -8,6 +8,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { initializeDb, getDb, closeDb } = require('./db');
+const { PROPERTY_MEDIA } = require('./property-media');
 
 function seed(existingDb, force = false) {
     try {
@@ -1033,7 +1034,7 @@ Includes 4 grand master bedrooms, Italian marble flooring, soundproof German gla
                     description: `Exceptional commercial asset suitable for high-end retail, bank branch, corporate office, or healthcare clinic.
 
 Features 100ft road frontage, glass facade, 3-phase high tension power connection, 100% DG backup, and 12 designated parking slots. Estimated rental yield of 8.5% p.a.`,
-                    price: 78000000, // ₹7.80 Cr
+                    price: 59000000, // ₹5.90 Cr (Max budget cap <= ₹6 Cr)
                     price_negotiable: 1,
                     city: 'Hyderabad',
                     locality: 'Gachibowli',
@@ -1295,7 +1296,7 @@ Clear title HMDA approved layout with underground electrical cabling, piped wate
                     description: `Super-exclusive 4BHK luxury villa situated along the serene Gandipet Lake boundary.
 
 4,900 sq.ft built-up area engineered with Italian Botticino marble, private pool, private elevator, double-height living room, 4 car parks, and personal landscaped terrace. 10 minutes to Financial District.`,
-                    price: 68000000, // ₹6.80 Cr
+                    price: 54000000, // ₹5.40 Cr (Max budget cap <= ₹6 Cr)
                     price_negotiable: 1,
                     city: 'Hyderabad',
                     locality: 'Gandipet',
@@ -1335,7 +1336,7 @@ Clear title HMDA approved layout with underground electrical cabling, piped wate
                     description: `Living in Banjara Hills is an unequivocal statement of distinction.
 
 This bespoke single-floor 4BHK apartment features soundproof German triple-glazed facades, private keycard elevator lobby, master suite with walk-in wardrobe, Italian marble, and 3 reserved basement car parks.`,
-                    price: 72000000, // ₹7.20 Cr
+                    price: 57500000, // ₹5.75 Cr (Max budget cap <= ₹6 Cr)
                     price_negotiable: 1,
                     city: 'Hyderabad',
                     locality: 'Banjara Hills',
@@ -1374,7 +1375,7 @@ This bespoke single-floor 4BHK apartment features soundproof German triple-glaze
 This bespoke 5BHK triplex masterpiece is engineered with double-height grand living spaces, imported Botticino marble, private OTIS glass elevator, fully landscaped private terrace garden, and an infinity plunge pool.
 
 Located within a private enclave of only 8 residences with 3-tier security, 100% power backup, and dedicated staff quarters. 100% Vastu compliant with expansive East-facing facade.`,
-                    price: 185000000, // ₹18.50 Cr
+                    price: 59500000, // ₹5.95 Cr (Max budget cap <= ₹6 Cr)
                     price_negotiable: 1,
                     city: 'Hyderabad',
                     locality: 'Jubilee Hills',
@@ -1470,7 +1471,8 @@ Located within a private enclave of only 8 residences with 3-tier security, 100%
                 });
 
                 const newPropId = res.lastInsertRowid;
-                prop.images.forEach((imgUrl, idx) => {
+                const propImages = PROPERTY_MEDIA[prop.property_code] || prop.images || [];
+                propImages.forEach((imgUrl, idx) => {
                     insertImage.run(newPropId, imgUrl, idx === 0 ? 1 : 0, idx);
                 });
             }
@@ -1489,7 +1491,7 @@ Located within a private enclave of only 8 residences with 3-tier security, 100%
                     phone: '9849012345',
                     email: 'suresh.varma@apollohospital.org',
                     property_category: 'villa',
-                    budget: '₹15 Cr - ₹20 Cr',
+                    budget: '₹5 Cr - ₹6 Cr',
                     preferred_location: 'Jubilee Hills',
                     message: 'Interested in The Royal Sovereign 5BHK Villa. Need to schedule private walkthrough on Saturday.',
                     status: 'site_visit_scheduled',

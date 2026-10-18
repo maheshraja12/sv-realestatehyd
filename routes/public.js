@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
 const { cloudLeadsConfigured, listCloudProperties } = require('../database/cloud-leads');
+const { enhanceProperty, enhancePropertyList } = require('../database/property-media');
 
 // GET / — Homepage
 router.get('/', async (req, res) => {
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
         if (!cloudLeadsConfigured()) return res.status(503).render('public/error', { title: 'Properties temporarily unavailable', error: 'The property database is not configured.' });
         const result = await listCloudProperties({ public: true, limit: 100, offset: 0 });
         if (!result.success) return res.status(502).render('public/error', { title: 'Properties temporarily unavailable', error: 'We could not load property listings right now.' });
-        const all = result.properties || [];
+        const all = enhancePropertyList(result.properties || []);
         const featuredProperties = all.filter(p => Number(p.is_featured) === 1).slice(0, 6);
         const latestProperties = all.slice(0, 8);
         const counts = new Map();
@@ -22,7 +23,7 @@ router.get('/', async (req, res) => {
     }
     const db = getDb();
     
-    const featuredProperties = db.prepare(`
+    let featuredProperties = db.prepare(`
         SELECT p.*,
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
@@ -30,8 +31,9 @@ router.get('/', async (req, res) => {
         ORDER BY p.published_at DESC
         LIMIT 6
     `).all();
+    featuredProperties = enhancePropertyList(featuredProperties);
 
-    const latestProperties = db.prepare(`
+    let latestProperties = db.prepare(`
         SELECT p.*,
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
@@ -39,6 +41,7 @@ router.get('/', async (req, res) => {
         ORDER BY p.published_at DESC
         LIMIT 8
     `).all();
+    latestProperties = enhancePropertyList(latestProperties);
 
     const categoryCounts = db.prepare(`
         SELECT category, COUNT(*) as count
@@ -75,7 +78,7 @@ router.get('/properties', async (req, res) => {
         if (!result.success) return res.status(502).render('public/error', { title: 'Properties temporarily unavailable', error: result.error || 'We could not load property listings right now.' });
         const localitiesResult = await listCloudProperties({ public: true, limit: 100, offset: 0 });
         const localities = Array.from(new Set((localitiesResult.properties || []).map(p => p.locality).filter(Boolean))).sort().map(locality => ({ locality }));
-        const properties = result.properties || [];
+        const properties = enhancePropertyList(result.properties || []);
         const total = Number(result.total || 0);
         const totalPages = Math.ceil(total / limit) || 1;
         return res.render('public/properties', { title: 'Properties — SV Real Estates Hyderabad', properties, page, totalPages, total, filters: { category, purpose, city, locality, minPrice, maxPrice, bedrooms, search, sort }, localities });
@@ -148,7 +151,7 @@ router.get('/properties', async (req, res) => {
     else if (sort === 'oldest') orderBy = 'published_at ASC';
 
     const total = db.prepare(`SELECT COUNT(*) as count FROM properties WHERE ${where}`).get(...params).count;
-    const properties = db.prepare(`
+    let properties = db.prepare(`
         SELECT p.*,
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
@@ -156,6 +159,7 @@ router.get('/properties', async (req, res) => {
         ORDER BY ${orderBy}
         LIMIT ? OFFSET ?
     `).all(...params, limit, offset);
+    properties = enhancePropertyList(properties);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -182,11 +186,12 @@ router.get('/properties/:id', async (req, res) => {
         const result = await listCloudProperties({ public: true, id: req.params.id, limit: 1, offset: 0 });
         const property = result.success ? result.property : null;
         if (!property) return res.status(result.success ? 404 : 502).render('public/404', { title: 'Property Not Found' });
-        const images = property.images || [];
+        enhanceProperty(property);
+        const images = (property.images && property.images.length) ? property.images : [];
         let similarProperties = [];
         if (property.category) {
             const similar = await listCloudProperties({ public: true, category: property.category, limit: 8, offset: 0 });
-            if (similar.success) similarProperties = (similar.properties || []).filter(p => String(p.id) !== String(property.id)).slice(0, 4);
+            if (similar.success) similarProperties = enhancePropertyList((similar.properties || []).filter(p => String(p.id) !== String(property.id)).slice(0, 4));
         }
         const amenities = Array.isArray(property.amenities) ? property.amenities : (() => { try { return JSON.parse(property.amenities || '[]'); } catch { return []; } })();
         delete property.admin_notes; delete property.created_by;
@@ -206,9 +211,11 @@ router.get('/properties/:id', async (req, res) => {
         return res.status(404).render('public/404', { title: 'Property Not Found' });
     }
 
-    const images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    enhanceProperty(property);
+    let images = db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(property.id);
+    if (!images || images.length === 0) images = property.images || [];
     
-    const similarProperties = db.prepare(`
+    let similarProperties = db.prepare(`
         SELECT p.*,
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
@@ -216,6 +223,7 @@ router.get('/properties/:id', async (req, res) => {
         ORDER BY p.published_at DESC
         LIMIT 4
     `).all(property.id, property.category, property.locality);
+    similarProperties = enhancePropertyList(similarProperties);
 
     // Parse amenities JSON
     let amenities = [];

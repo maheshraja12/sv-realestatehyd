@@ -208,4 +208,23 @@ describe('6. Properties Catalog & Search Quality', () => {
         const res = await fetch(`${baseUrl}/properties?min_price=7000000`);
         assert.strictEqual(res.status, 200);
     });
+
+    test('Budget filtering max_price=60000000 (6 Crore cap) filters correctly', async () => {
+        const res = await fetch(`${baseUrl}/properties?max_price=60000000`);
+        assert.strictEqual(res.status, 200);
+    });
+
+    test('Public API returns properties with high-res cover images within ₹70L - ₹6 Cr range', async () => {
+        const res = await fetch(`${baseUrl}/api/properties/public`);
+        assert.strictEqual(res.status, 200);
+        const data = await res.json();
+        assert.ok(Array.isArray(data.properties));
+        assert.ok(data.properties.length > 0);
+        for (const p of data.properties) {
+            assert.ok(p.price >= 7000000, `Property ${p.property_code} price ${p.price} should be >= ₹70L`);
+            assert.ok(p.price <= 60000000, `Property ${p.property_code} price ${p.price} should be <= ₹6 Cr`);
+            assert.ok(p.cover_image && p.cover_image.startsWith('http'), `Property ${p.property_code} must have a valid cover_image URL`);
+        }
+    });
 });
+
