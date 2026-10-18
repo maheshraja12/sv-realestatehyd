@@ -96,13 +96,13 @@ router.get('/dashboard', async (req, res) => {
     if (isPostgresConfigured()) {
         try {
             const pgStats = await getPgLeadStats();
-            if (pgStats.success) {
+            if (pgStats.success && pgStats.total > 0) {
                 stats.totalLeads = pgStats.total;
                 stats.newLeads = pgStats.newCount;
             }
 
             const pgAptStats = await getPgAppointmentStats();
-            if (pgAptStats.success) {
+            if (pgAptStats.success && (pgAptStats.total > 0 || pgAptStats.pendingCount > 0)) {
                 stats.siteVisitsScheduled = pgAptStats.pendingCount;
             }
 
@@ -130,7 +130,7 @@ router.get('/dashboard', async (req, res) => {
     } else if (isMySqlConfigured()) {
         try {
             const sqlStats = await getEnquiryStats();
-            if (sqlStats.success) {
+            if (sqlStats.success && sqlStats.total > 0) {
                 stats.totalLeads = sqlStats.total;
                 stats.newLeads = sqlStats.newCount;
             }
@@ -422,8 +422,8 @@ router.get('/leads', async (req, res) => {
         }
     }
 
-    // Fallback to local DB if cloud DB not configured or returns empty on default view
-    if ((!isPostgresConfigured() && !isMySqlConfigured()) || (leads.length === 0 && !search && !status && !category)) {
+    // Fallback to local DB if cloud DB not configured or returns empty
+    if ((!isPostgresConfigured() && !isMySqlConfigured()) || leads.length === 0) {
         let where = '1=1';
         const params = [];
 
