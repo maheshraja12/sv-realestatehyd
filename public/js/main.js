@@ -146,11 +146,14 @@ function showModalBase() {
     const backdrop = document.getElementById('enquiryModalBackdrop');
     if (!modal || !backdrop) return;
 
-    // Reset form, error alert, and success state
+    // Reset form, error alert, and restore form + header visibility
     const form = document.getElementById('publicEnquiryForm');
+    const header = document.querySelector('.modal-header-custom');
     const successBox = document.getElementById('modalSuccess');
     const errorAlert = document.getElementById('modalErrorAlert');
+
     if (form) form.style.display = 'block';
+    if (header) header.style.display = 'block';
     if (successBox) successBox.style.display = 'none';
     if (errorAlert) errorAlert.style.display = 'none';
 
@@ -160,8 +163,10 @@ function showModalBase() {
 }
 
 function closeEnquiryModal(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
 
     const modal = document.getElementById('enquiryModal');
     const backdrop = document.getElementById('enquiryModalBackdrop');
@@ -171,8 +176,17 @@ function closeEnquiryModal(e) {
     if (errorAlert) errorAlert.style.display = 'none';
     document.body.style.overflow = '';
 
+    // Permanently remember that the user closed/dismissed the enquiry modal
     try {
+        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
         sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+    } catch (err) {}
+
+    // Clean any query string left in URL (e.g. ?property_id=&full_name=...)
+    try {
+        if (window.location.search) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     } catch (err) {}
 }
 
@@ -190,12 +204,17 @@ function focusFirstField() {
 
 // ── Form Submission Handler (4 Required Fields) ─────────────
 async function handlePublicEnquirySubmit(e) {
-    e.preventDefault();
-    const form = e.target;
+    if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    }
+
+    const form = document.getElementById('publicEnquiryForm') || (e ? e.target : null);
     const submitBtn = document.getElementById('modalSubmitBtn');
     if (!submitBtn) {
         alert('The enquiry form did not initialize correctly. Please refresh the page and try again.');
-        return;
+        return false;
     }
     const originalText = submitBtn.innerHTML;
     const errorAlert = document.getElementById('modalErrorAlert');
@@ -217,7 +236,7 @@ async function handlePublicEnquirySubmit(e) {
     if (!fullName || fullName.length < 2) {
         showFormError('Please enter your full name (minimum 2 characters).');
         document.getElementById('modalCustomerName')?.focus();
-        return;
+        return false;
     }
 
     const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
@@ -225,25 +244,25 @@ async function handlePublicEnquirySubmit(e) {
     if (standardPhone.length < 10) {
         showFormError('Please enter a valid 10-digit mobile number.');
         document.getElementById('modalPhone')?.focus();
-        return;
+        return false;
     }
 
     if (!appointmentDate) {
         showFormError('Please select your preferred appointment date.');
         document.getElementById('modalAppointmentDate')?.focus();
-        return;
+        return false;
     }
 
     if (!appointmentTime) {
         showFormError('Please select your preferred appointment time slot.');
         document.getElementById('modalAppointmentTime')?.focus();
-        return;
+        return false;
     }
 
     if (!propertyRequirement) {
         showFormError('Please select what you are looking for.');
         document.getElementById('modalPropertyRequirement')?.focus();
-        return;
+        return false;
     }
 
     submitBtn.disabled = true;
@@ -280,21 +299,34 @@ async function handlePublicEnquirySubmit(e) {
         }
 
         if (res.ok) {
+            // Permanently remember submission in both localStorage and sessionStorage
             try {
+                localStorage.setItem('sv_enquiry_submitted', 'true');
                 sessionStorage.setItem('sv_enquiry_submitted', 'true');
+                localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
                 sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
             } catch (err) {}
-            openEnquirySuccessModal(result.lead_code || 'SV-LEAD-SUCCESS', fullName, appointmentDate, appointmentTime, propertyRequirement);
-            form.reset();
+
+            // Clean query parameters from URL immediately
+            try {
+                if (window.location.search) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (err) {}
+
+            openEnquirySuccessModal(result.lead_code || result.reference || 'SV-LEAD-SUCCESS', fullName, appointmentDate, appointmentTime, propertyRequirement);
+            if (form) form.reset();
         } else {
             showFormError(result.error || result.errors?.[0] || 'Submission failed. Please try again or call us.');
         }
     } catch (err) {
-        showFormError('Connection error. Please call our office directly at +91-9876543210.');
+        showFormError('Connection error. Please call our office directly at +91 9346423434.');
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     }
+
+    return false;
 
     function showFormError(msg) {
         if (errorAlert && errorText) {
@@ -311,26 +343,99 @@ function openEnquirySuccessModal(refCode, name, date, time, req) {
     const backdrop = document.getElementById('enquiryModalBackdrop');
     if (!modal || !backdrop) return;
 
+    // Permanently remember submission so popup NEVER opens again on any page
+    try {
+        localStorage.setItem('sv_enquiry_submitted', 'true');
+        sessionStorage.setItem('sv_enquiry_submitted', 'true');
+        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+    } catch (err) {}
+
+    // Clean query parameters from URL immediately
+    try {
+        if (window.location.search) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    } catch (err) {}
+
     backdrop.style.display = 'block';
     modal.style.display = 'flex';
-    document.getElementById('publicEnquiryForm').style.display = 'none';
+    document.body.style.overflow = 'hidden';
 
-    const successBox = document.getElementById('modalSuccess');
-    document.getElementById('successRefCode').innerText = `Reference: ${refCode}`;
-    const dateText = date ? ` for <strong>${date}</strong> (${time || 'Morning'})` : '';
-    document.getElementById('successMessageText').innerHTML = `Thank you, <strong>${name}</strong>. Your enquiry for <strong>${req || 'Property'}</strong>${dateText} has been logged in our system.`;
+    // Hide input form and header
+    const form = document.getElementById('publicEnquiryForm');
+    if (form) form.style.display = 'none';
+    const header = document.querySelector('.modal-header-custom');
+    if (header) header.style.display = 'none';
+    const preview = document.getElementById('modalPropertyPreview');
+    if (preview) preview.style.display = 'none';
 
-    const waLink = document.getElementById('successWhatsAppLink');
-    if (waLink) {
-        const waMsg = encodeURIComponent(`Hello SV Real Estates, I just submitted an enquiry for ${req || 'Property'} (Ref: ${refCode}). Preferred Date: ${date} ${time}`);
-        waLink.href = `https://wa.me/919876543210?text=${waMsg}`;
+    // Populate Luxury Greeting Card
+    const nameTarget = document.getElementById('greetingCustomerName');
+    if (nameTarget) nameTarget.innerText = name || 'Valued Client';
+
+    const refTarget = document.getElementById('successRefCode');
+    if (refTarget) refTarget.innerText = refCode;
+
+    const dateSlotTarget = document.getElementById('greetingDateSlot');
+    if (dateSlotTarget) {
+        dateSlotTarget.innerText = date ? `${date} • ${time || 'Morning'}` : 'Priority Callback';
     }
 
-    successBox.style.display = 'block';
+    const reqTarget = document.getElementById('greetingRequirement');
+    if (reqTarget) {
+        reqTarget.innerText = req || 'Hyderabad Property';
+    }
+
+    const msgTarget = document.getElementById('successMessageText');
+    if (msgTarget) {
+        const slotDesc = date ? ` for <strong>${date}</strong> (${time || 'Morning'})` : '';
+        msgTarget.innerHTML = `Your consultation request${slotDesc} has been confirmed. Our senior advisor will assist you with verified documentation and transparent pricing.`;
+    }
+
+    // Direct WhatsApp Button with valid business number
+    const waLink = document.getElementById('successWhatsAppLink');
+    if (waLink) {
+        const waMsg = encodeURIComponent(`Hello SV Real Estates, I just submitted an enquiry for ${req || 'Property'} (Ref: ${refCode}). Preferred Date: ${date || 'Today'} ${time || ''}`);
+        waLink.href = `https://wa.me/919346423434?text=${waMsg}`;
+    }
+
+    const successBox = document.getElementById('modalSuccess');
+    if (successBox) successBox.style.display = 'block';
+}
+
+function copyReferenceCode() {
+    const codeEl = document.getElementById('successRefCode');
+    const labelEl = document.getElementById('copyBtnLabel');
+    if (!codeEl) return;
+    const text = codeEl.innerText.replace(/Reference:\s*/i, '').trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (labelEl) labelEl.innerText = 'Copied!';
+            setTimeout(() => { if (labelEl) labelEl.innerText = 'Copy'; }, 2000);
+        }).catch(() => {});
+    }
 }
 
 // ── Auto-Bind All Enquiry Buttons Across Document ───────────
 function initButtonAutoBindings() {
+    // Explicitly bind the enquiry form submit event to prevent default reload
+    const enquiryForm = document.getElementById('publicEnquiryForm');
+    if (enquiryForm) {
+        enquiryForm.onsubmit = function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handlePublicEnquirySubmit(ev);
+            return false;
+        };
+        enquiryForm.addEventListener('submit', function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handlePublicEnquirySubmit(ev);
+            return false;
+        }, { capture: true });
+    }
+
     // Modal Close and Cancel buttons
     const closeBtn = document.getElementById('modalCloseBtn');
     if (closeBtn) {
@@ -358,6 +463,7 @@ function initButtonAutoBindings() {
             el.type === 'submit' || 
             el.closest('form') ||
             el.closest('.nav-links') ||
+            el.closest('.modal-success-state') ||
             el.classList.contains('btn-whatsapp') ||
             el.href?.startsWith('tel:') ||
             el.href?.startsWith('mailto:') ||
@@ -399,28 +505,31 @@ function initAutoEnquiryPopup() {
         return;
     }
 
-    // 2. Do not show if user already submitted an enquiry
+    // 2. Do not show if user already submitted an enquiry or dismissed it
     try {
-        if (sessionStorage.getItem('sv_enquiry_submitted')) {
+        if (localStorage.getItem('sv_enquiry_submitted') || 
+            sessionStorage.getItem('sv_enquiry_submitted') ||
+            localStorage.getItem('sv_enquiry_popup_dismissed') || 
+            sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
             return;
         }
     } catch (e) {}
 
-    const isHomePage = window.location.pathname === '/' || window.location.pathname === '' || window.location.pathname === '/home';
-
-    // 3. For subpages, avoid nagging if already dismissed in this session
-    try {
-        if (!isHomePage && sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
-            return;
-        }
-    } catch (e) {}
-
-    // 4. Smooth, elegant entrance after page initial paint
+    // 3. Smooth, elegant entrance after page initial paint (first visit only)
     setTimeout(() => {
+        try {
+            if (localStorage.getItem('sv_enquiry_submitted') || 
+                sessionStorage.getItem('sv_enquiry_submitted') ||
+                localStorage.getItem('sv_enquiry_popup_dismissed') || 
+                sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
+                return;
+            }
+        } catch (e) {}
+
         const modal = document.getElementById('enquiryModal');
         const backdrop = document.getElementById('enquiryModalBackdrop');
         if (modal && backdrop && modal.style.display !== 'flex') {
             openEnquiryModal();
         }
-    }, 800);
+    }, 1500);
 }

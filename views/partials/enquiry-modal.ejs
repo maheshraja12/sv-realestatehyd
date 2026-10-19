@@ -29,7 +29,7 @@
             <i class="fas fa-exclamation-circle"></i> <span id="modalErrorText">Please fill in all required fields.</span>
         </div>
 
-        <form id="publicEnquiryForm" onsubmit="handlePublicEnquirySubmit(event)">
+        <form id="publicEnquiryForm" action="javascript:void(0);" method="POST" onsubmit="event.preventDefault(); return handlePublicEnquirySubmit(event);">
             <input type="hidden" id="modalPropertyId" name="property_id" value="">
 
             <div class="form-grid-modal">
@@ -88,18 +88,54 @@
             </div>
         </form>
 
-        <!-- Success Message -->
+        <!-- Luxury Thank You Greeting Card -->
         <div id="modalSuccess" class="modal-success-state" style="display:none;">
-            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-            <h3 class="text-gold" id="successHeading">Enquiry Submitted Successfully!</h3>
-            <p id="successMessageText">Your details have been received by our senior team.</p>
-            <div class="ref-badge" id="successRefCode">Reference: SV-LEAD-XXXXXX</div>
-            <p class="text-muted"><small>Our representative will contact you at your chosen appointment time.</small></p>
-            <div class="success-actions" style="margin-top:20px; display:flex; gap:12px; justify-content:center;">
-                <a id="successWhatsAppLink" href="#" target="_blank" class="btn btn-whatsapp">
+            <div class="greeting-icon-wrapper">
+                <i class="fas fa-check"></i>
+            </div>
+            <span class="greeting-badge"><i class="fas fa-crown text-gold"></i> ENQUIRY CONFIRMED</span>
+            <h2 class="greeting-title">Thank You, <span class="gold-gradient-text" id="greetingCustomerName">Valued Client</span>!</h2>
+            <p class="greeting-subtitle" id="successMessageText">Your details have been received by our senior property team. We look forward to connecting with you.</p>
+
+            <div class="greeting-ref-card">
+                <div class="greeting-ref-header">
+                    <span class="greeting-ref-label"><i class="fas fa-ticket-alt text-gold"></i> Booking Reference</span>
+                    <button type="button" class="btn-copy-ref" onclick="copyReferenceCode()" title="Copy Reference Code">
+                        <i class="fas fa-copy"></i> <span id="copyBtnLabel">Copy</span>
+                    </button>
+                </div>
+                <div class="greeting-ref-code" id="successRefCode">SV-LEAD-XXXXXX</div>
+                <div class="greeting-meta-grid">
+                    <div class="meta-item">
+                        <i class="fas fa-calendar-check text-gold"></i>
+                        <div>
+                            <small>Appointment Slot</small>
+                            <strong id="greetingDateSlot">Confirmed</strong>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-city text-gold"></i>
+                        <div>
+                            <small>Looking For</small>
+                            <strong id="greetingRequirement">Property Details</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="greeting-steps">
+                <div class="step-pill"><i class="fas fa-shield-alt text-gold"></i> Verified Title Assurance</div>
+                <div class="step-pill"><i class="fas fa-user-tie text-gold"></i> Senior Consultant</div>
+                <div class="step-pill"><i class="fas fa-map-marker-alt text-gold"></i> All Over Hyderabad</div>
+            </div>
+
+            <div class="greeting-actions">
+                <a id="successWhatsAppLink" href="#" target="_blank" class="btn btn-whatsapp btn-large">
                     <i class="fab fa-whatsapp"></i> Chat on WhatsApp
                 </a>
-                <button type="button" class="btn btn-ghost" onclick="closeEnquiryModal(event)">Done</button>
+                <button type="button" class="btn btn-gold btn-large" onclick="closeEnquiryModal(event)">
+                    <i class="fas fa-arrow-left"></i> Back to Main Page
+                </button>
             </div>
         </div>
     </div>

@@ -95,7 +95,7 @@
                             <p>Fill out the details below and a senior advisor will reach out within 30 minutes.</p>
                         </div>
 
-                        <form id="contactPageForm" onsubmit="handleContactPageSubmit(event)">
+                        <form id="contactPageForm" action="javascript:void(0);" method="POST" onsubmit="event.preventDefault(); return handleContactPageSubmit(event);">
                             <div class="form-grid-modal">
                                 <div class="form-group-modal">
                                     <label for="contactName">Your Name *</label>
@@ -209,7 +209,10 @@
     <script src="/js/main.js"></script>
     <script>
         async function handleContactPageSubmit(e) {
-            e.preventDefault();
+            if (e) {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            }
             const form = e.target;
             const btn = document.getElementById('contactSubmitBtn');
             const originalText = btn.innerHTML;
@@ -229,6 +232,12 @@
                 });
                 const result = await res.json();
                 if (res.ok) {
+                    try {
+                        localStorage.setItem('sv_enquiry_submitted', 'true');
+                        sessionStorage.setItem('sv_enquiry_submitted', 'true');
+                        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+                        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
+                    } catch (err) {}
                     form.style.display = 'none';
                     const successBox = document.getElementById('contactSuccessState');
                     document.getElementById('contactRefCode').innerText = `Reference: ${result.lead_code || 'SV-LEAD-NEW'}`;
@@ -242,6 +251,7 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
+            return false;
         }
     </script>
 </body>
