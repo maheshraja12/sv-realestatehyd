@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
         const counts = new Map();
         all.forEach(p => counts.set(p.category, (counts.get(p.category) || 0) + 1));
         const categoryCounts = Array.from(counts, ([category, count]) => ({ category, count }));
-        return res.render('public/home', { title: 'SV Real Estates Hyderabad — Premium Properties in Hyderabad', featuredProperties, latestProperties, categoryCounts });
+        return res.render('public/home', { title: 'SV Real Estates — Verified Properties All Over Hyderabad', featuredProperties, latestProperties, categoryCounts });
     }
     const db = getDb();
     
@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
     `).all();
 
     res.render('public/home', {
-        title: 'SV Real Estates Hyderabad — Premium Properties in Hyderabad',
+        title: 'SV Real Estates — Verified Properties All Over Hyderabad',
         featuredProperties,
         latestProperties,
         categoryCounts
@@ -81,7 +81,7 @@ router.get('/properties', async (req, res) => {
         const properties = enhancePropertyList(result.properties || []);
         const total = Number(result.total || 0);
         const totalPages = Math.ceil(total / limit) || 1;
-        return res.render('public/properties', { title: 'Properties — SV Real Estates Hyderabad', properties, page, totalPages, total, filters: { category, purpose, city, locality, minPrice, maxPrice, bedrooms, search, sort }, localities });
+        return res.render('public/properties', { title: 'Properties All Over Hyderabad — SV Real Estates', properties, page, totalPages, total, filters: { category, purpose, city, locality, minPrice, maxPrice, bedrooms, search, sort }, localities });
     }
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
@@ -169,7 +169,7 @@ router.get('/properties', async (req, res) => {
     `).all();
 
     res.render('public/properties', {
-        title: 'Properties — SV Real Estates Hyderabad',
+        title: 'Properties All Over Hyderabad — SV Real Estates',
         properties,
         page,
         totalPages,
@@ -265,7 +265,7 @@ router.get('/locations', async (req, res) => {
         const grouped = new Map();
         (result.properties || []).forEach(p => { if (!p.locality) return; const key = `${p.locality}|${p.city || 'Hyderabad'}`; const old = grouped.get(key) || { locality: p.locality, city: p.city || 'Hyderabad', property_count: 0 }; old.property_count++; grouped.set(key, old); });
         const locationData = Array.from(grouped.values()).sort((a, b) => b.property_count - a.property_count);
-        return res.render('public/locations', { title: 'Locations — SV Real Estates Hyderabad', locationData });
+        return res.render('public/locations', { title: 'Locations All Over Hyderabad — SV Real Estates', locationData });
     }
     const db = getDb();
     const locationData = db.prepare(`
@@ -277,7 +277,7 @@ router.get('/locations', async (req, res) => {
     `).all();
 
     res.render('public/locations', {
-        title: 'Locations — SV Real Estates Hyderabad',
+        title: 'Locations All Over Hyderabad — SV Real Estates',
         locationData
     });
 });

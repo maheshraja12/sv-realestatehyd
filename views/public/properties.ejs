@@ -20,9 +20,9 @@
     <!-- Page Header -->
     <section class="page-banner">
         <div class="container page-banner-inner">
-            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS • ₹70 LAKHS TO ₹6 CRORE</span>
-            <h1 class="page-title">Properties in <span class="gold-gradient-text">Hyderabad</span></h1>
-            <p class="page-subtitle">Verified Luxury Villas, HMDA Plots, and 2BHK, 3BHK, 4BHK Homes across Hyderabad (₹70 Lakhs to ₹6 Crore).</p>
+            <span class="page-tag"><i class="fas fa-gem text-gold"></i> EXCLUSIVE LISTINGS • ALL OVER HYDERABAD • ₹70 LAKHS TO ₹6 CRORE</span>
+            <h1 class="page-title">Properties <span class="gold-gradient-text">All Over Hyderabad</span></h1>
+            <p class="page-subtitle">Verified Luxury Villas, HMDA Plots, and 2BHK, 3BHK, 4BHK Homes all over Hyderabad (₹70 Lakhs to ₹6 Crore).</p>
         </div>
     </section>
 
@@ -60,7 +60,7 @@
                     <div class="filter-row-top">
                         <div class="filter-input-wrap search-keyword">
                             <i class="fas fa-search"></i>
-                            <input type="text" name="search" value="<%= filters.search %>" placeholder="Search by area (e.g. Kokapet, Tellapur, Bachupally), BHK, or property name...">
+                            <input type="text" name="search" value="<%= filters.search %>" placeholder="Search all over Hyderabad by area (e.g. Kokapet, Tellapur, Bachupally), BHK, or property name...">
                         </div>
                         <div class="filter-input-wrap">
                             <select name="sort" onchange="this.form.submit()">
@@ -99,7 +99,7 @@
                         <div class="filter-col">
                             <label><i class="fas fa-map-pin text-gold"></i> Locality</label>
                             <select name="locality" onchange="this.form.submit()">
-                                <option value="">All Localities in Hyderabad</option>
+                                <option value="">All Over Hyderabad (All Localities)</option>
                                 <% localities.forEach(loc => { %>
                                 <option value="<%= loc.locality %>" <%= filters.locality === loc.locality ? 'selected' : '' %>><%= loc.locality %></option>
                                 <% }) %>
@@ -156,7 +156,7 @@
             <!-- Results Info Header -->
             <div class="catalog-info-bar">
                 <span class="results-count">
-                    Showing <strong><%= properties.length %></strong> of <strong><%= total %></strong> properties in Hyderabad
+                    Showing <strong><%= properties.length %></strong> of <strong><%= total %></strong> properties all over Hyderabad
                 </span>
                 <% if (filters.category || filters.locality || filters.search || filters.purpose || filters.bedrooms || filters.minPrice || filters.maxPrice) { %>
                 <div class="active-chips">
