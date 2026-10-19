@@ -66,7 +66,7 @@ router.get('/dashboard', async (req, res) => {
             created_at: e.created_at,
             property_title: null
         }));
-        const recentProperties = recentPropertiesResult.properties || [];
+        const recentProperties = enhancePropertyList(recentPropertiesResult.properties || []);
         return res.render('admin/dashboard', {
             title: 'Dashboard — SV Real Estates Admin',
             stats, recentLeads, recentProperties, unreadNotifications: 0

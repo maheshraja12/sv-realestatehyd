@@ -277,6 +277,17 @@
                                         <small>JPEG, PNG, WebP — Max 10MB each, up to 20 images</small>
                                         <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
                                     </div>
+                                    <div class="url-upload-wrap" style="margin-top: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 12px 14px; border-radius: 8px;">
+                                        <label for="imageUrlInput" style="font-size: 0.85rem; font-weight: 500; color: #d4af37; margin-bottom: 6px; display: block;">
+                                            <i class="fas fa-link"></i> Or Add Image by Web URL (Unsplash, CDN, or Cloud Storage)
+                                        </label>
+                                        <div style="display: flex; gap: 8px;">
+                                            <input type="url" id="imageUrlInput" placeholder="Paste image URL (e.g. https://images.unsplash.com/...)" style="flex: 1; padding: 9px 12px; border-radius: 6px; border: 1px solid #333a4d; background: #1a1e29; color: #fff; font-size: 0.9rem;">
+                                            <button type="button" class="btn btn-secondary" onclick="addImageByUrl()" style="white-space: nowrap; padding: 9px 16px;">
+                                                <i class="fas fa-plus"></i> Add Picture
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Image preview area -->

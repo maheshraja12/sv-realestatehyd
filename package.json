@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node database/seed.js",
+    "sync:media": "node scripts/download-offline-media.js",
     "test": "node --test tests/workflow.test.js"
   },
   "dependencies": {

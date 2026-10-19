@@ -223,8 +223,21 @@ describe('6. Properties Catalog & Search Quality', () => {
         for (const p of data.properties) {
             assert.ok(p.price >= 7000000, `Property ${p.property_code} price ${p.price} should be >= ₹70L`);
             assert.ok(p.price <= 60000000, `Property ${p.property_code} price ${p.price} should be <= ₹6 Cr`);
-            assert.ok(p.cover_image && p.cover_image.startsWith('http'), `Property ${p.property_code} must have a valid cover_image URL`);
+            assert.ok(p.cover_image && (p.cover_image.startsWith('http') || p.cover_image.startsWith('/uploads/')), `Property ${p.property_code} must have a valid cover_image URL`);
         }
+    });
+
+    test('Local offline property photo bank contains valid image assets for catalog properties', async () => {
+        const fs = require('fs');
+        const path = require('path');
+        const { getDb } = require('../database/db');
+        const db = getDb();
+        const images = db.prepare("SELECT image_url FROM property_images WHERE image_url LIKE '/uploads/%'").all();
+        assert.ok(images.length > 50, `Expected at least 50 local images, found ${images.length}`);
+        const sample = images[0];
+        const localPath = path.join(__dirname, '..', 'public', sample.image_url.replace(/^\//, ''));
+        assert.ok(fs.existsSync(localPath), `Sample image file ${localPath} should exist on disk`);
+        assert.ok(fs.statSync(localPath).size > 1000, `Sample image file ${localPath} should have content`);
     });
 });
 

@@ -213,15 +213,132 @@ const PROPERTY_MEDIA = {
     ]
 };
 
+const fs = require('fs');
+const path = require('path');
+
+const UPLOADS_PROPERTIES_DIR = path.join(__dirname, '..', 'public', 'uploads', 'properties');
+
+const TITLE_MEDIA_MAP = [
+    { kw: 'serene oaks', code: 'SV-APT-BCP-001' },
+    { kw: 'pine crest', code: 'SV-APT-KMP-001' },
+    { kw: 'greenwood hmda', code: 'SV-PLT-KMP-001' },
+    { kw: 'royal palms', code: 'SV-APT-KMP-002' },
+    { kw: 'palm county', code: 'SV-VIL-KMP-001' },
+    { kw: 'airport city', code: 'SV-APT-SHM-001' },
+    { kw: 'aeroville', code: 'SV-PLT-SHM-001' },
+    { kw: 'skyline aerovillas', code: 'SV-VIL-SHM-001' },
+    { kw: 'metro vista', code: 'SV-APT-MYP-001' },
+    { kw: 'metro grandeur', code: 'SV-APT-MYP-002' },
+    { kw: 'highway facing plot', code: 'SV-PLT-SHP-001' },
+    { kw: 'countryside villa', code: 'SV-VIL-SHP-001' },
+    { kw: 'pragathi nagar', code: 'SV-APT-PGN-001' },
+    { kw: 'greenwood heights', code: 'SV-APT-TLP-001' },
+    { kw: 'sovereign crest', code: 'SV-APT-TLP-002' },
+    { kw: 'meadowlands', code: 'SV-VIL-TLP-001' },
+    { kw: 'green valley hmda', code: 'SV-PLT-MOK-001' },
+    { kw: 'whispering palms', code: 'SV-VIL-MOK-001' },
+    { kw: 'signature serenity', code: 'SV-VIL-MOK-002' },
+    { kw: 'exit-2 hmda', code: 'SV-PLT-KLR-001' },
+    { kw: 'avenue crest', code: 'SV-APT-KLR-001' },
+    { kw: 'hillview heights', code: 'SV-APT-MNK-001' },
+    { kw: 'golden horizon', code: 'SV-APT-PUP-001' },
+    { kw: 'aparna serene', code: 'SV-APT-NLG-001' },
+    { kw: 'botanical enclave', code: 'SV-APT-KDP-001' },
+    { kw: 'cyber crest', code: 'SV-APT-GCB-001' },
+    { kw: 'signature heights', code: 'SV-APT-GCB-002' },
+    { kw: 'commercial showroom', code: 'SV-COM-GCB-001' },
+    { kw: 'one financial', code: 'SV-APT-FND-001' },
+    { kw: 'sky residences', code: 'SV-APT-FND-002' },
+    { kw: 'penthouse', code: 'SV-APT-KKP-002' },
+    { kw: 'celestia', code: 'SV-APT-KKP-001' },
+    { kw: 'golden mile', code: 'SV-PLT-KKP-001' },
+    { kw: 'executive tower', code: 'SV-COM-KKP-001' },
+    { kw: 'cyberview', code: 'SV-COM-MDP-001' },
+    { kw: 'lakefront opulence', code: 'SV-VIL-GDP-001' },
+    { kw: 'the marquess', code: 'SV-APT-BJH-001' },
+    { kw: 'royal sovereign', code: 'SV-VIL-JBH-001' },
+    { kw: 'sv grand', code: 'SV-APT-KKP-001' },
+    { kw: 'image test villa', code: 'SV-VIL-GDP-001' }
+];
+
+function getLocalMediaForCode(code) {
+    if (!code) return [];
+    const prefix = code.toLowerCase();
+    const urls = [];
+    for (let i = 1; i <= 10; i++) {
+        const filename = `${prefix}-${i}.jpg`;
+        const filePath = path.join(UPLOADS_PROPERTIES_DIR, filename);
+        try {
+            if (fs.existsSync(filePath)) {
+                urls.push(`/uploads/properties/${filename}`);
+            } else {
+                break;
+            }
+        } catch {
+            break;
+        }
+    }
+    return urls;
+}
+
+function resolveMediaCode(property) {
+    if (!property) return 'SV-APT-BCP-001';
+    const code = (property.property_code || '').trim();
+    if (PROPERTY_MEDIA[code]) return code;
+
+    const title = (property.title || '').toLowerCase();
+    for (const item of TITLE_MEDIA_MAP) {
+        if (title.includes(item.kw)) {
+            return item.code;
+        }
+    }
+
+    const cat = (property.category || '').toLowerCase();
+    const loc = (property.locality || '').toLowerCase();
+
+    if (cat === 'villa') {
+        if (loc.includes('jubilee')) return 'SV-VIL-JBH-001';
+        if (loc.includes('gandipet')) return 'SV-VIL-GDP-001';
+        if (loc.includes('tellapur')) return 'SV-VIL-TLP-001';
+        if (loc.includes('mokila')) return 'SV-VIL-MOK-001';
+        if (loc.includes('shamshabad')) return 'SV-VIL-SHM-001';
+        return 'SV-VIL-KMP-001';
+    }
+    if (cat === 'commercial') {
+        if (loc.includes('madhapur')) return 'SV-COM-MDP-001';
+        if (loc.includes('kokapet')) return 'SV-COM-KKP-001';
+        return 'SV-COM-GCB-001';
+    }
+    if (cat === 'residential_plot' || cat === 'agricultural_land') {
+        if (loc.includes('kokapet')) return 'SV-PLT-KKP-001';
+        if (loc.includes('shamshabad')) return 'SV-PLT-SHM-001';
+        if (loc.includes('mokila')) return 'SV-PLT-MOK-001';
+        if (loc.includes('kollur')) return 'SV-PLT-KLR-001';
+        return 'SV-PLT-KMP-001';
+    }
+    if (loc.includes('banjara')) return 'SV-APT-BJH-001';
+    if (loc.includes('kokapet')) return 'SV-APT-KKP-001';
+    if (loc.includes('financial')) return 'SV-APT-FND-002';
+    if (loc.includes('gachibowli')) return 'SV-APT-GCB-001';
+    if (loc.includes('tellapur')) return 'SV-APT-TLP-001';
+    return 'SV-APT-BCP-001';
+}
+
 function getMediaForProperty(property) {
     if (!property) return { cover_image: null, images: [] };
-    const code = (property.property_code || '').trim();
-    const urls = PROPERTY_MEDIA[code] ? [...PROPERTY_MEDIA[code]] : [];
-    if (urls.length === 0) {
-        // Fallback by category if a new dynamic code is passed
-        const defaultPool = PROPERTY_MEDIA['SV-APT-BCP-001'] || [];
-        urls.push(...defaultPool);
+
+    const resolvedCode = resolveMediaCode(property);
+    const remoteUrls = PROPERTY_MEDIA[resolvedCode] || PROPERTY_MEDIA['SV-APT-BCP-001'] || [];
+
+    // On Vercel / production, always use global high-speed CDN URLs so live web pages never 404
+    let urls;
+    if (process.env.VERCEL) {
+        urls = [...remoteUrls];
+    } else {
+        const localUrls = getLocalMediaForCode(resolvedCode);
+        urls = localUrls.length > 0 ? localUrls : [...remoteUrls];
     }
+
     const cover_image = urls[0] || null;
     const images = urls.map((url, idx) => ({
         id: idx + 1,
@@ -236,7 +353,11 @@ function getMediaForProperty(property) {
 function enhanceProperty(property) {
     if (!property) return property;
     const media = getMediaForProperty(property);
-    if (!property.cover_image || property.cover_image.trim() === '') {
+    const hasValidCover = property.cover_image && 
+                          typeof property.cover_image === 'string' && 
+                          property.cover_image.trim() !== '' && 
+                          property.cover_image.trim() !== 'null';
+    if (!hasValidCover) {
         property.cover_image = media.cover_image;
     }
     if (!property.images || !Array.isArray(property.images) || property.images.length === 0) {
@@ -260,7 +381,12 @@ function enhancePropertyList(properties) {
 
 module.exports = {
     PROPERTY_MEDIA,
+    TITLE_MEDIA_MAP,
+    resolveMediaCode,
+    getLocalMediaForCode,
     getMediaForProperty,
     enhanceProperty,
     enhancePropertyList
 };
+
+

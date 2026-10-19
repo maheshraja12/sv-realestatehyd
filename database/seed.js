@@ -8,7 +8,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { initializeDb, getDb, closeDb } = require('./db');
-const { PROPERTY_MEDIA } = require('./property-media');
+const { PROPERTY_MEDIA, getLocalMediaForCode } = require('./property-media');
 
 function seed(existingDb, force = false) {
     try {
@@ -1471,7 +1471,8 @@ Located within a private enclave of only 8 residences with 3-tier security, 100%
                 });
 
                 const newPropId = res.lastInsertRowid;
-                const propImages = PROPERTY_MEDIA[prop.property_code] || prop.images || [];
+                const localImages = getLocalMediaForCode(prop.property_code);
+                const propImages = localImages.length > 0 ? localImages : (PROPERTY_MEDIA[prop.property_code] || prop.images || []);
                 propImages.forEach((imgUrl, idx) => {
                     insertImage.run(newPropId, imgUrl, idx === 0 ? 1 : 0, idx);
                 });

@@ -3,10 +3,20 @@
  */
 
 let pendingUploadFiles = [];
+let pendingImageUrls = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     toggleCategoryFields();
     initUploadZone();
+    const urlInput = document.getElementById('imageUrlInput');
+    if (urlInput) {
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addImageByUrl();
+            }
+        });
+    }
 });
 
 function toggleCategoryFields() {
@@ -118,6 +128,62 @@ function renderLocalPreview(file) {
         grid.appendChild(item);
     };
     reader.readAsDataURL(file);
+}
+
+function renderUrlPreview(url) {
+    const grid = document.getElementById('imagePreviewGrid');
+    if (!grid) return;
+    const item = document.createElement('div');
+    item.className = 'image-preview-item';
+    item.innerHTML = `
+        <img src="${url}" alt="Preview" onerror="this.src='/images/placeholder.jpg'">
+        <span class="cover-badge" style="background:#d4af37; color:#12151c;">Queued URL</span>
+    `;
+    grid.appendChild(item);
+}
+
+async function addImageByUrl() {
+    const input = document.getElementById('imageUrlInput');
+    if (!input) return;
+    const url = input.value.trim();
+    if (!url) {
+        alert('Please enter a valid image URL');
+        input.focus();
+        return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+        alert('Please enter a valid HTTP or HTTPS image URL');
+        input.focus();
+        return;
+    }
+
+    const propertyId = document.getElementById('propertyId')?.value;
+    if (propertyId) {
+        showToast('Adding image URL...');
+        try {
+            const res = await fetch(`/api/properties/${propertyId}/images`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_url: url })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Image added successfully');
+                input.value = '';
+                setTimeout(() => location.reload(), 600);
+            } else {
+                showToast(data.error || 'Failed to add image', 'error');
+            }
+        } catch (e) {
+            showToast('Network error while adding image', 'error');
+        }
+    } else {
+        // Pending URL for new property creation
+        pendingImageUrls.push(url);
+        renderUrlPreview(url);
+        input.value = '';
+        showToast('Image URL queued for new property');
+    }
 }
 
 async function setCoverImage(imageId) {
@@ -257,17 +323,27 @@ async function saveProperty(overrideStatus) {
         if (res.ok) {
             const savedId = isEdit ? propertyId : data.id;
 
-            // If there are pending files for newly created property, upload them now
-            if (!isEdit && pendingUploadFiles.length > 0 && savedId) {
-                showToast('Uploading images...');
-                const formData = new FormData();
-                for (let i = 0; i < pendingUploadFiles.length; i++) {
-                    formData.append('images', pendingUploadFiles[i]);
+            // If there are pending files or image URLs for newly created property, upload them now
+            if (!isEdit && savedId) {
+                if (pendingUploadFiles.length > 0) {
+                    showToast('Uploading images...');
+                    const formData = new FormData();
+                    for (let i = 0; i < pendingUploadFiles.length; i++) {
+                        formData.append('images', pendingUploadFiles[i]);
+                    }
+                    await fetch(`/api/properties/${savedId}/images`, {
+                        method: 'POST',
+                        body: formData
+                    });
                 }
-                await fetch(`/api/properties/${savedId}/images`, {
-                    method: 'POST',
-                    body: formData
-                });
+                if (pendingImageUrls.length > 0) {
+                    showToast('Attaching image URLs...');
+                    await fetch(`/api/properties/${savedId}/images`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image_urls: pendingImageUrls })
+                    });
+                }
             }
 
             showToast('Property saved successfully');

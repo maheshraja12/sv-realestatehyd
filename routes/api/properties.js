@@ -303,27 +303,47 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 });
 
-// POST /api/properties/:id/images — Upload images
+// POST /api/properties/:id/images — Upload images (files or URLs)
 router.post('/:id/images', requireAuth, upload.array('images', 20), async (req, res) => {
     try {
+        const urlList = [];
+        if (req.body && req.body.image_url) {
+            const trimmed = String(req.body.image_url).trim();
+            if (trimmed) urlList.push(trimmed);
+        }
+        if (req.body && Array.isArray(req.body.image_urls)) {
+            req.body.image_urls.forEach(u => {
+                if (typeof u === 'string' && u.trim()) urlList.push(u.trim());
+            });
+        }
+
+        const hasFiles = Boolean(req.files && req.files.length > 0);
+        const hasUrls = Boolean(urlList.length > 0);
+
+        if (!hasFiles && !hasUrls) {
+            return res.status(400).json({ error: 'No images or image URLs provided' });
+        }
+
         if (process.env.VERCEL) {
             if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production properties database is not configured.' });
-            if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No images uploaded' });
             const images = [];
-            for (const file of req.files) {
-                const saved = await uploadCloudPropertyImage(req.params.id, file);
-                if (!saved.success) return res.status(502).json({ error: saved.error || 'Property image upload failed.' });
-                images.push(saved.image);
+            if (hasFiles) {
+                for (const file of req.files) {
+                    const saved = await uploadCloudPropertyImage(req.params.id, file);
+                    if (!saved.success) return res.status(502).json({ error: saved.error || 'Property image upload failed.' });
+                    images.push(saved.image);
+                }
             }
-            return res.json({ images, message: `${images.length} image(s) uploaded to persistent storage` });
+            if (hasUrls) {
+                for (const u of urlList) {
+                    images.push({ image_url: u });
+                }
+            }
+            return res.json({ images, message: `${images.length} image(s) saved` });
         }
         const db = getDb();
         const property = db.prepare('SELECT id FROM properties WHERE id = ?').get(req.params.id);
         if (!property) return res.status(404).json({ error: 'Property not found' });
-
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'No images uploaded' });
-        }
 
         const existingCount = db.prepare('SELECT COUNT(*) as count FROM property_images WHERE property_id = ?').get(req.params.id).count;
         const hasCover = db.prepare('SELECT COUNT(*) as count FROM property_images WHERE property_id = ? AND is_cover = 1').get(req.params.id).count > 0;
@@ -334,17 +354,30 @@ router.post('/:id/images', requireAuth, upload.array('images', 20), async (req, 
         `);
 
         const images = [];
-        req.files.forEach((file, index) => {
-            const imageUrl = `/uploads/properties/${file.filename}`;
-            const isCover = (!hasCover && index === 0) ? 1 : 0;
-            const order = existingCount + index;
-            const result = stmt.run(req.params.id, imageUrl, file.originalname, isCover, order);
-            images.push({ id: result.lastInsertRowid, image_url: imageUrl, is_cover: isCover, display_order: order });
-        });
+        let orderOffset = 0;
 
-        auditLog(db, req.session.userId, req.session.userName, 'upload_images', 'property', req.params.id, `Uploaded ${req.files.length} images`, req.ip);
+        if (hasFiles) {
+            req.files.forEach((file) => {
+                const imageUrl = `/uploads/properties/${file.filename}`;
+                const isCover = (!hasCover && images.length === 0) ? 1 : 0;
+                const order = existingCount + (orderOffset++);
+                const result = stmt.run(req.params.id, imageUrl, file.originalname, isCover, order);
+                images.push({ id: result.lastInsertRowid, image_url: imageUrl, is_cover: isCover, display_order: order });
+            });
+        }
 
-        res.json({ images, message: `${req.files.length} image(s) uploaded` });
+        if (hasUrls) {
+            urlList.forEach((rawUrl) => {
+                const isCover = (!hasCover && images.length === 0) ? 1 : 0;
+                const order = existingCount + (orderOffset++);
+                const result = stmt.run(req.params.id, rawUrl, 'Image URL', isCover, order);
+                images.push({ id: result.lastInsertRowid, image_url: rawUrl, is_cover: isCover, display_order: order });
+            });
+        }
+
+        auditLog(db, req.session.userId, req.session.userName, 'upload_images', 'property', req.params.id, `Added ${images.length} image(s)`, req.ip);
+
+        res.json({ images, message: `${images.length} image(s) added successfully` });
     } catch (err) {
         console.error('Upload images error:', err);
         res.status(500).json({ error: 'Failed to upload images' });
@@ -375,10 +408,16 @@ router.delete('/:id/images/:imageId', requireAuth, async (req, res) => {
     const image = db.prepare('SELECT * FROM property_images WHERE id = ? AND property_id = ?').get(req.params.imageId, req.params.id);
     if (!image) return res.status(404).json({ error: 'Image not found' });
 
-    // Delete file from disk
-    const filePath = path.join(__dirname, '..', '..', 'public', image.image_url);
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    // Delete file from disk if local upload
+    if (image.image_url && typeof image.image_url === 'string' && !image.image_url.startsWith('http://') && !image.image_url.startsWith('https://')) {
+        const filePath = path.join(__dirname, '..', '..', 'public', image.image_url.replace(/^\//, ''));
+        try {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        } catch (e) {
+            console.warn('Could not unlink local file:', filePath, e.message);
+        }
     }
 
     db.prepare('DELETE FROM property_images WHERE id = ?').run(req.params.imageId);
