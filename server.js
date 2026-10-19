@@ -266,6 +266,14 @@ app.use('/api/leads/public', enquiryLimiter);
 app.use('/api/appointments/public', enquiryLimiter);
 
 // Mount routes
+const handleAdminRoot = (req, res) => {
+    if (req.session && req.session.userId) {
+        return res.redirect('/admin/dashboard');
+    }
+    return res.redirect('/admin/login');
+};
+app.get('/admin', handleAdminRoot);
+app.get('/admin/', handleAdminRoot);
 app.use('/', publicRoutes);
 app.use('/admin', authRoutes);
 app.use('/admin', adminRoutes);

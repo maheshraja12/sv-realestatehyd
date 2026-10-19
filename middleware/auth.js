@@ -13,7 +13,12 @@ function requireAuth(req, res, next) {
     if (isApi) {
         return res.status(401).json({ error: 'Authentication required' });
     }
-    return res.redirect('/admin/login');
+    const url = req.originalUrl || req.url || '';
+    const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
+    const returnToParam = (url && cleanUrl !== '/admin' && cleanUrl !== '/admin/login' && cleanUrl !== '/admin/logout')
+        ? `?returnTo=${encodeURIComponent(url)}`
+        : '';
+    return res.redirect(`/admin/login${returnToParam}`);
 }
 
 function requireAdmin(req, res, next) {
@@ -27,7 +32,12 @@ function requireAdmin(req, res, next) {
     if (isApi) {
         return res.status(403).json({ error: 'Admin access required' });
     }
-    return res.redirect('/admin/login');
+    const url = req.originalUrl || req.url || '';
+    const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
+    const returnToParam = (url && cleanUrl !== '/admin' && cleanUrl !== '/admin/login' && cleanUrl !== '/admin/logout')
+        ? `?returnTo=${encodeURIComponent(url)}`
+        : '';
+    return res.redirect(`/admin/login${returnToParam}`);
 }
 
 function loadUser(req, res, next) {

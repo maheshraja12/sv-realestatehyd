@@ -25,6 +25,11 @@ const {
 // All admin routes require authentication
 router.use(requireAuth);
 
+// GET /admin or /admin/
+router.get('/', (req, res) => {
+    res.redirect('/admin/dashboard');
+});
+
 // GET /admin/dashboard
 router.get('/dashboard', async (req, res) => {
     if (process.env.VERCEL && cloudLeadsConfigured()) {
@@ -518,6 +523,11 @@ router.post('/settings/password', async (req, res) => {
         console.error('Password change error:', err);
         res.redirect('/admin/settings?err=Failed+to+change+password');
     }
+});
+
+// Fallback: any other unmatched /admin/* route redirects directly to admin dashboard
+router.use((req, res) => {
+    res.redirect('/admin/dashboard');
 });
 
 module.exports = router;

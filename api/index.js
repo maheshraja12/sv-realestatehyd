@@ -24,10 +24,15 @@ module.exports = (req, res) => {
     }
 
     // Normalize path if Vercel serverless rewrite prepends /api/index.js or /api
-    if (req.url && req.url.startsWith('/api/index.js')) {
+    const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'];
+    if (matchedPath && (req.url === '/api' || req.url.startsWith('/api/index.js'))) {
+        req.url = matchedPath;
+    } else if (req.url && req.url.startsWith('/api/index.js')) {
         req.url = req.url.replace(/^\/api\/index\.js/, '') || '/';
     } else if (req.url === '/api') {
         req.url = '/';
+    } else if (req.url && req.url.startsWith('/api/admin')) {
+        req.url = req.url.replace(/^\/api/, '');
     }
 
     try {

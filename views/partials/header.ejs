@@ -39,6 +39,9 @@
                     <li><a href="/services" class="<%= path === '/services' ? 'active' : '' %>">Services</a></li>
                     <li><a href="/locations" class="<%= path === '/locations' ? 'active' : '' %>">Locations</a></li>
                     <li><a href="/contact" class="<%= path === '/contact' ? 'active' : '' %>">Contact Us</a></li>
+                    <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+                    <li><a href="/admin/dashboard" class="<%= path.startsWith('/admin') ? 'active' : '' %>" style="color:var(--gold); font-weight:700;"><i class="fas fa-user-shield"></i> Admin</a></li>
+                    <% } %>
                 </ul>
             </nav>
 
