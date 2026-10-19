@@ -2132,6 +2132,12 @@ h1, h2, h3, h4 {
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(8px);
     z-index: 1000;
+    animation: modalBackdropFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes modalBackdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .modal-wrapper-custom {
@@ -2242,6 +2248,10 @@ h1, h2, h3, h4 {
 }
 
 @media (max-width: 600px) {
+    .modal-dialog-custom {
+        padding: 24px 18px !important;
+        max-height: 94vh !important;
+    }
     .modal-actions-grid {
         flex-direction: column-reverse !important;
         gap: 10px !important;
@@ -2373,9 +2383,9 @@ h1, h2, h3, h4 {
 }
 
 .greeting-icon-wrapper {
-    width: 68px;
-    height: 68px;
-    margin: 0 auto 12px;
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 8px;
     border-radius: 50%;
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(212, 175, 55, 0.25) 100%);
     border: 2px solid var(--gold);
@@ -2383,60 +2393,60 @@ h1, h2, h3, h4 {
     align-items: center;
     justify-content: center;
     color: var(--gold);
-    font-size: 2rem;
-    box-shadow: 0 0 35px rgba(212, 175, 55, 0.35);
+    font-size: 1.6rem;
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.35);
     animation: greetingPulse 2s infinite ease-in-out;
 }
 
 @keyframes greetingPulse {
     0%, 100% {
         transform: scale(1);
-        box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
     }
     50% {
         transform: scale(1.05);
-        box-shadow: 0 0 45px rgba(212, 175, 55, 0.55);
+        box-shadow: 0 0 38px rgba(212, 175, 55, 0.55);
     }
 }
 
 .greeting-badge {
     display: inline-block;
-    padding: 4px 14px;
+    padding: 3px 12px;
     background: rgba(212, 175, 55, 0.12);
     border: 1px solid rgba(212, 175, 55, 0.4);
     border-radius: 20px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     color: var(--gold);
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .greeting-title {
     font-family: var(--font-heading);
-    font-size: 1.55rem;
+    font-size: 1.4rem;
     color: #fff;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     line-height: 1.25;
 }
 
 .greeting-subtitle {
     color: #cbd5e1;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 16px;
-    max-width: 460px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin-bottom: 12px;
+    max-width: 440px;
     margin-left: auto;
     margin-right: auto;
 }
 
 .greeting-ref-card {
-    background: rgba(18, 22, 33, 0.9);
+    background: rgba(18, 22, 33, 0.95);
     border: 1px solid rgba(212, 175, 55, 0.35);
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     text-align: left;
 }
@@ -2445,11 +2455,11 @@ h1, h2, h3, h4 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .greeting-ref-label {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 600;
     color: #94a3b8;
     text-transform: uppercase;
@@ -2460,9 +2470,9 @@ h1, h2, h3, h4 {
     background: rgba(212, 175, 55, 0.15);
     border: 1px solid rgba(212, 175, 55, 0.4);
     color: var(--gold);
-    font-size: 0.75rem;
-    padding: 3px 10px;
-    border-radius: 6px;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s ease;
@@ -2475,35 +2485,35 @@ h1, h2, h3, h4 {
 
 .greeting-ref-code {
     font-family: monospace;
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: var(--gold);
-    letter-spacing: 1.5px;
-    margin-bottom: 12px;
+    letter-spacing: 1.2px;
+    margin-bottom: 8px;
 }
 
 .greeting-meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 8px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 12px;
+    padding-top: 8px;
 }
 
 .greeting-meta-grid .meta-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .greeting-meta-grid .meta-item i {
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .greeting-meta-grid .meta-item small {
     display: block;
     color: #94a3b8;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -2511,41 +2521,43 @@ h1, h2, h3, h4 {
 .greeting-meta-grid .meta-item strong {
     display: block;
     color: #f1f5f9;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 600;
 }
 
 .greeting-steps {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .step-pill {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #cbd5e1;
-    font-size: 0.78rem;
-    padding: 5px 12px;
-    border-radius: 16px;
+    font-size: 0.74rem;
+    padding: 4px 10px;
+    border-radius: 14px;
 }
 
 .greeting-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     justify-content: center;
     align-items: center;
 }
 
 .greeting-actions .btn {
     flex: 1;
-    min-height: 48px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
 }
 
 @media (max-width: 580px) {

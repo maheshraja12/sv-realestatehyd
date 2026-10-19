@@ -176,12 +176,6 @@ function closeEnquiryModal(e) {
     if (errorAlert) errorAlert.style.display = 'none';
     document.body.style.overflow = '';
 
-    // Permanently remember that the user closed/dismissed the enquiry modal
-    try {
-        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
-        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
-    } catch (err) {}
-
     // Clean any query string left in URL (e.g. ?property_id=&full_name=...)
     try {
         if (window.location.search) {
@@ -197,9 +191,11 @@ function handleModalWrapperClick(e) {
 }
 
 function focusFirstField() {
-    setTimeout(() => {
-        document.getElementById('modalCustomerName')?.focus();
-    }, 150);
+    if (window.innerWidth > 768) {
+        setTimeout(() => {
+            document.getElementById('modalCustomerName')?.focus();
+        }, 150);
+    }
 }
 
 // ── Form Submission Handler (4 Required Fields) ─────────────
@@ -343,13 +339,7 @@ function openEnquirySuccessModal(refCode, name, date, time, req) {
     const backdrop = document.getElementById('enquiryModalBackdrop');
     if (!modal || !backdrop) return;
 
-    // Permanently remember submission so popup NEVER opens again on any page
-    try {
-        localStorage.setItem('sv_enquiry_submitted', 'true');
-        sessionStorage.setItem('sv_enquiry_submitted', 'true');
-        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
-        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
-    } catch (err) {}
+    // Clean query parameters and prepare success card view
 
     // Clean query parameters from URL immediately
     try {
@@ -436,7 +426,7 @@ function initButtonAutoBindings() {
         }, { capture: true });
     }
 
-    // Modal Close and Cancel buttons
+    // Modal Close, Cancel, and Done / Back to Main Page buttons
     const closeBtn = document.getElementById('modalCloseBtn');
     if (closeBtn) {
         closeBtn.onclick = (e) => closeEnquiryModal(e);
@@ -444,6 +434,10 @@ function initButtonAutoBindings() {
     const cancelBtn = document.getElementById('modalCancelBtn');
     if (cancelBtn) {
         cancelBtn.onclick = (e) => closeEnquiryModal(e);
+    }
+    const backToMainBtn = document.getElementById('modalBackToMainBtn');
+    if (backToMainBtn) {
+        backToMainBtn.onclick = (e) => closeEnquiryModal(e);
     }
 
     // 1. Header CTA button
@@ -500,36 +494,28 @@ function initEscapeHandler() {
 
 // ── Auto Enquiry Popup on Website Entry ──────────────────────
 function initAutoEnquiryPopup() {
-    // 1. Never show on admin portal pages
-    if (window.location.pathname.startsWith('/admin')) {
+    // 1. Only show on the Home page (when anyone opens the homepage)
+    const rawPath = window.location.pathname || '';
+    const cleanPath = rawPath.replace(/\/+$/, '') || '/';
+    const isHomePage = cleanPath === '/' || cleanPath === '/index.html' || cleanPath === '';
+    
+    if (!isHomePage) {
         return;
     }
 
-    // 2. Do not show if user already submitted an enquiry or dismissed it
+    // 2. Clear any legacy dismissal flags so the popup is never blocked on the homepage
     try {
-        if (localStorage.getItem('sv_enquiry_submitted') || 
-            sessionStorage.getItem('sv_enquiry_submitted') ||
-            localStorage.getItem('sv_enquiry_popup_dismissed') || 
-            sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
-            return;
-        }
+        localStorage.removeItem('sv_enquiry_popup_dismissed');
+        sessionStorage.removeItem('sv_enquiry_popup_dismissed');
+        localStorage.removeItem('sv_enquiry_submitted');
     } catch (e) {}
 
-    // 3. Smooth, elegant entrance after page initial paint (first visit only)
+    // 3. Promptly pop up enquiry page first when opening the homepage
     setTimeout(() => {
-        try {
-            if (localStorage.getItem('sv_enquiry_submitted') || 
-                sessionStorage.getItem('sv_enquiry_submitted') ||
-                localStorage.getItem('sv_enquiry_popup_dismissed') || 
-                sessionStorage.getItem('sv_enquiry_popup_dismissed')) {
-                return;
-            }
-        } catch (e) {}
-
         const modal = document.getElementById('enquiryModal');
         const backdrop = document.getElementById('enquiryModalBackdrop');
         if (modal && backdrop && modal.style.display !== 'flex') {
             openEnquiryModal();
         }
-    }, 1500);
+    }, 400);
 }

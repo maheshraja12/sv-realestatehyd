@@ -233,10 +233,7 @@
                 const result = await res.json();
                 if (res.ok) {
                     try {
-                        localStorage.setItem('sv_enquiry_submitted', 'true');
                         sessionStorage.setItem('sv_enquiry_submitted', 'true');
-                        localStorage.setItem('sv_enquiry_popup_dismissed', 'true');
-                        sessionStorage.setItem('sv_enquiry_popup_dismissed', 'true');
                     } catch (err) {}
                     form.style.display = 'none';
                     const successBox = document.getElementById('contactSuccessState');
