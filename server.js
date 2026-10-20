@@ -3,10 +3,7 @@
  */
 require('dotenv').config();
 
-// Ensure Node.js TLS allows self-signed intermediate certificates in Supabase / Cloud Postgres chains
-if (process.env.VERCEL || process.env.NODE_ENV === 'production' || process.env.DATABASE_URL || process.env.POSTGRES_URL) {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+
 
 const express = require('express');
 const session = require('express-session');
@@ -72,8 +69,8 @@ const apiLimiter = rateLimit({
 
 const enquiryLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
-    max: 5000,
-    message: { error: 'Too many enquiries. Please try again shortly.' }
+    max: process.env.NODE_ENV === 'test' ? 500 : 15,
+    message: { error: 'Too many enquiries submitted. Please wait a few minutes or call our office directly.' }
 });
 
 // ── Parsing ───────────────────────────────────────────────

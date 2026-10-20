@@ -289,4 +289,18 @@ router.get('/contact', (req, res) => {
     });
 });
 
+// GET /privacy
+router.get('/privacy', (req, res) => {
+    res.render('public/privacy', {
+        title: 'Privacy Policy — SV Real Estates Hyderabad'
+    });
+});
+
+// GET /terms
+router.get('/terms', (req, res) => {
+    res.render('public/terms', {
+        title: 'Terms of Service — SV Real Estates Hyderabad'
+    });
+});
+
 module.exports = router;

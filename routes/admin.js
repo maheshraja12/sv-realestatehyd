@@ -349,41 +349,94 @@ router.get('/leads', requirePermission('leads'), async (req, res) => {
 // GET /admin/leads/:id
 router.get('/leads/:id', async (req, res) => {
     const db = getDb();
-    let lead = db.prepare(`
-        SELECT l.*, p.title as property_title, p.property_code, p.price as property_price,
-            p.category as property_cat, p.locality as property_locality,
-            u.name as agent_name
-        FROM leads l
-        LEFT JOIN properties p ON l.property_id = p.id
-        LEFT JOIN users u ON l.assigned_agent_id = u.id
-        WHERE l.id = ?
-    `).get(req.params.id);
+    let lead = null;
+    try {
+        lead = db.prepare(`
+            SELECT l.*, p.title as property_title, p.property_code, p.price as property_price,
+                p.category as property_cat, p.locality as property_locality,
+                u.name as agent_name
+            FROM leads l
+            LEFT JOIN properties p ON l.property_id = p.id
+            LEFT JOIN users u ON l.assigned_agent_id = u.id
+            WHERE l.id = ?
+        `).get(req.params.id);
+    } catch (e) {}
+
+    // Check Cloud (Supabase / PostgreSQL) if not found in local SQLite
+    if (!lead && (process.env.VERCEL || isPostgresConfigured())) {
+        try {
+            const pgResult = await getPgLeadById(req.params.id);
+            if (pgResult && pgResult.success && pgResult.data) {
+                const e = pgResult.data;
+                lead = {
+                    id: e.id,
+                    lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+                    customer_name: e.customer_name || e.full_name || 'Interested Buyer',
+                    full_name: e.full_name || e.customer_name || 'Interested Buyer',
+                    phone: e.phone || e.phone_number,
+                    phone_number: e.phone_number || e.phone,
+                    email: e.email,
+                    property_id: e.property_id,
+                    property_requirement: e.property_requirement || e.property_category || 'General Enquiry',
+                    property_category: e.property_category || e.property_requirement || 'General Enquiry',
+                    budget: e.budget,
+                    preferred_location: e.preferred_location,
+                    message: e.message || `Requirement: ${e.property_requirement || 'Property Enquiry'}`,
+                    contact_preference: e.contact_preference || 'phone',
+                    appointment_date: e.appointment_date || e.preferred_visit_date,
+                    appointment_time: e.appointment_time,
+                    status: (e.status || 'new').toLowerCase(),
+                    created_at: e.created_at,
+                    property_title: null,
+                    property_code: null,
+                    property_price: null,
+                    property_cat: null,
+                    property_locality: null,
+                    agent_name: 'Unassigned'
+                };
+            }
+        } catch (cloudErr) {
+            console.error('[ADMIN LEAD DETAIL] Cloud fetch error:', cloudErr.message);
+        }
+    }
 
     if (!lead) {
         return res.redirect('/admin/leads');
     }
 
-    const notes = db.prepare(`
-        SELECT n.*, u.name as user_name
-        FROM lead_notes n
-        LEFT JOIN users u ON n.user_id = u.id
-        WHERE n.lead_id = ?
-        ORDER BY n.created_at DESC
-    `).all(lead.id);
+    let notes = [];
+    try {
+        notes = db.prepare(`
+            SELECT n.*, u.name as user_name
+            FROM lead_notes n
+            LEFT JOIN users u ON n.user_id = u.id
+            WHERE n.lead_id = ?
+            ORDER BY n.created_at DESC
+        `).all(lead.id);
+    } catch (e) {}
 
-    const statusHistory = db.prepare(`
-        SELECT h.*, u.name as changed_by_name
-        FROM lead_status_history h
-        LEFT JOIN users u ON h.changed_by = u.id
-        WHERE h.lead_id = ?
-        ORDER BY h.created_at DESC
-    `).all(lead.id);
+    let statusHistory = [];
+    try {
+        statusHistory = db.prepare(`
+            SELECT h.*, u.name as changed_by_name
+            FROM lead_status_history h
+            LEFT JOIN users u ON h.changed_by = u.id
+            WHERE h.lead_id = ?
+            ORDER BY h.created_at DESC
+        `).all(lead.id);
+    } catch (e) {}
 
-    const appointments = db.prepare(`
-        SELECT * FROM appointments WHERE lead_id = ? ORDER BY created_at DESC
-    `).all(lead.id);
+    let appointments = [];
+    try {
+        appointments = db.prepare(`
+            SELECT * FROM appointments WHERE lead_id = ? ORDER BY created_at DESC
+        `).all(lead.id);
+    } catch (e) {}
 
-    const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
+    let agents = [];
+    try {
+        agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
+    } catch (e) {}
 
     res.render('admin/lead-detail', {
         title: `Lead: ${lead.customer_name} — SV Real Estates Admin`,
@@ -403,6 +456,46 @@ router.get('/appointments', requirePermission('appointments'), async (req, res) 
     const page = parseInt(req.query.page) || 1;
     const limit = 25;
     const offset = (page - 1) * limit;
+
+    // Check PostgreSQL / Supabase cloud first when on Vercel or configured
+    if (process.env.VERCEL || isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgAppointments({ status });
+            if (pgResult && pgResult.success && pgResult.data) {
+                const total = pgResult.data.length;
+                const totalPages = Math.ceil(total / limit) || 1;
+                const paged = pgResult.data.slice(offset, offset + limit).map(a => ({
+                    id: a.id,
+                    appointment_code: a.appointment_code || `SV-VISIT-${String(a.id).padStart(5, '0')}`,
+                    customer_name: a.customer_name || 'Visitor',
+                    phone: a.phone,
+                    requested_date: a.requested_date,
+                    requested_time: a.requested_time,
+                    confirmed_date: a.confirmed_date,
+                    confirmed_time: a.confirmed_time,
+                    status: a.status || 'requested',
+                    notes: a.notes,
+                    property_title: 'Direct Enquiry',
+                    property_code: null,
+                    agent_name: 'Unassigned'
+                }));
+                let agents = [];
+                try { agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all(); } catch (e) {}
+                return res.render('admin/appointments', {
+                    title: 'Site Visits — SV Real Estates Admin',
+                    appointments: paged,
+                    agents,
+                    page,
+                    totalPages,
+                    total,
+                    status,
+                    unreadNotifications: 0
+                });
+            }
+        } catch (cloudAptErr) {
+            console.error('[ADMIN APPOINTMENTS] Cloud fetch notice:', cloudAptErr.message);
+        }
+    }
 
     let where = '1=1';
     const params = [];

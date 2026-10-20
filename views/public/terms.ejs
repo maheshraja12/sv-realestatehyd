@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Terms of Service for <%= businessName %> — General terms, property verification standards, and site visit advisory guidelines.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Banner -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-file-contract text-gold"></i> ADVISORY & SERVICE GUIDELINES</span>
+            <h1 class="page-title">Terms of <span class="gold-gradient-text">Service</span></h1>
+            <p class="page-subtitle">Guidelines governing property consultations, listings information, site visits, and transactions with <%= businessName %>.</p>
+        </div>
+    </section>
+
+    <!-- Terms Content Section -->
+    <section class="section" style="padding: 60px 0;">
+        <div class="container" style="max-width: 900px; color: #cbd5e1; line-height: 1.8;">
+            <div style="background: rgba(18, 24, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 36px 40px; margin-bottom: 30px;">
+                <h2 style="color: #fff; font-size: 1.4rem; margin-top: 0; margin-bottom: 16px;"><i class="fas fa-check-circle text-gold"></i> 1. Property Information & Availability</h2>
+                <p>All property listings, plot dimensions, villa floor plans, pricing quotations, and availability statuses presented on this website are provided in good faith based on current project approvals and seller disclosures. Final dimensions and boundaries are subject to physical survey and registered documentation.</p>
+
+                <h2 style="color: #fff; font-size: 1.4rem; margin-top: 28px; margin-bottom: 16px;"><i class="fas fa-car text-gold"></i> 2. Guided Site Visits</h2>
+                <p>Site visits are scheduled upon request to assist prospective buyers in inspecting layouts, connectivity, and development progress. While our advisors coordinate complimentary transport for selected premium projects, visitors are advised to review local zoning regulations and verify RERA registrations before entering into legal commitments.</p>
+
+                <h2 style="color: #fff; font-size: 1.4rem; margin-top: 28px; margin-bottom: 16px;"><i class="fas fa-balance-scale text-gold"></i> 3. Legal & Regulatory Compliance</h2>
+                <p>Transactions facilitate compliance with the Real Estate (Regulation and Development) Act (RERA Telangana), HMDA, GHMC, and DTCP layout sanctions where applicable. Independent legal title scrutiny is always welcomed and supported by our documentation team.</p>
+
+                <h2 style="color: #fff; font-size: 1.4rem; margin-top: 28px; margin-bottom: 16px;"><i class="fas fa-phone-alt text-gold"></i> 4. Office Address & Inquiries</h2>
+                <p>For any clarifications regarding property terms, layout approvals, or construction materials agreements, please contact:</p>
+                <p style="margin-top: 10px;">
+                    <strong>Office:</strong> <%= typeof businessAddress !== 'undefined' ? businessAddress : '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085' %><br>
+                    <strong>Phone:</strong> <a href="tel:<%= businessPhone %>" style="color: var(--gold);"><%= businessPhone %></a><br>
+                    <strong>Email:</strong> <a href="mailto:<%= businessEmail %>" style="color: var(--gold);"><%= businessEmail %></a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <script src="/js/main.js"></script>
+</body>
+</html>

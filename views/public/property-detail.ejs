@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
     <meta name="description" content="<%= property.seo_description || property.short_description || property.title %>">
+    <!-- Open Graph Social & WhatsApp Previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<%= property.title %> — SV Real Estates Hyderabad">
+    <meta property="og:description" content="<%= property.short_description || property.description || 'Verified luxury property listing in Hyderabad.' %>">
+    <% if (property.cover_image) { %>
+    <meta property="og:image" content="<%= property.cover_image %>">
+    <% } %>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

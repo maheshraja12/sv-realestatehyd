@@ -514,32 +514,51 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // PATCH or PUT /api/leads/:id/status — Update lead status
-const handleStatusUpdate = (req, res) => {
+const handleStatusUpdate = async (req, res) => {
     const db = getDb();
     const { status } = req.body;
     const validStatuses = ['new', 'contacted', 'interested', 'site_visit_scheduled', 'negotiation', 'converted', 'lost', 'spam'];
     if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
-    const lead = db.prepare('SELECT status FROM leads WHERE id = ?').get(req.params.id);
+    let lead = null;
+    try {
+        lead = db.prepare('SELECT status FROM leads WHERE id = ?').get(req.params.id);
+    } catch (e) {}
+
+    // Check Cloud (Supabase / PostgreSQL) if missing from SQLite
+    if (!lead && (process.env.VERCEL || isPostgresConfigured())) {
+        try {
+            const pgResult = await getPgLeadById(req.params.id);
+            if (pgResult && pgResult.success && pgResult.data) {
+                lead = pgResult.data;
+            }
+        } catch (e) {}
+    }
+
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-    db.prepare("UPDATE leads SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, req.params.id);
-    db.prepare(`
-        INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
-        VALUES (?, ?, ?, ?)
-    `).run(req.params.id, lead.status, status, req.session.userId);
+    // Update SQLite if table exists
+    try {
+        db.prepare("UPDATE leads SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, req.params.id);
+        db.prepare(`
+            INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
+            VALUES (?, ?, ?, ?)
+        `).run(req.params.id, lead.status, status, req.session ? req.session.userId : null);
 
-    // Auto-add system note
-    db.prepare(`
-        INSERT INTO lead_notes (lead_id, user_id, note, note_type)
-        VALUES (?, ?, ?, 'status_change')
-    `).run(req.params.id, req.session.userId, `Status changed from "${lead.status}" to "${status}"`);
+        // Auto-add system note
+        db.prepare(`
+            INSERT INTO lead_notes (lead_id, user_id, note, note_type)
+            VALUES (?, ?, ?, 'status_change')
+        `).run(req.params.id, req.session ? req.session.userId : null, `Status changed from "${lead.status}" to "${status}"`);
+    } catch (e) {}
 
     // Sync to PostgreSQL / Supabase if configured
     if (isPostgresConfigured()) {
-        updatePgLeadStatus(req.params.id, status).catch(pgErr => {
+        try {
+            await updatePgLeadStatus(req.params.id, status);
+        } catch (pgErr) {
             console.error('PostgreSQL status update error:', pgErr);
-        });
+        }
     }
 
     // Sync to MySQL if configured
@@ -549,7 +568,7 @@ const handleStatusUpdate = (req, res) => {
         });
     }
 
-    auditLog(db, req.session.userId, req.session.userName, 'update_status', 'lead', req.params.id, `${lead.status} → ${status}`, req.ip);
+    auditLog(db, req.session ? req.session.userId : null, req.session ? req.session.userName : 'Admin', 'update_status', 'lead', req.params.id, `${lead.status} → ${status}`, req.ip);
     res.json({ message: 'Status updated' });
 };
 
@@ -595,23 +614,52 @@ router.patch('/:id/follow-up', requireAuth, (req, res) => {
 });
 
 // GET /api/leads/export/csv — Export leads to CSV
-router.get('/export/csv', requireAuth, (req, res) => {
+router.get('/export/csv', requireAuth, async (req, res) => {
     const db = getDb();
-    const leads = db.prepare(`
-        SELECT l.lead_code, l.customer_name, l.phone, l.email, l.budget,
-            l.message, l.status, l.contact_preference, l.created_at,
-            p.title as property_title, u.name as agent_name
-        FROM leads l
-        LEFT JOIN properties p ON l.property_id = p.id
-        LEFT JOIN users u ON l.assigned_agent_id = u.id
-        ORDER BY l.created_at DESC
-    `).all();
+    let leads = [];
+
+    if (process.env.VERCEL || isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgLeads({ limit: 5000, offset: 0 });
+            if (pgResult && pgResult.success && pgResult.data && pgResult.data.length > 0) {
+                leads = pgResult.data.map(l => ({
+                    lead_code: l.lead_code || `SV-LEAD-${String(l.id).padStart(5, '0')}`,
+                    customer_name: l.customer_name || l.full_name || 'Buyer',
+                    phone: l.phone || l.phone_number || '',
+                    email: l.email || '',
+                    budget: l.budget || '',
+                    message: l.message || '',
+                    status: l.status || 'new',
+                    contact_preference: l.contact_preference || 'phone',
+                    property_title: l.property_category || l.property_requirement || 'General Enquiry',
+                    agent_name: 'Unassigned',
+                    created_at: l.created_at
+                }));
+            }
+        } catch (pgErr) {
+            console.error('Cloud CSV export notice:', pgErr.message);
+        }
+    }
+
+    if (leads.length === 0) {
+        try {
+            leads = db.prepare(`
+                SELECT l.lead_code, l.customer_name, l.phone, l.email, l.budget,
+                    l.message, l.status, l.contact_preference, l.created_at,
+                    p.title as property_title, u.name as agent_name
+                FROM leads l
+                LEFT JOIN properties p ON l.property_id = p.id
+                LEFT JOIN users u ON l.assigned_agent_id = u.id
+                ORDER BY l.created_at DESC
+            `).all();
+        } catch (e) {}
+    }
 
     const headers = ['Lead Code', 'Customer Name', 'Phone', 'Email', 'Budget', 'Message', 'Status', 'Contact Preference', 'Property', 'Agent', 'Date'];
     const csv = [
         headers.join(','),
         ...leads.map(l => [
-            l.lead_code, `"${l.customer_name}"`, l.phone, l.email || '',
+            l.lead_code, `"${l.customer_name || ''}"`, l.phone, l.email || '',
             l.budget || '', `"${(l.message || '').replace(/"/g, '""')}"`,
             l.status, l.contact_preference, `"${l.property_title || ''}"`,
             l.agent_name || '', l.created_at
