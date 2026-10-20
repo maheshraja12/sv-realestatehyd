@@ -167,3 +167,21 @@ CREATE POLICY "Service role full access enquiries" ON public.enquiries FOR ALL T
 
 DROP POLICY IF EXISTS "Service role full access appointments" ON public.appointments;
 CREATE POLICY "Service role full access appointments" ON public.appointments FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Enable RLS and add policies for settings
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can read settings" ON public.settings;
+CREATE POLICY "Public can read settings" ON public.settings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can insert settings" ON public.settings;
+CREATE POLICY "Public can insert settings" ON public.settings FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Public can update settings" ON public.settings;
+CREATE POLICY "Public can update settings" ON public.settings FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access settings" ON public.settings;
+CREATE POLICY "Service role full access settings" ON public.settings FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Enable RLS and add policies for users (protect password hashes from public access)
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access users" ON public.users;
+CREATE POLICY "Service role full access users" ON public.users FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Authenticated can read users" ON public.users;
+CREATE POLICY "Authenticated can read users" ON public.users FOR SELECT TO authenticated USING (true);
