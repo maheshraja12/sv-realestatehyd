@@ -14,8 +14,17 @@ router.get('/', async (req, res) => {
         const result = await listCloudProperties({ public: true, limit: 100, offset: 0 });
         if (!result.success) return res.status(502).render('public/error', { title: 'Properties temporarily unavailable', error: 'We could not load property listings right now.' });
         const all = enhancePropertyList(result.properties || []);
-        const featuredProperties = all.filter(p => Number(p.is_featured) === 1).slice(0, 6);
-        const latestProperties = all.slice(0, 8);
+        // Sort: featured listings first, then newest published/created listings
+        const sortedAll = [...all].sort((a, b) => {
+            const featA = Number(a.is_featured) || 0;
+            const featB = Number(b.is_featured) || 0;
+            if (featB !== featA) return featB - featA;
+            const dateA = new Date(a.published_at || a.created_at || 0).getTime();
+            const dateB = new Date(b.published_at || b.created_at || 0).getTime();
+            return dateB - dateA;
+        });
+        const featuredProperties = sortedAll.slice(0, 8);
+        const latestProperties = sortedAll.slice(0, 8);
         const counts = new Map();
         all.forEach(p => counts.set(p.category, (counts.get(p.category) || 0) + 1));
         const categoryCounts = Array.from(counts, ([category, count]) => ({ category, count }));
@@ -27,9 +36,9 @@ router.get('/', async (req, res) => {
         SELECT p.*,
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
-        WHERE p.status = 'published' AND p.is_featured = 1
-        ORDER BY p.published_at DESC
-        LIMIT 6
+        WHERE p.status = 'published'
+        ORDER BY p.is_featured DESC, COALESCE(p.published_at, p.created_at) DESC
+        LIMIT 8
     `).all();
     featuredProperties = enhancePropertyList(featuredProperties);
 
@@ -38,7 +47,7 @@ router.get('/', async (req, res) => {
             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
         FROM properties p
         WHERE p.status = 'published'
-        ORDER BY p.published_at DESC
+        ORDER BY COALESCE(p.published_at, p.created_at) DESC
         LIMIT 8
     `).all();
     latestProperties = enhancePropertyList(latestProperties);

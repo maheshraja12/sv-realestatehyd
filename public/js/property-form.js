@@ -346,12 +346,72 @@ async function saveProperty(overrideStatus) {
                 }
             }
 
+            const propCode = data.property_code || payload.property_code || `SV-PROP-${savedId}`;
             showToast('Property saved successfully');
-            setTimeout(() => window.location = '/admin/properties', 900);
+
+            // Show popup confirmation modal with details submitted
+            showPropertySuccessModal({
+                id: savedId,
+                title: payload.title,
+                code: propCode,
+                category: payload.category,
+                status: payload.status,
+                is_featured: payload.is_featured
+            });
         } else {
             showToast(data.error || 'Failed to save property', 'error');
         }
     } catch (e) {
         showToast('Network error while saving', 'error');
     }
+}
+
+function showPropertySuccessModal(details) {
+    const modal = document.getElementById('propertySuccessModal');
+    const backdrop = document.getElementById('propertySuccessBackdrop');
+    if (!modal || !backdrop) return;
+
+    const titleEl = document.getElementById('successPropTitle');
+    const codeEl = document.getElementById('successPropCode');
+    const catEl = document.getElementById('successPropCategory');
+    const statusEl = document.getElementById('successPropStatus');
+    const viewMainBtn = document.getElementById('successViewMainBtn');
+    const viewPropBtn = document.getElementById('successViewPropertyBtn');
+
+    if (titleEl) titleEl.innerText = details.title || 'Property';
+    if (codeEl) codeEl.innerText = details.code || 'N/A';
+    if (catEl) catEl.innerText = (details.category || '').replace(/_/g, ' ').toUpperCase();
+    
+    if (statusEl) {
+        if (details.status === 'published') {
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Live on Main Page & Catalog';
+            statusEl.style.color = '#4ade80';
+            statusEl.style.borderColor = '#22c55e';
+            statusEl.style.background = 'rgba(34, 197, 94, 0.15)';
+        } else {
+            statusEl.innerHTML = '<i class="fas fa-file-alt"></i> Saved as Draft (Hidden)';
+            statusEl.style.color = '#f59e0b';
+            statusEl.style.borderColor = '#f59e0b';
+            statusEl.style.background = 'rgba(245, 158, 11, 0.15)';
+        }
+    }
+
+    if (viewMainBtn) {
+        viewMainBtn.href = '/';
+    }
+    if (viewPropBtn && details.id) {
+        viewPropBtn.href = `/properties/${details.id}`;
+    }
+
+    backdrop.style.display = 'block';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePropertySuccessModal() {
+    const modal = document.getElementById('propertySuccessModal');
+    const backdrop = document.getElementById('propertySuccessBackdrop');
+    if (modal) modal.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
+    document.body.style.overflow = '';
 }

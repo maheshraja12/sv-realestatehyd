@@ -454,6 +454,7 @@ function initButtonAutoBindings() {
         if (el.classList.contains('modal-close-btn') || 
             el.id === 'modalCancelBtn' ||
             el.classList.contains('btn-cancel-custom') ||
+            el.classList.contains('btn-card-enquire') ||
             el.type === 'submit' || 
             el.closest('form') ||
             el.closest('.nav-links') ||
@@ -482,7 +483,37 @@ function initButtonAutoBindings() {
             };
         }
     });
+
+    // 3. Dedicated handler for Property Card Enquire Now buttons
+    document.querySelectorAll('.btn-card-enquire').forEach(btn => {
+        btn.onclick = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const id = this.dataset.propId || this.getAttribute('data-prop-id') || null;
+            const title = this.dataset.propTitle || this.getAttribute('data-prop-title') || '';
+            const code = this.dataset.propCode || this.getAttribute('data-prop-code') || '';
+            const cat = this.dataset.propCategory || this.getAttribute('data-prop-category') || '';
+            openEnquiryModal(id, title, code, cat);
+            return false;
+        };
+    });
 }
+
+// Global click delegation for property card Enquire Now buttons
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-card-enquire');
+    if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = btn.dataset.propId || btn.getAttribute('data-prop-id') || null;
+        const title = btn.dataset.propTitle || btn.getAttribute('data-prop-title') || '';
+        const code = btn.dataset.propCode || btn.getAttribute('data-prop-code') || '';
+        const cat = btn.dataset.propCategory || btn.getAttribute('data-prop-category') || '';
+        openEnquiryModal(id, title, code, cat);
+    }
+});
 
 function initEscapeHandler() {
     document.addEventListener('keydown', (e) => {

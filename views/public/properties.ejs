@@ -249,8 +249,12 @@
                         </div>
 
                         <div class="prop-card-footer">
-                            <button class="btn btn-card-enquire" onclick="openEnquiryModal(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>', '<%= prop.property_code %>', '<%= prop.category %>')">
-                                <i class="fas fa-envelope"></i> Enquire
+                            <button type="button" class="btn btn-card-enquire"
+                                data-prop-id="<%= prop.id %>"
+                                data-prop-title="<%= (prop.title || '').replace(/"/g, '&quot;') %>"
+                                data-prop-code="<%= prop.property_code || '' %>"
+                                data-prop-category="<%= prop.category || '' %>">
+                                <i class="fas fa-envelope"></i> Enquire Now
                             </button>
                             <a href="/properties/<%= prop.id %>" class="btn btn-card-details">
                                 Details <i class="fas fa-arrow-right"></i>

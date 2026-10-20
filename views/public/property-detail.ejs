@@ -258,7 +258,11 @@
                             <h3 class="form-title">Interested in this Property?</h3>
                             <p class="form-desc">Get the complete price sheet, verified legal title documents, floor plans, or schedule a private site visit.</p>
 
-                            <button type="button" class="btn btn-gold btn-block btn-large btn-schedule-cta" onclick="openEnquiryModal(<%= property.id %>, '<%= property.title.replace(/'/g, "\\'") %>', '<%= property.property_code %>', '<%= property.category %>')">
+                            <button type="button" class="btn btn-gold btn-block btn-large btn-schedule-cta btn-card-enquire"
+                                data-prop-id="<%= property.id %>"
+                                data-prop-title="<%= (property.title || '').replace(/"/g, '&quot;') %>"
+                                data-prop-code="<%= property.property_code || '' %>"
+                                data-prop-category="<%= property.category || '' %>">
                                 <i class="fas fa-envelope"></i> Enquire Now
                             </button>
                         </div>
@@ -318,8 +322,12 @@
                             <div class="prop-location"><i class="fas fa-map-marker-alt text-gold"></i> <%= prop.locality || prop.city %></div>
                             <h3 class="prop-title"><a href="/properties/<%= prop.id %>"><%= prop.title %></a></h3>
                             <div class="prop-card-footer">
-                                <button class="btn btn-card-enquire" onclick="openEnquiryModal(<%= prop.id %>, '<%= prop.title.replace(/'/g, "\\'") %>', '<%= prop.property_code %>', '<%= prop.category %>')">
-                                    <i class="fas fa-envelope"></i> Enquire
+                                <button type="button" class="btn btn-card-enquire"
+                                    data-prop-id="<%= prop.id %>"
+                                    data-prop-title="<%= (prop.title || '').replace(/"/g, '&quot;') %>"
+                                    data-prop-code="<%= prop.property_code || '' %>"
+                                    data-prop-category="<%= prop.category || '' %>">
+                                    <i class="fas fa-envelope"></i> Enquire Now
                                 </button>
                                 <a href="/properties/<%= prop.id %>" class="btn btn-card-details">
                                     Details <i class="fas fa-arrow-right"></i>
