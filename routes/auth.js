@@ -5,13 +5,22 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { getDb } = require('../database/db');
-const { auditLog } = require('../middleware/auth');
+const { auditLog, getAdminPermissions } = require('../middleware/auth');
 const { sanitize } = require('../middleware/validation');
+
+function getLandingPage(userRole, db) {
+    if (userRole === 'superadmin') {
+        return '/admin/dashboard';
+    }
+    const perms = getAdminPermissions(db);
+    return perms.dashboard ? '/admin/dashboard' : '/admin/leads';
+}
 
 // GET /admin or /admin/
 router.get('/', (req, res) => {
     if (req.session && req.session.userId) {
-        return res.redirect('/admin/dashboard');
+        const db = getDb();
+        return res.redirect(getLandingPage(req.session.userRole, db));
     }
     return res.redirect('/admin/login');
 });
@@ -19,7 +28,8 @@ router.get('/', (req, res) => {
 // GET /admin/login
 router.get('/login', (req, res) => {
     if (req.session && req.session.userId) {
-        return res.redirect('/admin/dashboard');
+        const db = getDb();
+        return res.redirect(getLandingPage(req.session.userRole, db));
     }
     res.render('admin/login', {
         title: 'Admin Login — SV Real Estates',
@@ -78,12 +88,22 @@ router.post('/login', async (req, res) => {
         db.prepare("UPDATE users SET last_login_at = datetime('now') WHERE id = ?").run(user.id);
         auditLog(db, user.id, user.name, 'login', 'user', user.id, 'Successful login', req.ip);
 
-        // Determine destination: always default to /admin/dashboard
-        let targetUrl = '/admin/dashboard';
+        // Determine destination based on role and permissions
+        const defaultLanding = getLandingPage(user.role, db);
+        let targetUrl = defaultLanding;
         if (returnTo && returnTo.startsWith('/admin') && !returnTo.startsWith('//')) {
             const cleanTarget = returnTo.split('?')[0].replace(/\/+$/, '');
-            if (cleanTarget !== '/admin' && cleanTarget !== '/admin/login') {
-                targetUrl = returnTo;
+            if (cleanTarget !== '/admin' && cleanTarget !== '/admin/login' && cleanTarget !== '/admin/logout') {
+                if (user.role === 'superadmin') {
+                    targetUrl = returnTo;
+                } else {
+                    const perms = getAdminPermissions(db);
+                    if (cleanTarget.startsWith('/admin/dashboard') && perms.dashboard) targetUrl = returnTo;
+                    else if (cleanTarget.startsWith('/admin/properties') && perms.properties) targetUrl = returnTo;
+                    else if (cleanTarget.startsWith('/admin/leads') && perms.leads) targetUrl = returnTo;
+                    else if (cleanTarget.startsWith('/admin/appointments') && perms.appointments) targetUrl = returnTo;
+                    else targetUrl = defaultLanding;
+                }
             }
         }
 

@@ -158,8 +158,38 @@ describe('4. Security & Access Control Policies', () => {
     });
 });
 
-describe('5. Admin Authentication & Management Workflow', () => {
-    test('Admin successfully logs in and receives session cookie', async () => {
+describe('5. Admin Authentication & Role-Based Permissions Workflow', () => {
+    let superAdminCookie = '';
+    let normalAdminCookie = '';
+
+    test('Super Admin successfully logs in and redirects to /admin/dashboard', async () => {
+        const res = await fetch(`${baseUrl}/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'email=superadmin%40svrealestate.com&password=SuperAdmin%40SV2024',
+            redirect: 'manual'
+        });
+        assert.ok([302, 307].includes(res.status));
+        assert.strictEqual(res.headers.get('location'), '/admin/dashboard');
+        superAdminCookie = (res.headers.get('set-cookie') || '').split(';')[0];
+        assert.ok(superAdminCookie.startsWith('sv.sid='));
+    });
+
+    test('Super Admin can view /admin/dashboard, /admin/leads, and /admin/settings', async () => {
+        const dashRes = await fetch(`${baseUrl}/admin/dashboard`, {
+            headers: { 'Cookie': superAdminCookie }
+        });
+        assert.strictEqual(dashRes.status, 200);
+
+        const settingsRes = await fetch(`${baseUrl}/admin/settings`, {
+            headers: { 'Cookie': superAdminCookie }
+        });
+        assert.strictEqual(settingsRes.status, 200);
+        const settingsHtml = await settingsRes.text();
+        assert.ok(settingsHtml.includes('Normal Admin Permissions'));
+    });
+
+    test('Normal Admin successfully logs in and lands directly on /admin/leads', async () => {
         const res = await fetch(`${baseUrl}/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -167,27 +197,61 @@ describe('5. Admin Authentication & Management Workflow', () => {
             redirect: 'manual'
         });
         assert.ok([302, 307].includes(res.status));
-        assert.strictEqual(res.headers.get('location'), '/admin/dashboard');
-        sessionCookie = (res.headers.get('set-cookie') || '').split(';')[0];
-        assert.ok(sessionCookie.startsWith('sv.sid='));
+        assert.strictEqual(res.headers.get('location'), '/admin/leads');
+        normalAdminCookie = (res.headers.get('set-cookie') || '').split(';')[0];
+        sessionCookie = normalAdminCookie; // maintain compatibility for subsequent tests
+        assert.ok(normalAdminCookie.startsWith('sv.sid='));
     });
 
-    test('Authenticated admin can view /admin/dashboard with 200 OK', async () => {
-        const res = await fetch(`${baseUrl}/admin/dashboard`, {
-            headers: { 'Cookie': sessionCookie }
-        });
-        assert.strictEqual(res.status, 200);
-        const html = await res.text();
-        assert.ok(html.includes('Dashboard'));
-    });
-
-    test('Authenticated admin can view /admin/leads with 200 OK', async () => {
+    test('Normal Admin can view /admin/leads and does NOT see Super Admin button on page', async () => {
         const res = await fetch(`${baseUrl}/admin/leads`, {
-            headers: { 'Cookie': sessionCookie }
+            headers: { 'Cookie': normalAdminCookie }
         });
         assert.strictEqual(res.status, 200);
         const html = await res.text();
         assert.ok(html.includes('Leads') || html.includes('Enquiries'));
+        // Verify no Super Admin button or badge is visible to Normal Admin
+        assert.ok(!html.includes('Super Admin'), 'Normal admin page must not display Super Admin button or badge');
+    });
+
+    test('Normal Admin is blocked from /admin/settings and redirected to /admin/leads', async () => {
+        const res = await fetch(`${baseUrl}/admin/settings`, {
+            headers: { 'Cookie': normalAdminCookie },
+            redirect: 'manual'
+        });
+        assert.ok([302, 307].includes(res.status));
+        assert.strictEqual(res.headers.get('location'), '/admin/leads');
+    });
+
+    test('Super Admin can toggle Normal Admin permissions dynamically', async () => {
+        // Enable dashboard permission for Normal Admin
+        const postRes = await fetch(`${baseUrl}/admin/settings/permissions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': superAdminCookie
+            },
+            body: 'perm_dashboard=1&perm_leads=1',
+            redirect: 'manual'
+        });
+        assert.ok([302, 307].includes(postRes.status));
+
+        // Normal Admin can now access /admin/dashboard
+        const dashRes = await fetch(`${baseUrl}/admin/dashboard`, {
+            headers: { 'Cookie': normalAdminCookie }
+        });
+        assert.strictEqual(dashRes.status, 200);
+
+        // Reset permission back: Normal Admin only gets leads
+        await fetch(`${baseUrl}/admin/settings/permissions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': superAdminCookie
+            },
+            body: 'perm_leads=1',
+            redirect: 'manual'
+        });
     });
 });
 

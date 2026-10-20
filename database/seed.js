@@ -19,22 +19,43 @@ function seed(existingDb, force = false) {
             db = getDb();
         }
 
-        const email = process.env.ADMIN_EMAIL || 'admin@svrealestate.com';
-        const password = process.env.ADMIN_PASSWORD || 'Admin@SV2024';
-        const name = process.env.ADMIN_NAME || 'SV Admin';
+        const superEmail = process.env.SUPERADMIN_EMAIL || 'superadmin@svrealestate.com';
+        const superPassword = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@SV2024';
+        const superName = process.env.SUPERADMIN_NAME || 'SV Super Admin';
 
-        // 1. Admin User
-        let adminUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-        if (!adminUser) {
-            const hash = bcrypt.hashSync(password, 10);
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@svrealestate.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@SV2024';
+        const adminName = process.env.ADMIN_NAME || 'SV Staff Admin';
+
+        // 1. Super Admin User
+        let superAdminUser = db.prepare('SELECT id, role FROM users WHERE email = ?').get(superEmail);
+        if (!superAdminUser) {
+            const hash = bcrypt.hashSync(superPassword, 10);
+            const res = db.prepare(`
+                INSERT INTO users (name, email, password_hash, role, is_active)
+                VALUES (?, ?, ?, 'superadmin', 1)
+            `).run(superName, superEmail, hash);
+            superAdminUser = { id: res.lastInsertRowid };
+            console.log(`✅ Super Admin user created: ${superEmail}`);
+        } else if (superAdminUser.role !== 'superadmin') {
+            db.prepare("UPDATE users SET role = 'superadmin' WHERE id = ?").run(superAdminUser.id);
+            console.log(`ℹ️ Super Admin user upgraded: ${superEmail}`);
+        } else {
+            console.log(`ℹ️ Super Admin user verified: ${superEmail}`);
+        }
+
+        // 2. Normal Admin (Staff Admin) User
+        let normalAdminUser = db.prepare('SELECT id, role FROM users WHERE email = ?').get(adminEmail);
+        if (!normalAdminUser) {
+            const hash = bcrypt.hashSync(adminPassword, 10);
             const res = db.prepare(`
                 INSERT INTO users (name, email, password_hash, role, is_active)
                 VALUES (?, ?, ?, 'admin', 1)
-            `).run(name, email, hash);
-            adminUser = { id: res.lastInsertRowid };
-            console.log(`✅ Admin user created: ${email}`);
+            `).run(adminName, adminEmail, hash);
+            normalAdminUser = { id: res.lastInsertRowid };
+            console.log(`✅ Normal Admin user created: ${adminEmail}`);
         } else {
-            console.log(`ℹ️ Admin user verified: ${email}`);
+            console.log(`ℹ️ Normal Admin user verified: ${adminEmail}`);
         }
 
         // 2. Senior Agent User
@@ -1625,7 +1646,11 @@ Located within a private enclave of only 8 residences with 3-tier security, 100%
                 ('business_email', 'svsrivenkateswara99@gmail.com'),
                 ('business_whatsapp', '919346423434'),
                 ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
-                ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr')
+                ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'),
+                ('admin_perm_dashboard', '0'),
+                ('admin_perm_properties', '0'),
+                ('admin_perm_leads', '1'),
+                ('admin_perm_appointments', '0')
         `).run();
 
         console.log('🎉 Seeding successfully completed! All areas set with minimum ₹70 Lakhs budget baseline.');

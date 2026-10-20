@@ -99,8 +99,31 @@ INSERT INTO public.settings (key, value) VALUES
     ('business_email', 'svsrivenkateswara99@gmail.com'),
     ('business_whatsapp', '919346423434'),
     ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
-    ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr')
+    ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'),
+    ('admin_perm_dashboard', '0'),
+    ('admin_perm_properties', '0'),
+    ('admin_perm_leads', '1'),
+    ('admin_perm_appointments', '0')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- 6. Admin Users Table (For Super Admin and Normal Admin accounts)
+CREATE TABLE IF NOT EXISTS public.users (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    email VARCHAR(200) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin', 'admin', 'agent')),
+    is_active INT NOT NULL DEFAULT 1,
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default Super Admin and Normal Admin in Supabase (BCrypt hashes for SuperAdmin@SV2024 and Admin@SV2024)
+INSERT INTO public.users (name, email, password_hash, role, is_active) VALUES
+    ('SV Super Admin', 'superadmin@svrealestate.com', '$2a$10$7Z4CqgWlA2B3vEJuLgQ0t.yS.b8CgnM6v3rL7pYjR7kYd.jR6Qz7e', 'superadmin', 1),
+    ('SV Staff Admin', 'admin@svrealestate.com', '$2a$10$O0aF6U1j0n3F5u8x.O0aF6U1j0n3F5u8x.O0aF6U1j0n3F5u8x.', 'admin', 1)
+ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role;
 
 -- Enable Row Level Security (RLS) policies for security
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;

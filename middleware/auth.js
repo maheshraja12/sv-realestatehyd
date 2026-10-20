@@ -2,6 +2,26 @@
  * Authentication & Authorization Middleware
  */
 
+function getAdminPermissions(db) {
+    const perms = {
+        dashboard: false,
+        properties: false,
+        leads: true,
+        appointments: false,
+        settings: false
+    };
+    try {
+        if (db && typeof db.prepare === 'function') {
+            const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'admin_perm_%'").all();
+            rows.forEach(r => {
+                const feature = r.key.replace('admin_perm_', '');
+                perms[feature] = (r.value === '1' || r.value === 'true');
+            });
+        }
+    } catch (e) {}
+    return perms;
+}
+
 function requireAuth(req, res, next) {
     if (req.session && req.session.userId) {
         return next();
@@ -21,8 +41,26 @@ function requireAuth(req, res, next) {
     return res.redirect(`/admin/login${returnToParam}`);
 }
 
+function requireSuperAdmin(req, res, next) {
+    if (req.session && req.session.userId && req.session.userRole === 'superadmin') {
+        return next();
+    }
+    const isApi = req.xhr || 
+        (req.originalUrl && req.originalUrl.startsWith('/api/')) || 
+        (req.baseUrl && req.baseUrl.startsWith('/api/')) || 
+        req.path.startsWith('/api/');
+    if (isApi) {
+        return res.status(403).json({ error: 'Super Admin access required' });
+    }
+    if (!req.session || !req.session.userId) {
+        return res.redirect('/admin/login');
+    }
+    // Normal admin is redirected safely to their allowed area
+    return res.redirect('/admin/leads');
+}
+
 function requireAdmin(req, res, next) {
-    if (req.session && req.session.userId && req.session.userRole === 'admin') {
+    if (req.session && req.session.userId && (req.session.userRole === 'admin' || req.session.userRole === 'superadmin')) {
         return next();
     }
     const isApi = req.xhr || 
@@ -40,16 +78,55 @@ function requireAdmin(req, res, next) {
     return res.redirect(`/admin/login${returnToParam}`);
 }
 
+function requirePermission(feature) {
+    return (req, res, next) => {
+        if (!req.session || !req.session.userId) {
+            return requireAuth(req, res, next);
+        }
+        if (req.session.userRole === 'superadmin') {
+            return next();
+        }
+        const { getDb } = require('../database/db');
+        const perms = res.locals.userPermissions || getAdminPermissions(getDb());
+        if (perms[feature]) {
+            return next();
+        }
+        const isApi = req.xhr || 
+            (req.originalUrl && req.originalUrl.startsWith('/api/')) || 
+            (req.baseUrl && req.baseUrl.startsWith('/api/')) || 
+            req.path.startsWith('/api/');
+        if (isApi) {
+            return res.status(403).json({ error: `Access denied: ${feature} is restricted by Super Admin.` });
+        }
+        return res.redirect('/admin/leads');
+    };
+}
+
 function loadUser(req, res, next) {
     if (req.session && req.session.userId) {
+        const isSuperAdmin = req.session.userRole === 'superadmin';
         res.locals.currentUser = {
             id: req.session.userId,
             name: req.session.userName,
             email: req.session.userEmail,
-            role: req.session.userRole
+            role: req.session.userRole,
+            isSuperAdmin: isSuperAdmin
         };
+        if (isSuperAdmin) {
+            res.locals.userPermissions = {
+                dashboard: true,
+                properties: true,
+                leads: true,
+                appointments: true,
+                settings: true
+            };
+        } else {
+            const { getDb } = require('../database/db');
+            res.locals.userPermissions = getAdminPermissions(getDb());
+        }
     } else {
         res.locals.currentUser = null;
+        res.locals.userPermissions = null;
     }
     next();
 }
@@ -94,6 +171,9 @@ function notifyAllAdmins(db, type, title, message, link) {
 module.exports = {
     requireAuth,
     requireAdmin,
+    requireSuperAdmin,
+    requirePermission,
+    getAdminPermissions,
     loadUser,
     auditLog,
     createNotification,

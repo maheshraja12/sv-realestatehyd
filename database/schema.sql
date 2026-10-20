@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'agent' CHECK(role IN ('admin', 'agent')),
+    role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'agent')),
     is_active INTEGER NOT NULL DEFAULT 1,
     last_login_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -264,5 +264,9 @@ INSERT OR REPLACE INTO settings (key, value) VALUES
     ('business_whatsapp', '919346423434'),
     ('business_address', '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085'),
     ('business_instagram', 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'),
+    ('admin_perm_dashboard', '0'),
+    ('admin_perm_properties', '0'),
+    ('admin_perm_leads', '1'),
+    ('admin_perm_appointments', '0'),
     ('smtp_configured', '0'),
     ('whatsapp_configured', '0');

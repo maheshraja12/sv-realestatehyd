@@ -3,22 +3,42 @@
         <i class="fas fa-building"></i>
         <span><%= typeof businessName !== 'undefined' ? businessName : 'Sri Venkateswara' %></span>
     </div>
+    <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.isSuperAdmin) { %>
+    <div class="sidebar-role-badge">
+        <i class="fas fa-crown text-gold"></i> <span>Super Admin</span>
+    </div>
+    <% } %>
     <ul class="sidebar-nav">
+        <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.dashboard))) { %>
         <li class="<%= path === '/admin/dashboard' ? 'active' : '' %>">
             <a href="/admin/dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
         </li>
+        <% } %>
+
+        <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.properties))) { %>
         <li class="<%= path.startsWith('/admin/properties') ? 'active' : '' %>">
             <a href="/admin/properties"><i class="fas fa-building"></i><span>Properties</span></a>
         </li>
+        <% } %>
+
+        <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.leads))) { %>
         <li class="<%= path.startsWith('/admin/leads') ? 'active' : '' %>">
-            <a href="/admin/leads"><i class="fas fa-users"></i><span>Leads / Enquiries</span></a>
+            <a href="/admin/leads"><i class="fas fa-users"></i><span>Leads & Enquiries</span></a>
         </li>
+        <% } %>
+
+        <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.appointments))) { %>
         <li class="<%= path.startsWith('/admin/appointments') ? 'active' : '' %>">
             <a href="/admin/appointments"><i class="fas fa-calendar-alt"></i><span>Site Visits</span></a>
         </li>
+        <% } %>
+
+        <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.isSuperAdmin) { %>
         <li class="<%= path === '/admin/settings' ? 'active' : '' %>">
-            <a href="/admin/settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+            <a href="/admin/settings"><i class="fas fa-cog"></i><span>Settings & Access</span></a>
         </li>
+        <% } %>
+
         <li class="nav-divider"></li>
         <li>
             <a href="/" target="_blank"><i class="fas fa-external-link-alt"></i><span>View Website</span></a>

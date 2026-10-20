@@ -266,9 +266,15 @@ app.use('/api/leads/public', enquiryLimiter);
 app.use('/api/appointments/public', enquiryLimiter);
 
 // Mount routes
+const { getAdminPermissions } = require('./middleware/auth');
 const handleAdminRoot = (req, res) => {
     if (req.session && req.session.userId) {
-        return res.redirect('/admin/dashboard');
+        if (req.session.userRole === 'superadmin') {
+            return res.redirect('/admin/dashboard');
+        }
+        const db = getDb();
+        const perms = getAdminPermissions(db);
+        return res.redirect(perms.dashboard ? '/admin/dashboard' : '/admin/leads');
     }
     return res.redirect('/admin/login');
 };
@@ -332,16 +338,19 @@ app.use((err, req, res, next) => {
 
 // ── Start (Dual Port Binding: Listen on 3000 and 4000) ────
 if (require.main === module && !process.env.VERCEL && process.env.NODE_ENV !== 'test') {
-    const PRIMARY_PORT = parseInt(process.env.PORT) || 3000;
-    const ALT_PORT = PRIMARY_PORT === 3000 ? 4000 : 3000;
+    const PRIMARY_PORT = parseInt(process.env.PORT) || 5000;
+    const ALT_PORT = parseInt(process.env.ALT_PORT) || (PRIMARY_PORT === 3000 ? 4000 : PRIMARY_PORT + 1);
 
-    app.listen(PRIMARY_PORT, () => {
+    const primaryServer = app.listen(PRIMARY_PORT, () => {
         console.log(`
 ╔══════════════════════════════════════════════════╗
 ║   SV Real Estates Hyderabad                      ║
 ║   Primary Server: http://localhost:${PRIMARY_PORT}        ║
 ║   Admin Leads:    http://localhost:${PRIMARY_PORT}/admin/leads  ║
 ╚══════════════════════════════════════════════════╝`);
+    });
+    primaryServer.on('error', (err) => {
+        console.error(`Primary port ${PRIMARY_PORT} error:`, err.message);
     });
 
     try {
@@ -350,10 +359,10 @@ if (require.main === module && !process.env.VERCEL && process.env.NODE_ENV !== '
             console.log(`🔑 Mirror Admin: http://localhost:${ALT_PORT}/admin/leads`);
         });
         mirrorServer.on('error', (err) => {
-            console.log(`Note: Port ${ALT_PORT} not bound (${err.message}). Primary http://localhost:${PRIMARY_PORT} active.`);
+            // Silently ignore if alt port is occupied
         });
     } catch (e) {
-        console.log(`Note: Port ${ALT_PORT} skipped. Primary http://localhost:${PRIMARY_PORT} active.`);
+        // Silently continue with primary server
     }
 }
 

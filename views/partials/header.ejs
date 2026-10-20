@@ -11,7 +11,11 @@
                 <a href="tel:<%= businessPhone %>" class="topbar-link"><i class="fas fa-phone-alt text-gold"></i> <%= businessPhone %></a>
                 <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="topbar-link text-whatsapp"><i class="fab fa-whatsapp"></i> Chat on WhatsApp</a>
                 <% if (typeof currentUser !== 'undefined' && currentUser) { %>
-                <a href="/admin/dashboard" class="topbar-admin-badge"><i class="fas fa-user-shield"></i> Admin Portal</a>
+                    <% if (currentUser.isSuperAdmin) { %>
+                    <a href="/admin/dashboard" class="topbar-admin-badge"><i class="fas fa-crown text-gold"></i> Super Admin</a>
+                    <% } else { %>
+                    <a href="/admin/leads" class="topbar-admin-badge"><i class="fas fa-users"></i> Staff Portal</a>
+                    <% } %>
                 <% } else { %>
                 <a href="/admin/login" class="topbar-link text-muted"><i class="fas fa-lock"></i> Staff Login</a>
                 <% } %>
@@ -40,7 +44,11 @@
                     <li><a href="/locations" class="<%= path === '/locations' ? 'active' : '' %>">Locations</a></li>
                     <li><a href="/contact" class="<%= path === '/contact' ? 'active' : '' %>">Contact Us</a></li>
                     <% if (typeof currentUser !== 'undefined' && currentUser) { %>
-                    <li><a href="/admin/dashboard" class="<%= path.startsWith('/admin') ? 'active' : '' %>" style="color:var(--gold); font-weight:700;"><i class="fas fa-user-shield"></i> Admin</a></li>
+                        <% if (currentUser.isSuperAdmin) { %>
+                        <li><a href="/admin/dashboard" class="<%= path.startsWith('/admin') ? 'active' : '' %>" style="color:var(--gold); font-weight:700;"><i class="fas fa-crown"></i> Admin</a></li>
+                        <% } else { %>
+                        <li><a href="/admin/leads" class="<%= path.startsWith('/admin') ? 'active' : '' %>" style="color:var(--gold); font-weight:700;"><i class="fas fa-users"></i> Leads</a></li>
+                        <% } %>
                     <% } %>
                 </ul>
             </nav>

@@ -42,6 +42,90 @@
             <% } %>
 
             <div class="settings-grid">
+                <!-- Super Admin Role & Permission Controls -->
+                <div class="settings-card" style="border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 4px 20px rgba(212, 175, 55, 0.08);">
+                    <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; margin-bottom: 18px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3><i class="fas fa-crown text-gold"></i> Normal Admin Permissions & Module Access</h3>
+                            <span class="status-badge status-published" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-weight:700;">
+                                <i class="fas fa-shield-alt"></i> Super Admin Only
+                            </span>
+                        </div>
+                        <p style="margin-top:6px; color:#9aa0ac;">Control which tabs and options are visible to the Normal Admin. By default, Normal Admins only see and manage customer Leads & Enquiries.</p>
+                    </div>
+
+                    <form method="POST" action="/admin/settings/permissions" class="settings-form">
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 14px 0; color: #fff; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-toggle-on text-gold"></i> Visible Modules for Normal Admin
+                            </h4>
+
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_leads" value="1" checked disabled style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Customer Leads & Enquiries</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Always visible & active by default. Normal Admin handles all customer inquiries, status updates, and notes.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_dashboard" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.dashboard) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Dashboard & Analytics</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to view the analytics dashboard and summary stats cards.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_properties" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.properties) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Properties Catalog Management</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to add, edit, duplicate, and modify property listings.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_appointments" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.appointments) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Site Visits & Appointments</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to view and update customer site visit bookings.</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Normal Admin Account Credentials -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 14px 0; color: #fff; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-user-cog text-gold"></i> Normal Admin (Staff) Account Details
+                            </h4>
+
+                            <div class="form-row cols-2">
+                                <div class="form-group">
+                                    <label for="staff_name">Staff Admin Name</label>
+                                    <input type="text" id="staff_name" name="staff_name" value="<%= (typeof staffUser !== 'undefined' && staffUser) ? staffUser.name : 'SV Staff Admin' %>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="staff_email">Staff Admin Email Address</label>
+                                    <input type="email" id="staff_email" name="staff_email" value="<%= (typeof staffUser !== 'undefined' && staffUser) ? staffUser.email : 'admin@svrealestate.com' %>" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="staff_password">Change Staff Admin Password <span style="font-weight:normal; color:#9aa0ac;">(Leave blank to keep unchanged)</span></label>
+                                <input type="password" id="staff_password" name="staff_password" placeholder="••••••••" minlength="6">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save Normal Admin Permissions & Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Business Profile Form -->
                 <div class="settings-card">
                     <div class="card-header">

@@ -288,7 +288,11 @@ function createMemoryDb() {
         business_email: 'svsrivenkateswara99@gmail.com',
         business_whatsapp: '919346423434',
         business_address: '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085',
-        business_instagram: 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr'
+        business_instagram: 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr',
+        admin_perm_dashboard: '0',
+        admin_perm_properties: '0',
+        admin_perm_leads: '1',
+        admin_perm_appointments: '0'
     };
 
     return {
@@ -328,7 +332,10 @@ function createMemoryDb() {
                         return Object.entries(memSettings).map(([key, value]) => ({ key, value }));
                     }
                     if (s.includes('from users')) {
-                        return [{ id: 1, name: 'SV Admin', email: 'admin@svrealestate.com', role: 'admin', is_active: 1 }];
+                        return [
+                            { id: 1, name: 'SV Super Admin', email: 'superadmin@svrealestate.com', role: 'superadmin', is_active: 1 },
+                            { id: 2, name: 'SV Staff Admin', email: 'admin@svrealestate.com', role: 'admin', is_active: 1 }
+                        ];
                     }
                     return [];
                 },
@@ -354,12 +361,22 @@ function createMemoryDb() {
                         return { count: 0 };
                     }
                     if (s.includes('from users where email =') || s.includes('from users where id =')) {
-                        const email = params[0] || 'admin@svrealestate.com';
+                        const param = String(params[0] || '').toLowerCase();
                         const bcrypt = require('bcryptjs');
+                        if (param === 'superadmin@svrealestate.com' || param === '1') {
+                            return {
+                                id: 1,
+                                name: 'SV Super Admin',
+                                email: 'superadmin@svrealestate.com',
+                                password_hash: bcrypt.hashSync('SuperAdmin@SV2024', 10),
+                                role: 'superadmin',
+                                is_active: 1
+                            };
+                        }
                         return {
-                            id: 1,
-                            name: 'SV Admin',
-                            email: email,
+                            id: 2,
+                            name: 'SV Staff Admin',
+                            email: 'admin@svrealestate.com',
                             password_hash: bcrypt.hashSync('Admin@SV2024', 10),
                             role: 'admin',
                             is_active: 1
@@ -453,6 +470,85 @@ function initializeDb() {
             }
         } catch (e) {
             // Table created freshly from schema.sql
+        }
+
+        // Migrate users table role check constraint if needed to permit 'superadmin'
+        try {
+            const userTableInfo = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
+            if (userTableInfo && userTableInfo.sql && !userTableInfo.sql.includes("'superadmin'")) {
+                database.exec(`
+                    PRAGMA foreign_keys = OFF;
+                    CREATE TABLE users_migrated (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        email TEXT NOT NULL UNIQUE,
+                        password_hash TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'agent')),
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        last_login_at TEXT,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+                    INSERT OR IGNORE INTO users_migrated (id, name, email, password_hash, role, is_active, last_login_at, created_at, updated_at)
+                        SELECT id, name, email, password_hash, role, is_active, last_login_at, created_at, updated_at FROM users;
+                    DROP TABLE users;
+                    ALTER TABLE users_migrated RENAME TO users;
+                    PRAGMA foreign_keys = ON;
+                `);
+                console.log('✅ [MIGRATION] users table upgraded with superadmin role constraint');
+            }
+        } catch (migErr) {
+            console.warn('⚠️ Users table migration notice:', migErr.message);
+        }
+
+        // Seed or verify Super Admin, Normal Admin, and default permissions
+        try {
+            const bcrypt = require('bcryptjs');
+            const superEmail = (process.env.SUPERADMIN_EMAIL || 'superadmin@svrealestate.com').toLowerCase().trim();
+            const superPass = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@SV2024';
+            const superName = process.env.SUPERADMIN_NAME || 'SV Super Admin';
+
+            let superUser = database.prepare('SELECT id, role FROM users WHERE email = ?').get(superEmail);
+            if (!superUser) {
+                const hash = bcrypt.hashSync(superPass, 10);
+                database.prepare(`
+                    INSERT INTO users (name, email, password_hash, role, is_active)
+                    VALUES (?, ?, ?, 'superadmin', 1)
+                `).run(superName, superEmail, hash);
+                console.log(`✅ Super Admin user verified: ${superEmail}`);
+            } else if (superUser.role !== 'superadmin') {
+                database.prepare("UPDATE users SET role = 'superadmin' WHERE id = ?").run(superUser.id);
+            }
+
+            const adminEmail = (process.env.ADMIN_EMAIL || 'admin@svrealestate.com').toLowerCase().trim();
+            const adminPass = process.env.ADMIN_PASSWORD || 'Admin@SV2024';
+            const adminName = process.env.ADMIN_NAME || 'SV Staff Admin';
+
+            let normalAdmin = database.prepare('SELECT id, role FROM users WHERE email = ?').get(adminEmail);
+            if (!normalAdmin) {
+                const hash = bcrypt.hashSync(adminPass, 10);
+                database.prepare(`
+                    INSERT INTO users (name, email, password_hash, role, is_active)
+                    VALUES (?, ?, ?, 'admin', 1)
+                `).run(adminName, adminEmail, hash);
+                console.log(`✅ Normal Admin user verified: ${adminEmail}`);
+            }
+
+            // Default permissions for normal admin
+            const defaultPerms = [
+                ['admin_perm_dashboard', '0'],
+                ['admin_perm_properties', '0'],
+                ['admin_perm_leads', '1'],
+                ['admin_perm_appointments', '0']
+            ];
+            const permStmt = database.prepare(`
+                INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)
+            `);
+            for (const [k, v] of defaultPerms) {
+                permStmt.run(k, v);
+            }
+        } catch (adminInitErr) {
+            console.warn('⚠️ Admin init notice:', adminInitErr.message);
         }
 
         // Auto-seed if database is fresh (e.g. freshly created in /tmp or new environment)

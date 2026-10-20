@@ -6,7 +6,7 @@ const router = express.Router();
 const { getDb } = require('../database/db');
 const { cloudLeadsConfigured, listCloudLeads, listCloudProperties } = require('../database/cloud-leads');
 const { enhanceProperty, enhancePropertyList } = require('../database/property-media');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireSuperAdmin, requirePermission, getAdminPermissions } = require('../middleware/auth');
 const { 
     isMySqlConfigured, 
     fetchEnquiries, 
@@ -27,11 +27,16 @@ router.use(requireAuth);
 
 // GET /admin or /admin/
 router.get('/', (req, res) => {
-    res.redirect('/admin/dashboard');
+    if (req.session && req.session.userRole === 'superadmin') {
+        return res.redirect('/admin/dashboard');
+    }
+    const db = getDb();
+    const perms = res.locals.userPermissions || getAdminPermissions(db);
+    return res.redirect(perms.dashboard ? '/admin/dashboard' : '/admin/leads');
 });
 
 // GET /admin/dashboard
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', requirePermission('dashboard'), async (req, res) => {
     if (process.env.VERCEL && cloudLeadsConfigured()) {
         const [allPropertiesResult, publishedResult, leadResult, recentPropertiesResult] = await Promise.all([
             listCloudProperties({ public: false, limit: 100, offset: 0 }),
@@ -117,7 +122,7 @@ router.get('/dashboard', async (req, res) => {
 });
 
 // GET /admin/properties
-router.get('/properties', async (req, res) => {
+router.get('/properties', requirePermission('properties'), async (req, res) => {
     if (process.env.VERCEL) {
         if (!cloudLeadsConfigured()) return res.status(503).send('Production properties database is not configured.');
         const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -190,7 +195,7 @@ router.get('/properties', async (req, res) => {
 });
 
 // GET /admin/properties/new
-router.get('/properties/new', (req, res) => {
+router.get('/properties/new', requirePermission('properties'), (req, res) => {
     res.render('admin/property-form', {
         title: 'Add New Property — SV Real Estates Admin',
         property: null,
@@ -201,7 +206,7 @@ router.get('/properties/new', (req, res) => {
 });
 
 // GET /admin/properties/:id/edit
-router.get('/properties/:id/edit', async (req, res) => {
+router.get('/properties/:id/edit', requirePermission('properties'), async (req, res) => {
     if (process.env.VERCEL) {
         if (!cloudLeadsConfigured()) return res.status(503).send('Production properties database is not configured.');
         const result = await listCloudProperties({ public: false, id: req.params.id, limit: 1, offset: 0 });
@@ -235,7 +240,7 @@ router.get('/properties/:id/edit', async (req, res) => {
 });
 
 // GET /admin/leads
-router.get('/leads', async (req, res) => {
+router.get('/leads', requirePermission('leads'), async (req, res) => {
     const db = getDb();
     const page = parseInt(req.query.page) || 1;
     const limit = 25;
@@ -392,7 +397,7 @@ router.get('/leads/:id', async (req, res) => {
 });
 
 // GET /admin/appointments
-router.get('/appointments', async (req, res) => {
+router.get('/appointments', requirePermission('appointments'), async (req, res) => {
     const db = getDb();
     const status = req.query.status || '';
     const page = parseInt(req.query.page) || 1;
@@ -434,8 +439,8 @@ router.get('/appointments', async (req, res) => {
     });
 });
 
-// GET /admin/settings
-router.get('/settings', (req, res) => {
+// GET /admin/settings — Super Admin Only
+router.get('/settings', requireSuperAdmin, (req, res) => {
     const db = getDb();
     const settings = {};
     const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -444,18 +449,24 @@ router.get('/settings', (req, res) => {
     const message = req.query.msg || null;
     const error = req.query.err || null;
 
+    // Load staff admin account and current permissions
+    const staffUser = db.prepare("SELECT id, name, email, role, last_login_at FROM users WHERE role = 'admin' LIMIT 1").get() || null;
+    const adminPermissions = getAdminPermissions(db);
+
     res.render('admin/settings', {
-        title: 'Settings — SV Real Estates Admin',
+        title: 'Settings & Permissions — SV Real Estates Admin',
         settings,
         message,
         error,
+        staffUser,
+        adminPermissions,
         postgresConfigured: isPostgresConfigured(),
         unreadNotifications: 0
     });
 });
 
-// POST /admin/settings — Save settings
-router.post('/settings', (req, res) => {
+// POST /admin/settings — Save business settings (Super Admin Only)
+router.post('/settings', requireSuperAdmin, (req, res) => {
     try {
         const db = getDb();
         const allowedKeys = [
@@ -480,6 +491,70 @@ router.post('/settings', (req, res) => {
     } catch (err) {
         console.error('Settings update error:', err);
         res.redirect('/admin/settings?err=Failed+to+save+settings');
+    }
+});
+
+// POST /admin/settings/permissions — Manage Normal Admin permissions & account (Super Admin Only)
+router.post('/settings/permissions', requireSuperAdmin, async (req, res) => {
+    try {
+        const db = getDb();
+        const bcrypt = require('bcryptjs');
+
+        // 1. Update module visibility & access permissions
+        const permsToUpdate = [
+            ['admin_perm_dashboard', req.body.perm_dashboard ? '1' : '0'],
+            ['admin_perm_properties', req.body.perm_properties ? '1' : '0'],
+            ['admin_perm_leads', '1'], // Customer leads always accessible
+            ['admin_perm_appointments', req.body.perm_appointments ? '1' : '0']
+        ];
+
+        const upsert = db.prepare(`
+            INSERT INTO settings (key, value, updated_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        `);
+        for (const [k, v] of permsToUpdate) {
+            upsert.run(k, v);
+        }
+
+        // 2. Update Normal Admin user credentials if submitted
+        const staffName = (req.body.staff_name || '').trim();
+        const staffEmail = (req.body.staff_email || '').trim().toLowerCase();
+        const staffPassword = (req.body.staff_password || '').trim();
+
+        let normalAdmin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+        if (normalAdmin && (staffName || staffEmail || staffPassword)) {
+            const updates = [];
+            const params = [];
+
+            if (staffName) {
+                updates.push("name = ?");
+                params.push(staffName);
+            }
+            if (staffEmail) {
+                updates.push("email = ?");
+                params.push(staffEmail);
+            }
+            if (staffPassword) {
+                if (staffPassword.length < 6) {
+                    return res.redirect('/admin/settings?err=Normal+admin+password+must+be+at+least+6+characters');
+                }
+                const hash = await bcrypt.hash(staffPassword, 10);
+                updates.push("password_hash = ?");
+                params.push(hash);
+            }
+
+            if (updates.length > 0) {
+                updates.push("updated_at = datetime('now')");
+                params.push(normalAdmin.id);
+                db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+            }
+        }
+
+        res.redirect('/admin/settings?msg=Normal+admin+permissions+and+account+updated+successfully');
+    } catch (err) {
+        console.error('Permission update error:', err);
+        res.redirect('/admin/settings?err=Failed+to+update+permissions');
     }
 });
 
@@ -525,9 +600,14 @@ router.post('/settings/password', async (req, res) => {
     }
 });
 
-// Fallback: any other unmatched /admin/* route redirects directly to admin dashboard
+// Fallback: any other unmatched /admin/* route redirects directly to appropriate admin landing page
 router.use((req, res) => {
-    res.redirect('/admin/dashboard');
+    if (req.session && req.session.userRole === 'superadmin') {
+        return res.redirect('/admin/dashboard');
+    }
+    const db = getDb();
+    const perms = res.locals.userPermissions || getAdminPermissions(db);
+    return res.redirect(perms.dashboard ? '/admin/dashboard' : '/admin/leads');
 });
 
 module.exports = router;
