@@ -15,10 +15,14 @@ function getAdminPermissions(db) {
             const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'admin_perm_%'").all();
             rows.forEach(r => {
                 const feature = r.key.replace('admin_perm_', '');
-                perms[feature] = (r.value === '1' || r.value === 'true');
+                if (feature !== 'leads') {
+                    perms[feature] = (r.value === '1' || r.value === 'true');
+                }
             });
         }
     } catch (e) {}
+    // Leads & enquiries is the foundational permission and is ALWAYS guaranteed true
+    perms.leads = true;
     return perms;
 }
 
@@ -35,6 +39,9 @@ function requireAuth(req, res, next) {
     }
     const url = req.originalUrl || req.url || '';
     const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
+    if (cleanUrl === '/admin/login') {
+        return next();
+    }
     const returnToParam = (url && cleanUrl !== '/admin' && cleanUrl !== '/admin/login' && cleanUrl !== '/admin/logout')
         ? `?returnTo=${encodeURIComponent(url)}`
         : '';
@@ -55,6 +62,10 @@ function requireSuperAdmin(req, res, next) {
     if (!req.session || !req.session.userId) {
         return res.redirect('/admin/login');
     }
+    const cleanUrl = (req.originalUrl || req.url || '').split('?')[0].replace(/\/+$/, '');
+    if (cleanUrl === '/admin/leads') {
+        return next();
+    }
     // Normal admin is redirected safely to their allowed area
     return res.redirect('/admin/leads');
 }
@@ -72,6 +83,9 @@ function requireAdmin(req, res, next) {
     }
     const url = req.originalUrl || req.url || '';
     const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
+    if (cleanUrl === '/admin/login') {
+        return next();
+    }
     const returnToParam = (url && cleanUrl !== '/admin' && cleanUrl !== '/admin/login' && cleanUrl !== '/admin/logout')
         ? `?returnTo=${encodeURIComponent(url)}`
         : '';
@@ -83,7 +97,8 @@ function requirePermission(feature) {
         if (!req.session || !req.session.userId) {
             return requireAuth(req, res, next);
         }
-        if (req.session.userRole === 'superadmin') {
+        // Superadmin and leads access are always permitted
+        if (req.session.userRole === 'superadmin' || feature === 'leads') {
             return next();
         }
         const { getDb } = require('../database/db');
@@ -97,6 +112,10 @@ function requirePermission(feature) {
             req.path.startsWith('/api/');
         if (isApi) {
             return res.status(403).json({ error: `Access denied: ${feature} is restricted by Super Admin.` });
+        }
+        const cleanUrl = (req.originalUrl || req.url || '').split('?')[0].replace(/\/+$/, '');
+        if (cleanUrl === '/admin/leads') {
+            return next(); // Never loop redirect to /admin/leads from /admin/leads!
         }
         return res.redirect('/admin/leads');
     };

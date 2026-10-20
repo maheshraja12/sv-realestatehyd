@@ -177,7 +177,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: 'auto', // Automatically uses Secure on HTTPS and plain on localhost HTTP
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         sameSite: 'lax'
     },

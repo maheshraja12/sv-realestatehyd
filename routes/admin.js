@@ -602,12 +602,18 @@ router.post('/settings/password', async (req, res) => {
 
 // Fallback: any other unmatched /admin/* route redirects directly to appropriate admin landing page
 router.use((req, res) => {
+    const cleanUrl = (req.originalUrl || req.url || '').split('?')[0].replace(/\/+$/, '');
     if (req.session && req.session.userRole === 'superadmin') {
+        if (cleanUrl === '/admin/dashboard') return res.status(404).render('public/404', { title: 'Page Not Found' });
         return res.redirect('/admin/dashboard');
     }
     const db = getDb();
     const perms = res.locals.userPermissions || getAdminPermissions(db);
-    return res.redirect(perms.dashboard ? '/admin/dashboard' : '/admin/leads');
+    const target = perms.dashboard ? '/admin/dashboard' : '/admin/leads';
+    if (cleanUrl === target) {
+        return res.status(404).render('public/404', { title: 'Page Not Found' });
+    }
+    return res.redirect(target);
 });
 
 module.exports = router;
