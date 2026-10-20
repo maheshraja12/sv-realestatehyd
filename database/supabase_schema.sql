@@ -121,8 +121,8 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 -- Seed default Super Admin and Normal Admin in Supabase (BCrypt hashes for SuperAdmin@SV2024 and Admin@SV2024)
 INSERT INTO public.users (name, email, password_hash, role, is_active) VALUES
-    ('SV Super Admin', 'superadmin@svrealestate.com', '$2a$10$7Z4CqgWlA2B3vEJuLgQ0t.yS.b8CgnM6v3rL7pYjR7kYd.jR6Qz7e', 'superadmin', 1),
-    ('SV Staff Admin', 'admin@svrealestate.com', '$2a$10$O0aF6U1j0n3F5u8x.O0aF6U1j0n3F5u8x.O0aF6U1j0n3F5u8x.', 'admin', 1)
+    ('SV Super Admin', 'superadmin@svrealestate.com', '$2a$10$MXv9CNsonmpzFy7zQXAMe.sLLhAPs.rPHlKwQgY26aj8h.cd0N0Zu', 'superadmin', 1),
+    ('SV Staff Admin', 'admin@svrealestate.com', '$2a$10$GHBRBZWJoYyPhtnXZkMB1unMHhM5bEbanT6pV7tK9OEPwQcsG4fgK', 'admin', 1)
 ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role;
 
 -- Enable Row Level Security (RLS) policies for security
