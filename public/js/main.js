@@ -243,15 +243,9 @@ async function handlePublicEnquirySubmit(e) {
         return false;
     }
 
-    if (!appointmentDate) {
-        showFormError('Please select your preferred appointment date.');
+    if (appointmentTime && !appointmentDate) {
+        showFormError('Please select a site visit date, or leave the time slot blank.');
         document.getElementById('modalAppointmentDate')?.focus();
-        return false;
-    }
-
-    if (!appointmentTime) {
-        showFormError('Please select your preferred appointment time slot.');
-        document.getElementById('modalAppointmentTime')?.focus();
         return false;
     }
 
