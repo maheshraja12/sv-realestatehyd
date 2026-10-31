@@ -5,7 +5,7 @@ const express = require('express');
 const crypto = require('node:crypto');
 const router = express.Router();
 const { getDb } = require('../../database/db');
-const { cloudLeadsConfigured, submitCloudLead, listCloudLeads } = require('../../database/cloud-leads');
+const { cloudLeadsConfigured, submitCloudLead, listCloudLeads, updateCloudLeadStatus } = require('../../database/cloud-leads');
 const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
 const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
@@ -519,6 +519,16 @@ const handleStatusUpdate = async (req, res) => {
     const { status } = req.body;
     const validStatuses = ['new', 'contacted', 'interested', 'site_visit_scheduled', 'negotiation', 'converted', 'lost', 'spam'];
     if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).json({ error: 'Production enquiry database is not configured.' });
+        const current = await listCloudLeads({ id: req.params.id, limit: 1, offset: 0 });
+        const existing = current.success && Array.isArray(current.data) ? current.data[0] : null;
+        if (!existing) return res.status(current.success ? 404 : 502).json({ error: existing ? '' : 'Enquiry not found or unavailable.' });
+        const updated = await updateCloudLeadStatus(req.params.id, status);
+        if (!updated.success || !updated.data) return res.status(502).json({ error: updated.error || 'Could not update enquiry status.' });
+        return res.json({ message: 'Status updated', lead: updated.data });
+    }
 
     let lead = null;
     try {
