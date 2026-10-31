@@ -5,8 +5,9 @@
 function getEndpoint() {
     const base = (process.env.SV_REAL_ESTATE_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const token = (process.env.SV_REAL_ESTATE_EDGE_TOKEN_V2 || '').trim();
-    if (!base.startsWith('https://') || !token) return null;
-    return { url: `${base}/functions/v1/leads-api`, token };
+    const functionName = (process.env.SV_REAL_ESTATE_EDGE_FUNCTION_NAME || 'leads-api').trim();
+    if (!base.startsWith('https://') || !/^[a-z0-9-]+$/.test(functionName) || !token) return null;
+    return { url: `${base}/functions/v1/${functionName}`, token };
 }
 
 function cloudLeadsConfigured() {
@@ -72,9 +73,25 @@ async function listCloudLeads(options = {}) {
         status: options.status,
         category: options.category,
         search: options.search,
+        id: options.id,
         limit: options.limit || 25,
         offset: options.offset || 0
     });
+}
+
+async function submitCloudAppointment(appointment) {
+    return callCloud('POST', { resource: 'appointments', ...appointment });
+}
+
+async function listCloudAppointments(options = {}) {
+    return callCloud('GET', {
+        resource: 'appointments', status: options.status, lead_id: options.lead_id,
+        limit: options.limit || 25, offset: options.offset || 0
+    });
+}
+
+async function updateCloudAppointment(id, patch) {
+    return callCloud('PATCH', { resource: 'appointments', id, ...patch });
 }
 
 async function listCloudProperties(options = {}) {
@@ -187,6 +204,7 @@ async function deleteCloudProperty(id) {
 
 module.exports = {
     cloudLeadsConfigured, submitCloudLead, listCloudLeads,
+    submitCloudAppointment, listCloudAppointments, updateCloudAppointment,
     listCloudProperties, createCloudProperty, updateCloudProperty,
     uploadCloudPropertyImage, setCloudPropertyStatus, setCloudPropertyCoverImage,
     deleteCloudPropertyImage, deleteCloudProperty
