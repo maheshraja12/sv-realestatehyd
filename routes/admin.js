@@ -348,6 +348,7 @@ router.get('/leads', requirePermission('leads'), async (req, res) => {
 
 // GET /admin/leads/:id
 router.get('/leads/:id', async (req, res) => {
+    const db = getDb();
     if (process.env.VERCEL) {
         if (!cloudLeadsConfigured()) return res.status(503).send('Production enquiry database is not configured.');
         const [leadResult, appointmentResult] = await Promise.all([
@@ -383,7 +384,6 @@ router.get('/leads/:id', async (req, res) => {
             lead, notes: [], statusHistory: [], appointments, agents, unreadNotifications: 0
         });
     }
-    const db = getDb();
     let lead = null;
     try {
         lead = db.prepare(`
