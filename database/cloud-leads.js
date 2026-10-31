@@ -79,6 +79,10 @@ async function listCloudLeads(options = {}) {
     });
 }
 
+async function updateCloudLeadStatus(id, status) {
+    return callCloud('PATCH', { resource: 'leads', id, status });
+}
+
 async function submitCloudAppointment(appointment) {
     return callCloud('POST', { resource: 'appointments', ...appointment });
 }
@@ -203,7 +207,7 @@ async function deleteCloudProperty(id) {
 }
 
 module.exports = {
-    cloudLeadsConfigured, submitCloudLead, listCloudLeads,
+    cloudLeadsConfigured, submitCloudLead, listCloudLeads, updateCloudLeadStatus,
     submitCloudAppointment, listCloudAppointments, updateCloudAppointment,
     listCloudProperties, createCloudProperty, updateCloudProperty,
     uploadCloudPropertyImage, setCloudPropertyStatus, setCloudPropertyCoverImage,
