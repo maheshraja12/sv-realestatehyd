@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database/db');
-const { cloudLeadsConfigured, listCloudLeads, listCloudProperties } = require('../database/cloud-leads');
+const { cloudLeadsConfigured, listCloudLeads, listCloudProperties, listCloudAppointments } = require('../database/cloud-leads');
 const { enhanceProperty, enhancePropertyList } = require('../database/property-media');
 const { requireAuth, requireSuperAdmin, requirePermission, getAdminPermissions } = require('../middleware/auth');
 const { 
@@ -349,6 +349,41 @@ router.get('/leads', requirePermission('leads'), async (req, res) => {
 // GET /admin/leads/:id
 router.get('/leads/:id', async (req, res) => {
     const db = getDb();
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).send('Production enquiry database is not configured.');
+        const [leadResult, appointmentResult] = await Promise.all([
+            listCloudLeads({ id: req.params.id, limit: 1, offset: 0 }),
+            listCloudAppointments({ lead_id: req.params.id, limit: 100, offset: 0 })
+        ]);
+        if (!leadResult.success) return res.status(502).send('Unable to load this enquiry from the production database.');
+        const e = (leadResult.data || [])[0];
+        if (!e) return res.redirect('/admin/leads');
+        const lead = {
+            id: e.id, lead_code: e.lead_code || `SV-LEAD-${String(e.id).padStart(5, '0')}`,
+            customer_name: e.customer_name || e.full_name || 'Interested Buyer',
+            full_name: e.full_name || e.customer_name || 'Interested Buyer',
+            phone: e.phone || e.phone_number, phone_number: e.phone_number || e.phone,
+            email: e.email, property_id: e.property_id,
+            property_requirement: e.property_requirement || e.property_category || 'General Enquiry',
+            property_category: e.property_category || e.property_requirement || 'General Enquiry',
+            budget: e.budget, preferred_location: e.preferred_location, message: e.message,
+            contact_preference: e.contact_preference || 'phone',
+            appointment_date: e.appointment_date || e.preferred_visit_date,
+            appointment_time: e.appointment_time, status: (e.status || 'new').toLowerCase(),
+            created_at: e.created_at, property_title: null, property_code: null,
+            property_price: null, property_cat: null, property_locality: null, agent_name: 'Unassigned'
+        };
+        let agents = [];
+        try { agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all(); } catch (e) {}
+        const appointments = appointmentResult.success ? (appointmentResult.data || []).map(item => ({
+            ...item, requested_date: item.requested_date, requested_time: item.requested_time,
+            status: item.status || 'requested', property_title: 'Direct Enquiry', agent_name: 'Unassigned'
+        })) : [];
+        return res.render('admin/lead-detail', {
+            title: `Lead: ${lead.customer_name} — SV Real Estates Admin`,
+            lead, notes: [], statusHistory: [], appointments, agents, unreadNotifications: 0
+        });
+    }
     let lead = null;
     try {
         lead = db.prepare(`
@@ -457,8 +492,26 @@ router.get('/appointments', requirePermission('appointments'), async (req, res) 
     const limit = 25;
     const offset = (page - 1) * limit;
 
-    // Check PostgreSQL / Supabase cloud first when on Vercel or configured
-    if (process.env.VERCEL || isPostgresConfigured()) {
+    // Production appointments use the same Supabase Edge Function as public site-visit requests.
+    if (process.env.VERCEL) {
+        if (!cloudLeadsConfigured()) return res.status(503).send('Production appointments database is not configured.');
+        const cloudResult = await listCloudAppointments({ status, limit: 100, offset: 0 });
+        if (!cloudResult.success) return res.status(502).send('Could not load site visits from the production database.');
+        const all = cloudResult.data || [];
+        const total = Number(cloudResult.count || all.length);
+        const paged = all.slice(offset, offset + limit).map(a => ({
+            ...a, appointment_code: a.appointment_code || `SV-VISIT-${String(a.id).padStart(5, '0')}`,
+            property_title: 'Direct Enquiry', agent_name: 'Unassigned'
+        }));
+        let agents = [];
+        try { agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all(); } catch (e) {}
+        return res.render('admin/appointments', {
+            title: 'Site Visits — SV Real Estates Admin', appointments: paged, agents,
+            page, totalPages: Math.ceil(total / limit) || 1, total, status, unreadNotifications: 0
+        });
+    }
+    // Local PostgreSQL fallback for non-Vercel deployments.
+    if (isPostgresConfigured()) {
         try {
             const pgResult = await fetchPgAppointments({ status });
             if (pgResult && pgResult.success && pgResult.data) {

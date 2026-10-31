@@ -243,15 +243,9 @@ async function handlePublicEnquirySubmit(e) {
         return false;
     }
 
-    if (!appointmentDate) {
-        showFormError('Please select your preferred appointment date.');
+    if (appointmentTime && !appointmentDate) {
+        showFormError('Please select a site visit date, or leave the time slot blank.');
         document.getElementById('modalAppointmentDate')?.focus();
-        return false;
-    }
-
-    if (!appointmentTime) {
-        showFormError('Please select your preferred appointment time slot.');
-        document.getElementById('modalAppointmentTime')?.focus();
         return false;
     }
 
@@ -380,13 +374,15 @@ function openEnquirySuccessModal(refCode, name, date, time, req) {
     const msgTarget = document.getElementById('successMessageText');
     if (msgTarget) {
         const slotDesc = date ? ` for <strong>${date}</strong> (${time || 'Morning'})` : '';
-        msgTarget.innerHTML = `Your consultation request${slotDesc} has been confirmed. Our senior advisor will assist you with verified documentation and transparent pricing.`;
+        msgTarget.innerHTML = date
+            ? `Your enquiry and preferred visit request${slotDesc} have been received. Our team will contact you to confirm the visit.`
+            : 'Your enquiry has been received. Our team will contact you shortly to understand your requirement and arrange the next steps.';
     }
 
     // Direct WhatsApp Button with valid business number
     const waLink = document.getElementById('successWhatsAppLink');
     if (waLink) {
-        const waMsg = encodeURIComponent(`Hello SV Real Estates, I just submitted an enquiry for ${req || 'Property'} (Ref: ${refCode}). Preferred Date: ${date || 'Today'} ${time || ''}`);
+        const waMsg = encodeURIComponent(`Hello SV Real Estates, I just submitted an enquiry for ${req || 'Property'} (Ref: ${refCode}). Preferred Date: ${date || 'To be arranged'} ${time || ''}`);
         waLink.href = `https://wa.me/919346423434?text=${waMsg}`;
     }
 

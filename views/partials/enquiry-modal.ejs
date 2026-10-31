@@ -47,14 +47,14 @@
 
                 <!-- 3. Preferred Appointment Date & Time -->
                 <div class="form-group-modal">
-                    <label for="modalAppointmentDate"><i class="fas fa-calendar-day text-gold"></i> Preferred Appointment Date *</label>
-                    <input type="date" id="modalAppointmentDate" name="appointment_date" required>
+                    <label for="modalAppointmentDate"><i class="fas fa-calendar-day text-gold"></i> Preferred Site Visit Date (Optional)</label>
+                    <input type="date" id="modalAppointmentDate" name="appointment_date">
                 </div>
 
                 <div class="form-group-modal">
-                    <label for="modalAppointmentTime"><i class="fas fa-clock text-gold"></i> Appointment Time Slot *</label>
-                    <select id="modalAppointmentTime" name="appointment_time" required>
-                        <option value="">Select Time Slot *</option>
+                    <label for="modalAppointmentTime"><i class="fas fa-clock text-gold"></i> Preferred Time Slot (Optional)</label>
+                    <select id="modalAppointmentTime" name="appointment_time">
+                        <option value="">Choose later / No preference</option>
                         <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM (Morning)</option>
                         <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM (Afternoon)</option>
                         <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM (Post-Lunch)</option>
@@ -93,7 +93,7 @@
             <div class="greeting-icon-wrapper">
                 <i class="fas fa-check"></i>
             </div>
-            <span class="greeting-badge"><i class="fas fa-crown text-gold"></i> ENQUIRY CONFIRMED</span>
+            <span class="greeting-badge"><i class="fas fa-crown text-gold"></i> ENQUIRY RECEIVED</span>
             <h2 class="greeting-title">Thank You, <span class="gold-gradient-text" id="greetingCustomerName">Valued Client</span>!</h2>
             <p class="greeting-subtitle" id="successMessageText">Your details have been received by our senior property team. We look forward to connecting with you.</p>
 
