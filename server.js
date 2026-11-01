@@ -201,15 +201,31 @@ if (process.env.VERCEL) {
 // ── Global Middleware ─────────────────────────────────────
 app.use(loadUser);
 
-// Make common data available to all views
+// Make common data available to all views from dynamic CMS settings with sensible fallbacks
 app.use((req, res, next) => {
-    res.locals.businessName = process.env.BUSINESS_NAME || 'Sri Venkateswara Real Estates & Building Materials';
-    res.locals.businessTagline = process.env.BUSINESS_TAGLINE || 'Luxury Properties, Gated Communities & Building Construction';
-    res.locals.businessPhone = process.env.BUSINESS_PHONE || '+91 9346423434';
-    res.locals.businessEmail = process.env.BUSINESS_EMAIL || 'svsrivenkateswara99@gmail.com';
-    res.locals.businessWhatsapp = process.env.BUSINESS_WHATSAPP || '919346423434';
-    res.locals.businessAddress = process.env.BUSINESS_ADDRESS || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085';
-    res.locals.businessInstagram = process.env.BUSINESS_INSTAGRAM || 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr';
+    let dbSettings = {};
+    try {
+        const db = getDb();
+        if (db && typeof db.prepare === 'function') {
+            const rows = db.prepare("SELECT key, value FROM settings").all();
+            rows.forEach(r => { dbSettings[r.key] = r.value; });
+        }
+    } catch (e) {}
+
+    res.locals.businessName = dbSettings.business_name || process.env.BUSINESS_NAME || 'Sri Venkateswara Real Estates & Building Materials';
+    res.locals.businessTagline = dbSettings.tagline || process.env.BUSINESS_TAGLINE || 'Luxury Properties, Gated Communities & Building Construction';
+    res.locals.businessPhone = dbSettings.phone || process.env.BUSINESS_PHONE || '+91 9346423434';
+    res.locals.businessEmail = dbSettings.email || process.env.BUSINESS_EMAIL || 'svsrivenkateswara99@gmail.com';
+    res.locals.businessWhatsapp = dbSettings.whatsapp || process.env.BUSINESS_WHATSAPP || '919346423434';
+    res.locals.businessAddress = dbSettings.address || process.env.BUSINESS_ADDRESS || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085';
+    res.locals.businessInstagram = dbSettings.instagram || process.env.BUSINESS_INSTAGRAM || 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr';
+    res.locals.heroTitle = dbSettings.hero_title || '';
+    res.locals.heroSubtitle = dbSettings.hero_subtitle || '';
+    res.locals.themeAccentGold = dbSettings.theme_accent_gold || '#d4af37';
+    res.locals.themePrimaryColor = dbSettings.theme_primary_color || '#0b0c10';
+    res.locals.whatsappFloating = dbSettings.whatsapp_floating !== '0';
+    res.locals.announcementBar = dbSettings.announcement_bar || '';
+    res.locals.settings = dbSettings;
     res.locals.path = req.path;
     res.locals.csrfToken = ''; // Placeholder, set per-form as needed
 
@@ -255,6 +271,7 @@ const apiLeadRoutes = require('./routes/api/leads');
 const apiAppointmentRoutes = require('./routes/api/appointments');
 const apiDashboardRoutes = require('./routes/api/dashboard');
 const apiNotificationRoutes = require('./routes/api/notifications');
+const apiChatbotRoutes = require('./routes/api/chatbot');
 
 // Apply rate limiters
 app.use('/admin/login', loginLimiter);
@@ -285,6 +302,7 @@ app.use('/api/leads', apiLeadRoutes);
 app.use('/api/appointments', apiAppointmentRoutes);
 app.use('/api/dashboard', apiDashboardRoutes);
 app.use('/api/notifications', apiNotificationRoutes);
+app.use('/api/chatbot', apiChatbotRoutes);
 
 // GET /api/health — System health check (safe, no secret leakage)
 app.get('/api/health', (req, res) => {

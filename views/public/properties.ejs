@@ -193,7 +193,7 @@
                 <div class="property-card" data-id="<%= prop.id %>">
                     <div class="prop-card-media">
                         <% if (prop.cover_image) { %>
-                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %> — <%= (prop.category || '').replace(/_/g, ' ') %> in <%= prop.locality || 'Hyderabad' %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                         <% } else { %>
                         <div class="prop-img-placeholder">
                             <i class="fas fa-building"></i>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Explore luxury interior projects completed by SV Home Interiors in Hyderabad — Kokapet villas, Financial District 3BHK flats, Tellapur residences, and Jubilee Hills mansions.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Banner -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-images text-gold"></i> COMPLETED TRANSFORMATIONS • HYDERABAD</span>
+            <h1 class="page-title">Interior Projects <span class="gold-gradient-text">Portfolio</span></h1>
+            <p class="page-subtitle">Handcrafted residences designed and executed with architectural mastery across prime Hyderabad locations.</p>
+        </div>
+    </section>
+
+    <!-- Projects Catalog -->
+    <section class="section">
+        <div class="container">
+            <div class="properties-grid">
+                <% if (typeof projects !== 'undefined' && projects && projects.length > 0) { %>
+                    <% projects.forEach(proj => { %>
+                    <div class="property-card">
+                        <div class="prop-card-media" style="aspect-ratio: 4/3; width: 100%; height: auto; min-height: 260px;">
+                            <img src="<%= proj.cover_image || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80' %>" alt="<%= proj.title %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
+                            <div class="prop-badge-top">
+                                <span class="badge-featured"><i class="fas fa-check-circle"></i> Completed</span>
+                                <span class="badge-category"><%= proj.bhk_config || proj.property_type %></span>
+                            </div>
+                            <% if (proj.budget_range) { %>
+                            <div class="prop-price-tag"><%= proj.budget_range %></div>
+                            <% } %>
+                        </div>
+                        <div class="prop-card-body">
+                            <div class="prop-location">
+                                <i class="fas fa-map-marker-alt text-gold"></i>
+                                <span><%= proj.locality %>, <%= proj.city || 'Hyderabad' %></span>
+                            </div>
+                            <h3 class="prop-title">
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>"><%= proj.title %></a>
+                            </h3>
+                            <p class="prop-desc"><%= proj.short_description %></p>
+                            <div class="prop-specs-row" style="margin-top: 12px;">
+                                <div class="spec-item"><i class="fas fa-paint-roller"></i> <%= proj.design_style || 'Contemporary' %></div>
+                                <div class="spec-item"><i class="fas fa-building"></i> <%= proj.property_type %></div>
+                            </div>
+                            <div class="prop-card-footer" style="margin-top: 16px;">
+                                <button type="button" class="btn btn-card-enquire" onclick="openEnquiryModal('Home Interiors', '<%= (proj.title || '').replace(/'/g, '\\\'') %>')">
+                                    <i class="fas fa-envelope"></i> Similar Estimate
+                                </button>
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>" class="btn btn-card-details">
+                                    Full Gallery <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } else { %>
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                        <i class="fas fa-couch fa-3x text-gold" style="margin-bottom: 16px;"></i>
+                        <h3 style="color: var(--text-light); margin-bottom: 8px;">Projects Portfolio Being Updated</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 24px;">Our latest completed villa and flat projects are being added. Connect directly for site visits and photos.</p>
+                        <button type="button" class="btn btn-gold" onclick="openEnquiryModal('Home Interiors')">
+                            <i class="fas fa-calendar-check"></i> Book Consultation
+                        </button>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </section>
+
+    <!-- Consultation CTA -->
+    <section class="cta-banner-section">
+        <div class="container">
+            <div class="cta-banner-card">
+                <div class="cta-text">
+                    <h2>Wish to Experience a Completed Home in Person?</h2>
+                    <p>We organize guided site visits to our ongoing and completed projects in Kokapet, Tellapur, and Financial District.</p>
+                </div>
+                <div class="cta-buttons">
+                    <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal('Home Interiors')">
+                        <i class="fas fa-eye"></i> Request Project Walkthrough
+                    </button>
+                    <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Home%20Interiors,%20I%20would%20like%20to%20visit%20one%20of%20your%20completed%20interior%20projects." target="_blank" class="btn btn-whatsapp btn-large">
+                        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
+</body>
+</html>
+

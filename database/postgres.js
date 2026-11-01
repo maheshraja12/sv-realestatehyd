@@ -268,6 +268,8 @@ async function insertLead(lead) {
         property_id: lead.property_id ? parseInt(lead.property_id, 10) : null,
         property_category: lead.property_category || lead.property_requirement || 'Residential Plot',
         property_requirement: lead.property_requirement || lead.property_category || 'Residential Plot',
+        lead_category: lead.lead_category || (String(lead.property_category || lead.property_requirement || '').toLowerCase().includes('interior') ? 'Home Interiors' : 'Property Buying'),
+        service_type: lead.service_type || (String(lead.property_category || lead.property_requirement || '').toLowerCase().includes('interior') ? 'interiors' : 'real_estate'),
         budget: lead.budget || 'Consult / Market Price',
         preferred_location: lead.preferred_location || 'Hyderabad',
         message: lead.message || null,
@@ -287,10 +289,10 @@ async function insertLead(lead) {
             const query = `
                 INSERT INTO leads (
                     lead_code, customer_name, full_name, phone, phone_number, email,
-                    property_id, property_category, property_requirement, budget, preferred_location,
+                    property_id, property_category, property_requirement, lead_category, service_type, budget, preferred_location,
                     message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
                     consent, source, status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 RETURNING *
             `;
 
@@ -298,6 +300,7 @@ async function insertLead(lead) {
                 leadPayload.lead_code, leadPayload.customer_name, leadPayload.full_name,
                 leadPayload.phone, leadPayload.phone_number, leadPayload.email,
                 leadPayload.property_id, leadPayload.property_category, leadPayload.property_requirement,
+                leadPayload.lead_category, leadPayload.service_type,
                 leadPayload.budget, leadPayload.preferred_location, leadPayload.message,
                 leadPayload.contact_preference, leadPayload.preferred_visit_date,
                 leadPayload.appointment_date, leadPayload.appointment_time,

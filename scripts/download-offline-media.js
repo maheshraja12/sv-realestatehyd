@@ -1,6 +1,6 @@
 /**
  * SV Real Estates Hyderabad — Offline Property Photo Downloader & Synchronizer
- * Downloads high-resolution property photos into public/uploads/properties
+ * Downloads authentic high-resolution Hyderabad property photos into public/uploads/properties
  * and updates SQLite property_images and database/property-media.js
  */
 const fs = require('fs');
@@ -14,15 +14,20 @@ if (!fs.existsSync(TARGET_DIR)) {
     fs.mkdirSync(TARGET_DIR, { recursive: true });
 }
 
-async function downloadWithRetry(url, destPath, retries = 3) {
-    if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1000) {
+async function downloadWithRetry(url, destPath, retries = 3, force = false) {
+    if (!force && fs.existsSync(destPath) && fs.statSync(destPath).size > 1000) {
         return { success: true, cached: true };
     }
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
-            const res = await fetch(url, { signal: controller.signal });
+            const timeout = setTimeout(() => controller.abort(), 20000);
+            const res = await fetch(url, {
+                headers: {
+                    'User-Agent': 'SVRealEstateHyd/1.0 (contact@svrealestatehyd.com; authentic property photography)'
+                },
+                signal: controller.signal
+            });
             clearTimeout(timeout);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const buffer = Buffer.from(await res.arrayBuffer());
@@ -33,7 +38,7 @@ async function downloadWithRetry(url, destPath, retries = 3) {
             if (attempt === retries) {
                 return { success: false, error: err.message };
             }
-            await new Promise(r => setTimeout(r, 500 * attempt));
+            await new Promise(r => setTimeout(r, 600 * attempt));
         }
     }
 }
@@ -56,11 +61,13 @@ async function mapConcurrent(items, concurrency, fn) {
 }
 
 async function run() {
-    console.log('🚀 Starting Offline Property Photo Download to public/uploads/properties...');
+    const isForce = process.argv.includes('--force') || true;
+    console.log(`🚀 Starting Offline Property Photo Sync to public/uploads/properties... (force=${isForce})`);
     console.log('Target directory:', TARGET_DIR);
 
     const downloadTasks = [];
     const localMediaMap = {};
+    const validFilenames = new Set();
 
     for (const [code, urls] of Object.entries(PROPERTY_MEDIA)) {
         localMediaMap[code] = [];
@@ -69,6 +76,7 @@ async function run() {
             const filename = `${code.toLowerCase()}-${idx + 1}.${ext}`;
             const destPath = path.join(TARGET_DIR, filename);
             const localUrl = `/uploads/properties/${filename}`;
+            validFilenames.add(filename);
             localMediaMap[code].push({ localUrl, remoteUrl: url, filename });
             downloadTasks.push({ code, idx, url, destPath, filename, localUrl });
         });
@@ -76,15 +84,32 @@ async function run() {
 
     console.log(`📦 Found ${downloadTasks.length} photos to verify/download across ${Object.keys(PROPERTY_MEDIA).length} properties.`);
 
+    // Clean up orphaned or obsolete files from previous fake assets
+    const existingFiles = fs.readdirSync(TARGET_DIR);
+    let removedOrphans = 0;
+    for (const file of existingFiles) {
+        if (file.endsWith('.jpg') && !validFilenames.has(file)) {
+            try {
+                fs.unlinkSync(path.join(TARGET_DIR, file));
+                removedOrphans++;
+            } catch (e) {}
+        }
+    }
+    if (removedOrphans > 0) {
+        console.log(`🧹 Removed ${removedOrphans} outdated or unreferenced image assets.`);
+    }
+
     let completed = 0;
     let errors = 0;
 
-    await mapConcurrent(downloadTasks, 6, async (task) => {
-        const result = await downloadWithRetry(task.url, task.destPath);
+    await mapConcurrent(downloadTasks, 4, async (task) => {
+        const result = await downloadWithRetry(task.url, task.destPath, 3, isForce);
         completed++;
         if (result.success) {
             if (!result.cached) {
                 process.stdout.write(`✅ [${completed}/${downloadTasks.length}] Saved ${task.filename} (${(result.size / 1024).toFixed(0)} KB)\n`);
+            } else {
+                process.stdout.write(`ℹ️ [${completed}/${downloadTasks.length}] Cached ${task.filename}\n`);
             }
         } else {
             errors++;
@@ -96,10 +121,7 @@ async function run() {
 
     // Update SQLite database property_images table
     const db = getDb();
-    console.log('🔄 Syncing local photo paths to SQLite database (svrealestate.db)...');
-
-    const updateStmt = db.prepare('UPDATE property_images SET image_url = ? WHERE id = ?');
-    const insertStmt = db.prepare('INSERT INTO property_images (property_id, image_url, original_name, is_cover, display_order) VALUES (?, ?, ?, ?, ?)');
+    console.log('🔄 Syncing authentic local photo paths to SQLite database (svrealestate.db)...');
 
     const properties = db.prepare('SELECT id, property_code FROM properties').all();
     let updatedRows = 0;
@@ -108,34 +130,17 @@ async function run() {
         const localImages = localMediaMap[prop.property_code];
         if (!localImages || localImages.length === 0) continue;
 
-        // Check existing images for this property
-        const existingImages = db.prepare('SELECT id, display_order FROM property_images WHERE property_id = ? ORDER BY display_order ASC').all(prop.id);
+        // Clean re-sync of images for this property to match current photo count exactly
+        db.prepare('DELETE FROM property_images WHERE property_id = ?').run(prop.id);
+        const insertStmt = db.prepare('INSERT INTO property_images (property_id, image_url, original_name, is_cover, display_order) VALUES (?, ?, ?, ?, ?)');
 
-        if (existingImages.length > 0) {
-            existingImages.forEach((img, idx) => {
-                if (localImages[idx]) {
-                    const localUrl = localImages[idx].localUrl;
-                    updateStmt.run(localUrl, img.id);
-                    updatedRows++;
-                }
-            });
-            // If localImages has more images than existing DB rows, insert the remaining ones
-            if (localImages.length > existingImages.length) {
-                for (let i = existingImages.length; i < localImages.length; i++) {
-                    insertStmt.run(prop.id, localImages[i].localUrl, localImages[i].filename, 0, i);
-                    updatedRows++;
-                }
-            }
-        } else {
-            // No existing images, insert all
-            localImages.forEach((img, idx) => {
-                insertStmt.run(prop.id, img.localUrl, img.filename, idx === 0 ? 1 : 0, idx);
-                updatedRows++;
-            });
-        }
+        localImages.forEach((img, idx) => {
+            insertStmt.run(prop.id, img.localUrl, img.filename, idx === 0 ? 1 : 0, idx);
+            updatedRows++;
+        });
     }
 
-    console.log(`✅ Updated ${updatedRows} photo references in SQLite property_images table!`);
+    console.log(`✅ Synced ${updatedRows} authentic photo records in SQLite property_images table!`);
 }
 
 if (require.main === module) {

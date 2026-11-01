@@ -1,3 +1,18 @@
+
+function handleCategoryChange(val) {
+    const hiddenCat = document.getElementById('modalLeadCategory');
+    if (!hiddenCat) return;
+    const lower = String(val).toLowerCase();
+    if (lower.includes('interior') || lower.includes('modular') || lower.includes('renovation')) {
+        hiddenCat.value = 'Home Interiors';
+    } else if (lower.includes('selling')) {
+        hiddenCat.value = 'Property Selling';
+    } else if (lower.includes('visit')) {
+        hiddenCat.value = 'Site Visit';
+    } else {
+        hiddenCat.value = 'Property Buying';
+    }
+}
 /**
  * SV Real Estates Hyderabad — Public Main JavaScript
  * Handles Navigation, Modals, Site Visit Scheduler, and Free Consultation popups

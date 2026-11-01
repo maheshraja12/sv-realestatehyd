@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        .cms-nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .cms-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px 18px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .cms-tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .cms-tab-btn.active {
+            color: #0c0f17;
+            background: var(--gold);
+        }
+        .cms-tab-pane {
+            display: none;
+        }
+        .cms-tab-pane.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-sliders-h text-gold"></i> Website Control Center</h2>
+            </div>
+            <div class="header-right">
+                <span class="status-badge status-published"><i class="fas fa-crown text-gold"></i> Super Admin</span>
+                <span class="user-name"><%= currentUser ? currentUser.name : 'Admin' %></span>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <% if (typeof message !== 'undefined' && message) { %>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <%= message %>
+            </div>
+            <% } %>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <%= error %>
+            </div>
+            <% } %>
+
+            <!-- CMS Navigation Tabs -->
+            <div class="cms-nav-tabs">
+                <button class="cms-tab-btn active" onclick="switchCmsTab('company')"><i class="fas fa-building"></i> Company Profile</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('leadership')"><i class="fas fa-users-cog"></i> Leadership & Team</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('homepage')"><i class="fas fa-home"></i> Homepage Copy & Stats</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('services')"><i class="fas fa-concierge-bell"></i> Services</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('pages')"><i class="fas fa-file-alt"></i> SEO & Pages</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('theme')"><i class="fas fa-palette"></i> Global Branding</button>
+                <button class="cms-tab-btn" onclick="switchCmsTab('audit')"><i class="fas fa-history"></i> Audit Logs</button>
+            </div>
+
+            <!-- TAB 1: Company Profile Management -->
+            <div id="tab-company" class="cms-tab-pane active">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-building text-gold"></i> Company & Brand Identity</h3>
+                        <p>All fields dynamically update the live website header, footer, topbar, and contact pages.</p>
+                    </div>
+                    <form method="POST" action="/admin/cms/company" class="settings-form">
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="business_name">Registered Legal Business Name *</label>
+                                <input type="text" id="business_name" name="business_name" value="<%= settings.business_name || 'Sri Venkateswara Real Estates & Building Materials' %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="business_tagline">Brand Tagline</label>
+                                <input type="text" id="business_tagline" name="business_tagline" value="<%= settings.business_tagline || 'Luxury Properties, Gated Communities & Home Interiors' %>">
+                            </div>
+                        </div>
+
+                        <div class="form-row cols-3">
+                            <div class="form-group">
+                                <label for="business_phone">Primary Phone Number *</label>
+                                <input type="text" id="business_phone" name="business_phone" value="<%= settings.business_phone || '+91 9346423434' %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="business_whatsapp">WhatsApp Number (with country code) *</label>
+                                <input type="text" id="business_whatsapp" name="business_whatsapp" value="<%= settings.business_whatsapp || '919346423434' %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="business_email">Official Email Address *</label>
+                                <input type="email" id="business_email" name="business_email" value="<%= settings.business_email || 'svsrivenkateswara99@gmail.com' %>" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="business_instagram">Instagram Profile URL</label>
+                                <input type="url" id="business_instagram" name="business_instagram" value="<%= settings.business_instagram || 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr' %>">
+                            </div>
+                            <div class="form-group">
+                                <label for="business_hours">Business & Office Hours</label>
+                                <input type="text" id="business_hours" name="business_hours" value="<%= settings.business_hours || 'Mon - Sun: 9:00 AM - 8:30 PM (7 Days Open)' %>">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="business_address">Headquarters / Office Address *</label>
+                            <textarea id="business_address" name="business_address" rows="3" required><%= settings.business_address || '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085' %></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save Company Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 2: Leadership & Executive Team Management -->
+            <div id="tab-leadership" class="cms-tab-pane">
+                <div class="settings-card" style="margin-bottom: 24px;">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3><i class="fas fa-crown text-gold"></i> Executive Leadership & Founder Profiles</h3>
+                            <p>Manage Founder, Managing Director, and key leaders shown on the public About page. Never hardcoded.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" style="background:var(--gold); color:#0c0f17;" onclick="toggleAddLeaderForm()">
+                            <i class="fas fa-plus"></i> Add Leader Profile
+                        </button>
+                    </div>
+
+                    <!-- Add Leader Form (Toggleable) -->
+                    <div id="addLeaderFormBox" style="display:none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 22px; margin-bottom: 24px;">
+                        <h4 style="margin-bottom: 16px; color: var(--gold);"><i class="fas fa-user-plus"></i> Add New Leadership Profile</h4>
+                        <form method="POST" action="/admin/cms/leadership">
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label>Full Name *</label>
+                                    <input type="text" name="name" required placeholder="e.g. B. Bhuvan Raju">
+                                </div>
+                                <div class="form-group">
+                                    <label>Designation *</label>
+                                    <input type="text" name="designation" required placeholder="e.g. Founder / Managing Director">
+                                </div>
+                                <div class="form-group">
+                                    <label>Role Category</label>
+                                    <select name="role_type">
+                                        <option value="founder">Founder</option>
+                                        <option value="managing_director">Managing Director</option>
+                                        <option value="owner">Owner</option>
+                                        <option value="director">Director</option>
+                                        <option value="sales_head">Sales Head</option>
+                                        <option value="interior_design_head">Interior Design Head</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row cols-3">
+                                <div class="form-group">
+                                    <label>Years Experience</label>
+                                    <input type="number" name="experience_years" value="15" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Photo URL (Optional)</label>
+                                    <input type="url" name="photo_url" placeholder="https://...">
+                                </div>
+                                <div class="form-group">
+                                    <label>LinkedIn URL</label>
+                                    <input type="url" name="linkedin_url" placeholder="https://linkedin.com/in/...">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Biography & Achievements *</label>
+                                <textarea name="bio" rows="3" required placeholder="Executive biography..."></textarea>
+                            </div>
+                            <div class="form-row cols-3" style="margin-bottom: 16px;">
+                                <label><input type="checkbox" name="show_on_about" value="1" checked> Show on About Page</label>
+                                <label><input type="checkbox" name="show_on_home" value="1"> Show on Homepage</label>
+                                <label><input type="checkbox" name="is_active" value="1" checked> Active Profile</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save Leadership Profile
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Current Leadership Table -->
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Designation</th>
+                                    <th>Role Category</th>
+                                    <th>Exp (Yrs)</th>
+                                    <th>About Page</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (typeof leadership !== 'undefined' && leadership && leadership.length > 0) { %>
+                                    <% leadership.forEach(leader => { %>
+                                    <tr>
+                                        <td><strong><%= leader.name %></strong></td>
+                                        <td><%= leader.designation %></td>
+                                        <td><span class="status-badge status-published"><%= leader.role_type %></span></td>
+                                        <td><%= leader.experience_years %> yrs</td>
+                                        <td><%= leader.show_on_about ? 'Visible' : 'Hidden' %></td>
+                                        <td>
+                                            <span class="status-badge <%= leader.is_active ? 'status-published' : 'status-draft' %>">
+                                                <%= leader.is_active ? 'Active' : 'Inactive' %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <form method="POST" action="/admin/cms/leadership/<%= leader.id %>/delete" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this profile?');">
+                                                <button type="submit" class="btn btn-sm" style="color:var(--danger); background:none; border:none; cursor:pointer;" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="7" class="text-center">No leadership profiles found.</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Homepage Copy & Quick Statistics -->
+            <div id="tab-homepage" class="cms-tab-pane">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-home text-gold"></i> Homepage Content & Key Statistics</h3>
+                        <p>Edit hero banner copy, numbers, and value propositions rendered on the home page.</p>
+                    </div>
+                    <form method="POST" action="/admin/cms/homepage" class="settings-form">
+                        <div class="form-group">
+                            <label for="hero_headline">Hero Headline</label>
+                            <input type="text" id="hero_headline" name="hero_headline" value="<%= settings.hero_headline || 'Redefining Luxury Living, Strategic Land & Bespoke Interiors' %>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hero_subheading">Hero Subtitle</label>
+                            <textarea id="hero_subheading" name="hero_subheading" rows="2"><%= settings.hero_subheading || 'Explore handpicked luxury villas, HMDA approved plots, 2BHK/3BHK/4BHK gated apartments, and complete home interior solutions across Hyderabad.' %></textarea>
+                        </div>
+
+                        <div class="form-row cols-4">
+                            <div class="form-group">
+                                <label for="stat_years">Years in Real Estate</label>
+                                <input type="text" id="stat_years" name="stat_years" value="<%= settings.stat_years || '15+' %>">
+                            </div>
+                            <div class="form-group">
+                                <label for="stat_acres">Acres Developed</label>
+                                <input type="text" id="stat_acres" name="stat_acres" value="<%= settings.stat_acres || '500+' %>">
+                            </div>
+                            <div class="form-group">
+                                <label for="stat_titles">Clear Title %</label>
+                                <input type="text" id="stat_titles" name="stat_titles" value="<%= settings.stat_titles || '100%' %>">
+                            </div>
+                            <div class="form-group">
+                                <label for="stat_clients">Satisfied Clients</label>
+                                <input type="text" id="stat_clients" name="stat_clients" value="<%= settings.stat_clients || '3,200+' %>">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save Homepage Content
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB: Services Management -->
+            <div id="tab-services" class="cms-tab-pane">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-concierge-bell text-gold"></i> Real Estate & Home Interior Services</h3>
+                        <p>Manage public visibility, starting price points, and active service offerings across Hyderabad.</p>
+                    </div>
+                    
+                    <h4 style="color:var(--gold); margin: 20px 0 12px; font-size:1.1rem;"><i class="fas fa-couch"></i> Home Interior Services (12 Core Offerings)</h4>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Service Name</th>
+                                    <th>Category</th>
+                                    <th>Update Starting Price & Status</th>
+                                    <th>Status</th>
+                                    <th>Preview</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (typeof interiorServices !== 'undefined' && interiorServices && interiorServices.length > 0) { %>
+                                    <% interiorServices.forEach(svc => { %>
+                                    <tr>
+                                        <td>
+                                            <i class="fas <%= svc.icon || 'fa-couch' %> text-gold" style="margin-right:8px;"></i>
+                                            <strong><%= svc.title %></strong>
+                                        </td>
+                                        <td><span class="badge" style="text-transform:capitalize;"><%= svc.category %></span></td>
+                                        <td>
+                                            <form method="POST" action="/admin/cms/services" style="display:flex; gap:10px; align-items:center;">
+                                                <input type="hidden" name="service_id" value="<%= svc.id %>">
+                                                <input type="text" name="starting_price" value="<%= svc.starting_price || '' %>" style="width:130px; padding:6px 10px; font-size:0.85rem; background:var(--bg-input); border:1px solid var(--border-color); border-radius:4px; color:#fff;" placeholder="e.g. ₹5 Lakhs">
+                                                <label style="display:flex; align-items:center; gap:5px; font-size:0.85rem; cursor:pointer;">
+                                                    <input type="checkbox" name="is_active" value="1" <%= svc.is_active ? 'checked' : '' %>> Active
+                                                </label>
+                                                <button type="submit" class="btn btn-secondary" style="padding:5px 12px; font-size:0.8rem; background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3);">
+                                                    <i class="fas fa-save"></i> Save
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge <%= svc.is_active ? 'status-published' : 'status-draft' %>">
+                                                <%= svc.is_active ? 'Active' : 'Hidden' %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="/interiors/services" target="_blank" class="btn-text" style="color:var(--gold); font-size:0.85rem;">
+                                                <i class="fas fa-external-link-alt"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SEO & Pages Management -->
+            <div id="tab-pages" class="cms-tab-pane">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-alt text-gold"></i> Public Page Metadata & SEO Defaults</h3>
+                        <p>Set meta descriptions, search engine keywords, and canonical defaults for Google & Meta indexing.</p>
+                    </div>
+                    <form method="POST" action="/admin/cms/seo" class="settings-form">
+                        <div class="form-group">
+                            <label for="seo_default_title">Default Website Meta Title</label>
+                            <input type="text" id="seo_default_title" name="seo_default_title" value="<%= settings.seo_default_title || 'SV Real Estates & Home Interiors Hyderabad — Luxury Villas, Plots & Turnkey Design' %>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="seo_default_desc">Default Meta Description</label>
+                            <textarea id="seo_default_desc" name="seo_default_desc" rows="3"><%= settings.seo_default_desc || 'Premier real estate advisory and turnkey bespoke home interiors in Hyderabad. Verified HMDA/RERA plots, luxury villas in Kokapet, Tellapur, Financial District.' %></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="seo_keywords">Target Locality Keywords (Comma Separated)</label>
+                            <input type="text" id="seo_keywords" name="seo_keywords" value="<%= settings.seo_keywords || 'Kokapet, Neopolis, Financial District, Tellapur, Gachibowli, Jubilee Hills, Hyderabad Real Estate, Home Interiors' %>">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save SEO Settings
+                            </button>
+                        </div>
+                    </form>
+
+                    <div style="margin-top: 36px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                        <h4 style="color:var(--gold); margin-bottom: 12px;"><i class="fas fa-sitemap"></i> Core Website Pages & Routing</h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Page Name</th>
+                                        <th>Route URL</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Homepage</strong></td>
+                                        <td><code>/</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>About Us</strong></td>
+                                        <td><code>/about</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/about" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Real Estate Services</strong></td>
+                                        <td><code>/services</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/services" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Properties Catalog</strong></td>
+                                        <td><code>/properties</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/properties" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Home Interiors Portal</strong></td>
+                                        <td><code>/interiors</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/interiors" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>12 Interior Services</strong></td>
+                                        <td><code>/interiors/services</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/interiors/services" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Interior Projects Portfolio</strong></td>
+                                        <td><code>/interiors/projects</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/interiors/projects" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Interior Consultation Booking</strong></td>
+                                        <td><code>/interiors/contact</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/interiors/contact" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Hyderabad Locations</strong></td>
+                                        <td><code>/locations</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/locations" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Contact Us</strong></td>
+                                        <td><code>/contact</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/contact" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Privacy Policy</strong></td>
+                                        <td><code>/privacy</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/privacy" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Terms of Service</strong></td>
+                                        <td><code>/terms</code></td>
+                                        <td><span class="status-badge status-published">Active</span></td>
+                                        <td><a href="/terms" target="_blank" class="btn-text text-gold"><i class="fas fa-external-link-alt"></i> View</a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: Global Branding & Theme -->
+            <div id="tab-theme" class="cms-tab-pane">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-palette text-gold"></i> Global Branding & Theme Options</h3>
+                        <p>Configure brand colors, announcement banners, and floating WhatsApp contact widget.</p>
+                    </div>
+                    <form method="POST" action="/admin/cms/branding" class="settings-form">
+                        <div class="form-row cols-2">
+                            <div class="form-group">
+                                <label for="theme_accent_gold">Brand Gold Accent Color</label>
+                                <input type="text" id="theme_accent_gold" name="theme_accent_gold" value="<%= settings.theme_accent_gold || '#d4af37' %>">
+                            </div>
+                            <div class="form-group">
+                                <label for="theme_primary_color">Primary Dark Tone</label>
+                                <input type="text" id="theme_primary_color" name="theme_primary_color" value="<%= settings.theme_primary_color || '#0b0c10' %>">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="whatsapp_floating_enabled" value="1" <%= settings.whatsapp_floating_enabled !== '0' ? 'checked' : '' %>>
+                                Enable Floating WhatsApp Click-to-Chat Button on All Public Pages
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="announcement_bar_enabled" value="1" <%= settings.announcement_bar_enabled === '1' ? 'checked' : '' %>>
+                                Display Top Announcement Bar
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="announcement_text">Announcement Bar Message</label>
+                            <input type="text" id="announcement_text" name="announcement_text" value="<%= settings.announcement_text || '' %>" placeholder="e.g. Fresh HMDA Plots in Kokapet Golden Mile released this week — Inquire now!">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Update Branding Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 6: Audit Logs -->
+            <div id="tab-audit" class="cms-tab-pane">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history text-gold"></i> System Audit Logs</h3>
+                        <p>Immutable log of administrative events, status transitions, and settings changes.</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Entity</th>
+                                    <th>Details</th>
+                                    <th>IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (typeof auditLogs !== 'undefined' && auditLogs && auditLogs.length > 0) { %>
+                                    <% auditLogs.forEach(log => { %>
+                                    <tr>
+                                        <td><small><%= log.created_at %></small></td>
+                                        <td><%= log.user_name || 'System' %></td>
+                                        <td><strong><%= log.action %></strong></td>
+                                        <td><%= log.entity_type %> <%= log.entity_id ? '#' + log.entity_id : '' %></td>
+                                        <td><%= log.details || '-' %></td>
+                                        <td><small class="text-muted"><%= log.ip_address || '-' %></small></td>
+                                    </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="6" class="text-center">No recent audit events recorded.</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+    <script>
+    function switchCmsTab(tabName) {
+        document.querySelectorAll('.cms-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.cms-tab-pane').forEach(pane => pane.classList.remove('active'));
+        
+        event.currentTarget.classList.add('active');
+        const target = document.getElementById('tab-' + tabName);
+        if (target) target.classList.add('active');
+    }
+
+    function toggleAddLeaderForm() {
+        const formBox = document.getElementById('addLeaderFormBox');
+        if (formBox) {
+            formBox.style.display = formBox.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    </script>
+</body>
+</html>
+

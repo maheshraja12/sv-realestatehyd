@@ -1,6 +1,6 @@
 <nav class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-brand">
-        <i class="fas fa-building"></i>
+        <i class="fas fa-building text-gold"></i>
         <span><%= typeof businessName !== 'undefined' ? businessName : 'Sri Venkateswara' %></span>
     </div>
     <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.isSuperAdmin) { %>
@@ -21,6 +21,12 @@
         </li>
         <% } %>
 
+        <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.interiors))) { %>
+        <li class="<%= path.startsWith('/admin/interiors') ? 'active' : '' %>">
+            <a href="/admin/interiors"><i class="fas fa-couch"></i><span>Home Interiors</span></a>
+        </li>
+        <% } %>
+
         <% if (typeof currentUser !== 'undefined' && currentUser && (currentUser.isSuperAdmin || (typeof userPermissions !== 'undefined' && userPermissions && userPermissions.leads))) { %>
         <li class="<%= path.startsWith('/admin/leads') ? 'active' : '' %>">
             <a href="/admin/leads"><i class="fas fa-users"></i><span>Leads & Enquiries</span></a>
@@ -34,6 +40,9 @@
         <% } %>
 
         <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.isSuperAdmin) { %>
+        <li class="<%= path === '/admin/cms' ? 'active' : '' %>">
+            <a href="/admin/cms"><i class="fas fa-sliders-h text-gold"></i><span>Website Control (CMS)</span></a>
+        </li>
         <li class="<%= path === '/admin/settings' ? 'active' : '' %>">
             <a href="/admin/settings"><i class="fas fa-cog"></i><span>Settings & Access</span></a>
         </li>

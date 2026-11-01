@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <meta name="description" content="About SV Real Estates Hyderabad — Over 15 years of excellence in verified luxury real estate, open plots, and commercial developments across Telangana.">
+    <meta name="description" content="About SV Real Estates & Home Interiors Hyderabad — Over 15 years of excellence in verified luxury real estate, open plots, and bespoke interior design across Telangana.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
         <div class="container page-banner-inner">
             <span class="page-tag"><i class="fas fa-crown text-gold"></i> ESTABLISHED LEGACY • ALL OVER HYDERABAD</span>
             <h1 class="page-title">About <span class="gold-gradient-text"><%= businessName %></span></h1>
-            <p class="page-subtitle">Hyderabad's benchmark in building construction materials, supply chain reliability, and high-integrity real estate solutions all over Hyderabad.</p>
+            <p class="page-subtitle">Hyderabad's benchmark in building construction materials, supply chain reliability, verified real estate, and bespoke home interiors all over Hyderabad.</p>
         </div>
     </section>
 
@@ -69,7 +69,7 @@
                                 <li><i class="fas fa-check-circle text-gold"></i> 30-Year Comprehensive Title Search</li>
                                 <li><i class="fas fa-check-circle text-gold"></i> 100% HMDA / RERA / DTCP Approved Layouts</li>
                                 <li><i class="fas fa-check-circle text-gold"></i> Zero Litigation & Clean Link Deeds Guarantee</li>
-                                <li><i class="fas fa-check-circle text-gold"></i> End-to-End Registration & Revenue Support</li>
+                                <li><i class="fas fa-check-circle text-gold"></i> Turnkey Home Interiors & Execution</li>
                             </ul>
                         </div>
                     </div>
@@ -108,36 +108,59 @@
 
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-hand-holding-heart text-gold"></i></div>
-                    <h3>Lifelong Partnership</h3>
-                    <p>Our commitment doesn't end at registration. We assist clients with demarcation, boundary protection, mutation, and future resale management.</p>
+                    <h3>Turnkey Solutions</h3>
+                    <p>From initial land purchase and clear-title registration to complete modern interior design and handover, we manage every phase under one roof.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Leadership Section -->
-    <section class="section team-section">
+    <!-- Leadership Section (Dynamically Loaded from Database / CMS) -->
+    <section class="section team-section" id="leadership">
         <div class="container">
             <div class="section-header text-center">
                 <span class="section-badge">LEADERSHIP</span>
                 <h2 class="section-title">Meet Our <span class="gold-gradient-text">Executive Team</span></h2>
-                <p class="section-subtitle">Seasoned professionals with decades of cumulative real estate and revenue acumen.</p>
+                <p class="section-subtitle">Seasoned professionals with decades of cumulative real estate, revenue, and design acumen.</p>
             </div>
 
             <div class="team-grid">
-                <div class="team-card">
-                    <div class="team-avatar"><i class="fas fa-crown"></i></div>
-                    <h3>B. Bhuvan Raju</h3>
-                    <span class="team-role">Founder</span>
-                    <p>Visionary founder guiding SV Real Estates with over two decades of land acquisition, development excellence, and trusted property leadership across Hyderabad.</p>
-                </div>
-
-                <div class="team-card">
-                    <div class="team-avatar"><i class="fas fa-user-tie"></i></div>
-                    <h3>D. Manikanta</h3>
-                    <span class="team-role">Managing Director</span>
-                    <p>Leading executive operations, client advisory, luxury acquisitions, and project delivery with end-to-end transparency and verified compliance.</p>
-                </div>
+                <% if (typeof leadership !== 'undefined' && leadership && leadership.length > 0) { %>
+                    <% leadership.forEach(member => { %>
+                    <div class="team-card">
+                        <% if (member.photo_url) { %>
+                        <div class="team-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="<%= member.photo_url %>" alt="<%= member.name %>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\"fas fa-user-tie\"></i>';">
+                        </div>
+                        <% } else { %>
+                        <div class="team-avatar">
+                            <i class="fas <%= member.role_type === 'founder' || member.role_type === 'owner' ? 'fa-crown' : 'fa-user-tie' %>"></i>
+                        </div>
+                        <% } %>
+                        <h3><%= member.name %></h3>
+                        <span class="team-role"><%= member.designation %></span>
+                        <p><%= member.bio %></p>
+                        <% if (member.linkedin_url) { %>
+                        <a href="<%= member.linkedin_url %>" target="_blank" rel="noopener noreferrer" style="color: var(--gold); font-size: 0.85rem; margin-top: 10px; display: inline-block;">
+                            <i class="fab fa-linkedin"></i> Connect on LinkedIn
+                        </a>
+                        <% } %>
+                    </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="team-card">
+                        <div class="team-avatar"><i class="fas fa-crown"></i></div>
+                        <h3>B. Bhuvan Raju</h3>
+                        <span class="team-role">Founder</span>
+                        <p>Visionary founder guiding SV Real Estates with over two decades of land acquisition, development excellence, and trusted property leadership across Hyderabad.</p>
+                    </div>
+                    <div class="team-card">
+                        <div class="team-avatar"><i class="fas fa-user-tie"></i></div>
+                        <h3>D. Manikanta</h3>
+                        <span class="team-role">Managing Director</span>
+                        <p>Leading executive operations, client advisory, luxury acquisitions, and project delivery with end-to-end transparency and verified compliance.</p>
+                    </div>
+                <% } %>
             </div>
         </div>
     </section>
@@ -148,11 +171,11 @@
             <div class="cta-banner-card">
                 <div class="cta-text">
                     <h2>Experience the SV Real Estates Difference</h2>
-                    <p>Whether you seek a generational villa or an investment plot in Kokapet, our senior team is at your service.</p>
+                    <p>Whether you are acquiring a prime HMDA plot or designing your dream home interior, speak directly with our senior advisors.</p>
                 </div>
                 <div class="cta-buttons">
-                    <button type="button" class="btn btn-gold btn-large" onclick="openConsultationModal('Executive Callback')">
-                        <i class="fas fa-calendar-check"></i> Book Personal Consultation
+                    <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal()">
+                        <i class="fas fa-envelope"></i> Enquire Now
                     </button>
                     <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="btn btn-whatsapp btn-large">
                         <i class="fab fa-whatsapp"></i> Chat on WhatsApp
@@ -164,8 +187,9 @@
 
     <%- include('../partials/footer') %>
     <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
 
-    <!-- Scripts -->
     <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
 </body>
 </html>

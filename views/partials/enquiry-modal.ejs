@@ -11,8 +11,8 @@
         
         <div class="modal-header-custom">
             <span class="modal-tag" id="modalBadge">DIRECT ENQUIRY</span>
-            <h3 id="modalTitle">Enquire & Schedule Visit</h3>
-            <p id="modalSubtitle" class="text-muted">Connect directly with our senior property consultant in Hyderabad.</p>
+            <h3 id="modalTitle">Enquire & Connect With Advisor</h3>
+            <p id="modalSubtitle" class="text-muted">Connect directly with our senior property & interior consultants in Hyderabad.</p>
         </div>
 
         <!-- Property Preview (if opened from a specific property listing) -->
@@ -31,6 +31,7 @@
 
         <form id="publicEnquiryForm" action="javascript:void(0);" method="POST" onsubmit="event.preventDefault(); return handlePublicEnquirySubmit(event);">
             <input type="hidden" id="modalPropertyId" name="property_id" value="">
+            <input type="hidden" id="modalLeadCategory" name="lead_category" value="Property Buying">
 
             <div class="form-grid-modal">
                 <!-- 1. Full Name -->
@@ -41,38 +42,49 @@
 
                 <!-- 2. Phone Number -->
                 <div class="form-group-modal full-width">
-                    <label for="modalPhone"><i class="fas fa-phone-alt text-gold"></i> Phone Number *</label>
+                    <label for="modalPhone"><i class="fas fa-phone-alt text-gold"></i> Mobile Number *</label>
                     <input type="tel" id="modalPhone" name="phone_number" required placeholder="10-digit mobile number (e.g. 9876543210)" autocomplete="tel" pattern="[0-9+ -]{10,15}">
                 </div>
 
-                <!-- 3. Preferred Appointment Date & Time -->
+                <!-- 3. What Are You Looking For? -->
+                <div class="form-group-modal full-width">
+                    <label for="modalPropertyRequirement"><i class="fas fa-compass text-gold"></i> Interested Service / Category *</label>
+                    <select id="modalPropertyRequirement" name="property_requirement" required onchange="handleCategoryChange(this.value)">
+                        <option value="">Select Category *</option>
+                        <optgroup label="Real Estate">
+                            <option value="Residential Plot" selected>Residential Plot (HMDA/DTCP)</option>
+                            <option value="Villa">Luxury Villa</option>
+                            <option value="Apartment">Gated Flat / Apartment</option>
+                            <option value="Commercial Property">Commercial Property</option>
+                            <option value="Property Selling">Selling My Property</option>
+                        </optgroup>
+                        <optgroup label="Home Interiors">
+                            <option value="Home Interiors">Full Home Interiors (2BHK / 3BHK / Villa)</option>
+                            <option value="Modular Kitchen">Modular Kitchen Design</option>
+                            <option value="Renovation">Home Renovation & Remodeling</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                            <option value="Site Visit Request">Site Visit Walkthrough</option>
+                            <option value="General Enquiry">General Consultation</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Optional Visit Date & Time (Not Mandatory for General Enquiry) -->
                 <div class="form-group-modal">
-                    <label for="modalAppointmentDate"><i class="fas fa-calendar-day text-gold"></i> Preferred Appointment Date *</label>
-                    <input type="date" id="modalAppointmentDate" name="appointment_date" required>
+                    <label for="modalAppointmentDate"><i class="fas fa-calendar-day text-gold"></i> Preferred Date <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Optional)</span></label>
+                    <input type="date" id="modalAppointmentDate" name="appointment_date">
                 </div>
 
                 <div class="form-group-modal">
-                    <label for="modalAppointmentTime"><i class="fas fa-clock text-gold"></i> Appointment Time Slot *</label>
-                    <select id="modalAppointmentTime" name="appointment_time" required>
-                        <option value="">Select Time Slot *</option>
+                    <label for="modalAppointmentTime"><i class="fas fa-clock text-gold"></i> Preferred Time <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Optional)</span></label>
+                    <select id="modalAppointmentTime" name="appointment_time">
+                        <option value="">Flexible / Call First</option>
                         <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM (Morning)</option>
                         <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM (Afternoon)</option>
                         <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM (Post-Lunch)</option>
                         <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM (Evening)</option>
                         <option value="06:00 PM - 08:00 PM">06:00 PM - 08:00 PM (Late Evening)</option>
-                    </select>
-                </div>
-
-                <!-- 4. What Are You Looking For? -->
-                <div class="form-group-modal full-width">
-                    <label for="modalPropertyRequirement"><i class="fas fa-home text-gold"></i> What Are You Looking For? *</label>
-                    <select id="modalPropertyRequirement" name="property_requirement" required>
-                        <option value="">Select Property Type *</option>
-                        <option value="Residential Plot">Residential Plot</option>
-                        <option value="Villa">Villa</option>
-                        <option value="Apartment">Apartment</option>
-                        <option value="Commercial Property">Commercial Property</option>
-                        <option value="Other">Other</option>
                     </select>
                 </div>
             </div>
@@ -95,7 +107,7 @@
             </div>
             <span class="greeting-badge"><i class="fas fa-crown text-gold"></i> ENQUIRY CONFIRMED</span>
             <h2 class="greeting-title">Thank You, <span class="gold-gradient-text" id="greetingCustomerName">Valued Client</span>!</h2>
-            <p class="greeting-subtitle" id="successMessageText">Your details have been received by our senior property team. We look forward to connecting with you.</p>
+            <p class="greeting-subtitle" id="successMessageText">Your details have been received by our senior team. We look forward to connecting with you.</p>
 
             <div class="greeting-ref-card">
                 <div class="greeting-ref-header">

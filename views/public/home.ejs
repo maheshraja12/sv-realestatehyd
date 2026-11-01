@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <meta name="description" content="Discover premier luxury villas, gated community plots, and high-rise apartments in Hyderabad with SV Real Estates. Verified titles, transparent deals, and prime locations.">
+    <meta name="description" content="Discover premier luxury villas, gated community plots, high-rise apartments, and turnkey home interiors in Hyderabad with SV Real Estates. Verified titles, transparent deals, and prime locations.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,15 +26,19 @@
         <div class="container hero-content">
             <div class="hero-badge animate-fade-down">
                 <i class="fas fa-crown text-gold"></i>
-                <span>HYDERABAD'S PREMIER REAL ESTATE ADVISORY</span>
+                <span>HYDERABAD'S PREMIER REAL ESTATE & INTERIOR ADVISORY</span>
             </div>
             
             <h1 class="hero-title animate-fade-up">
-                Redefining <span class="gold-gradient-text">Luxury Living</span> & Strategic Land Investments
+                <% if (typeof heroTitle !== 'undefined' && heroTitle) { %>
+                    <%- heroTitle %>
+                <% } else { %>
+                    Redefining <span class="gold-gradient-text">Luxury Living</span>, Strategic Land & Bespoke Interiors
+                <% } %>
             </h1>
             
             <p class="hero-subtitle animate-fade-up">
-                Explore handpicked luxury villas, HMDA approved plots, and 2BHK, 3BHK, 4BHK homes all over Hyderabad • Starting at realistic rates from ₹70 Lakhs in every area.
+                <%= (typeof heroSubtitle !== 'undefined' && heroSubtitle) ? heroSubtitle : 'Explore handpicked luxury villas, HMDA approved plots, 2BHK/3BHK/4BHK gated apartments, and complete home interior solutions across Hyderabad.' %>
             </p>
 
             <!-- Hero Search Filter Bar -->
@@ -64,7 +68,7 @@
 
                     <div class="search-field">
                         <label><i class="fas fa-map-marker-alt text-gold"></i> Locality</label>
-                        <input type="text" name="locality" placeholder="All over Hyderabad (Kokapet, Tellapur, Bachupally...)">
+                        <input type="text" name="locality" placeholder="Kokapet, Tellapur, Financial District...">
                     </div>
 
                     <div class="search-field">
@@ -90,11 +94,12 @@
                 <!-- Popular Search Badges -->
                 <div class="hero-quick-tags">
                     <span>Popular Searches:</span>
-                    <a href="/properties?bedrooms=2&category=apartment">2 BHK Flats (from ₹70L)</a>
+                    <a href="/properties?bedrooms=2&category=apartment">2 BHK Flats</a>
                     <a href="/properties?bedrooms=3&locality=Tellapur">3 BHK in Tellapur</a>
                     <a href="/properties?category=villa">Luxury Villas</a>
                     <a href="/properties?category=residential_plot">HMDA Plots</a>
                     <a href="/properties?locality=Kokapet">Kokapet Neopolis</a>
+                    <a href="/interiors"><i class="fas fa-couch text-gold"></i> Home Interiors</a>
                 </div>
             </div>
 
@@ -117,7 +122,7 @@
                 <div class="stat-divider"></div>
                 <div class="hero-stat-item">
                     <span class="stat-big">3,200+</span>
-                    <span class="stat-desc">Satisfied Homeowners & Investors</span>
+                    <span class="stat-desc">Satisfied Homeowners & Clients</span>
                 </div>
             </div>
         </div>
@@ -150,29 +155,30 @@
 
                 <a href="/properties?category=apartment" class="category-card">
                     <div class="cat-icon"><i class="fas fa-building"></i></div>
-                    <h3>High-Rise Apartments</h3>
-                    <p>3BHK & 4BHK sky residences near Hitec City and Financial District with panoramic views.</p>
+                    <h3>Gated Apartments</h3>
+                    <p>2BHK, 3BHK & 4BHK high-rise sky residences near IT corridors & metro stations.</p>
                     <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
                 </a>
 
-                <a href="/properties?category=commercial" class="category-card">
-                    <div class="cat-icon"><i class="fas fa-city"></i></div>
-                    <h3>Commercial Properties</h3>
-                    <p>Prime retail spaces, corporate offices, and highway-facing development lands.</p>
-                    <span class="cat-link">View Listings <i class="fas fa-arrow-right"></i></span>
+                <a href="/interiors" class="category-card" style="border: 1px solid var(--gold); background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(18,20,26,0.95));">
+                    <div class="cat-badge" style="background: var(--gold); color: #0b0c10;">Turnkey</div>
+                    <div class="cat-icon"><i class="fas fa-couch text-gold"></i></div>
+                    <h3>Home Interiors</h3>
+                    <p>Modular kitchens, false ceiling, wardrobes, and complete luxury villa interior execution.</p>
+                    <span class="cat-link" style="color: var(--gold-light);">Explore Interiors <i class="fas fa-arrow-right"></i></span>
                 </a>
             </div>
         </div>
     </section>
 
-    <!-- Featured Properties Section -->
-    <section class="section featured-section">
+    <!-- Featured Properties Section (Optimized 4:3 Aspect Ratio Cards) -->
+    <section class="section featured-properties-section" id="featuredProperties">
         <div class="container">
             <div class="section-header-flex">
                 <div>
-                    <span class="section-badge">HANDPICKED SELECTIONS</span>
+                    <span class="section-badge">HANDPICKED SELECTION</span>
                     <h2 class="section-title">Featured <span class="gold-gradient-text">Properties</span></h2>
-                    <p class="section-subtitle">Exclusive verified homes and parcels currently available for acquisition.</p>
+                    <p class="section-subtitle">Premium verified properties across prime Hyderabad growth corridors.</p>
                 </div>
                 <a href="/properties" class="btn btn-outline-gold">View All Properties <i class="fas fa-arrow-right"></i></a>
             </div>
@@ -188,9 +194,9 @@
                 <% } else { %>
                 <% featuredProperties.forEach(prop => { %>
                 <div class="property-card" data-category="<%= prop.category %>">
-                    <div class="prop-card-media">
+                    <div class="prop-card-media" style="aspect-ratio: 4/3; width: 100%; height: auto; min-height: 250px;">
                         <% if (prop.cover_image) { %>
-                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                        <img src="<%= prop.cover_image %>" alt="<%= prop.title %> — <%= (prop.category || '').replace(/_/g, ' ') %> in <%= prop.locality || 'Hyderabad' %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                         <% } else { %>
                         <div class="prop-img-placeholder">
                             <i class="fas fa-building"></i>
@@ -199,7 +205,7 @@
                         <% } %>
                         <div class="prop-badge-top">
                             <span class="badge-featured"><i class="fas fa-star"></i> Featured</span>
-                            <span class="badge-category"><%= prop.category.replace(/_/g, ' ') %></span>
+                            <span class="badge-category"><%= (prop.category || '').replace(/_/g, ' ') %></span>
                         </div>
                         <div class="prop-price-tag">
                             <% if (prop.price) { %>
@@ -260,6 +266,68 @@
         </div>
     </section>
 
+    <!-- Home Interiors Showcase Section -->
+    <section class="section" style="background: var(--bg-dark);" id="homeInteriorsShowcase">
+        <div class="container">
+            <div class="section-header-flex">
+                <div>
+                    <span class="section-badge"><i class="fas fa-couch text-gold"></i> SV HOME INTERIORS</span>
+                    <h2 class="section-title">Bespoke <span class="gold-gradient-text">Home Interiors</span></h2>
+                    <p class="section-subtitle">German joinery hardware, 45-day guaranteed handover & 10-year warranty for your flat or villa.</p>
+                </div>
+                <a href="/interiors" class="btn btn-gold">Explore All Interiors <i class="fas fa-arrow-right"></i></a>
+            </div>
+
+            <div class="properties-grid">
+                <% if (typeof interiorProjects !== 'undefined' && interiorProjects && interiorProjects.length > 0) { %>
+                    <% interiorProjects.slice(0, 3).forEach(proj => { %>
+                    <div class="property-card">
+                        <div class="prop-card-media" style="aspect-ratio: 4/3; width: 100%; height: auto; min-height: 250px;">
+                            <img src="<%= proj.cover_image || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80' %>" alt="<%= proj.title %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
+                            <div class="prop-badge-top">
+                                <span class="badge-featured"><i class="fas fa-check-circle"></i> Completed</span>
+                                <span class="badge-category"><%= proj.bhk_config || proj.property_type %></span>
+                            </div>
+                            <% if (proj.budget_range) { %>
+                            <div class="prop-price-tag"><%= proj.budget_range %></div>
+                            <% } %>
+                        </div>
+                        <div class="prop-card-body">
+                            <div class="prop-location">
+                                <i class="fas fa-map-marker-alt text-gold"></i>
+                                <span><%= proj.locality %>, <%= proj.city || 'Hyderabad' %></span>
+                            </div>
+                            <h3 class="prop-title">
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>"><%= proj.title %></a>
+                            </h3>
+                            <p class="prop-desc"><%= proj.short_description %></p>
+                            <div class="prop-card-footer" style="margin-top: 14px;">
+                                <button type="button" class="btn btn-card-enquire" onclick="openEnquiryModal('Home Interiors', '<%= (proj.title || '').replace(/'/g, '\\\'') %>')">
+                                    <i class="fas fa-calendar-check"></i> Free 3D Plan
+                                </button>
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>" class="btn btn-card-details">
+                                    View Project <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="property-card">
+                        <div class="prop-card-media" style="aspect-ratio: 4/3; width: 100%; height: auto;">
+                            <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80" alt="Kokapet Villa Interior" class="prop-img" loading="lazy">
+                        </div>
+                        <div class="prop-card-body">
+                            <div class="prop-location"><i class="fas fa-map-marker-alt text-gold"></i> Kokapet, Hyderabad</div>
+                            <h3 class="prop-title"><a href="/interiors">4BHK Luxury Villa Interior</a></h3>
+                            <p class="prop-desc">Contemporary Italian marble finishes and custom modular joinery.</p>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </section>
+
     <!-- Why Choose SV Real Estates Section -->
     <section class="section why-us-section">
         <div class="container">
@@ -291,7 +359,7 @@
                 <div class="feature-card">
                     <div class="feature-icon"><i class="fas fa-chart-line text-gold"></i></div>
                     <h3>High Capital Appreciation Zones</h3>
-                    <p>We specialize in Hyderabad's growth corridors all over Hyderabad: Neopolis Kokapet, Tellapur, Shankarpally, Mokila, Kompally, and beyond.</p>
+                    <p>We specialize in Hyderabad's growth corridors: Neopolis Kokapet, Tellapur, Shankarpally, Mokila, Kompally, and Bachupally.</p>
                 </div>
             </div>
         </div>
@@ -304,15 +372,15 @@
                 <div>
                     <span class="section-badge">SERVING ALL OVER HYDERABAD</span>
                     <h2 class="section-title">Prime Locations <span class="gold-gradient-text">All Over Hyderabad</span></h2>
-                    <p class="section-subtitle">Verified properties and strategic land investments across West, North, South, East, and Central corridors all over Hyderabad.</p>
+                    <p class="section-subtitle">Verified properties and strategic land investments across West, North, South, East, and Central corridors.</p>
                 </div>
-                <a href="/locations" class="btn btn-outline-gold">Locations All Over Hyderabad <i class="fas fa-map-marked-alt"></i></a>
+                <a href="/locations" class="btn btn-outline-gold">Explore All Localities <i class="fas fa-map-marked-alt"></i></a>
             </div>
 
             <div class="location-cards-grid">
                 <a href="/properties?locality=Jubilee+Hills" class="loc-card">
                     <div class="loc-content">
-                        <h3>Jubilee Hills</h3>
+                        <h3>Jubilee Hills & Banjara</h3>
                         <span>Ultra-Luxury Villas • High-Net-Worth Residential</span>
                     </div>
                 </a>
@@ -325,7 +393,7 @@
                 <a href="/properties?locality=Gachibowli" class="loc-card">
                     <div class="loc-content">
                         <h3>Gachibowli & Financial Dist</h3>
-                        <span>IT Hub Hub • Gated High-Rise Communities</span>
+                        <span>IT Hub • Gated High-Rise Communities</span>
                     </div>
                 </a>
                 <a href="/properties?locality=Tellapur" class="loc-card">
@@ -338,13 +406,51 @@
         </div>
     </section>
 
+    <!-- Leadership & Governance Section -->
+    <% if (typeof leadershipProfiles !== 'undefined' && leadershipProfiles && leadershipProfiles.some(l => l.show_on_home)) { %>
+    <section class="section leadership-preview-section" style="background: rgba(255,255,255,0.015); border-top: 1px solid var(--border-dark); border-bottom: 1px solid var(--border-dark);">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">LEADERSHIP & GOVERNANCE</span>
+                <h2 class="section-title">Guided by <span class="gold-gradient-text">Experienced Leadership</span></h2>
+                <p class="section-subtitle">Over two decades of verified land acquisition, legal due diligence, and architectural excellence in Hyderabad.</p>
+            </div>
+
+            <div class="team-grid" style="max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+                <% leadershipProfiles.filter(l => l.show_on_home).forEach(member => { %>
+                <div class="team-card" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 28px; text-align: center;">
+                    <% if (member.photo_url) { %>
+                    <div class="team-avatar" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; border: 2px solid var(--gold);">
+                        <img src="<%= member.photo_url %>" alt="<%= member.name %>" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <% } else { %>
+                    <div class="team-avatar" style="width: 70px; height: 70px; border-radius: 50%; background: rgba(212,175,55,0.12); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 16px;">
+                        <i class="fas <%= member.role_type === 'founder' || member.role_type === 'owner' ? 'fa-crown' : 'fa-user-tie' %>"></i>
+                    </div>
+                    <% } %>
+                    <h3 style="font-size: 1.2rem; color: #fff; margin-bottom: 4px;"><%= member.name %></h3>
+                    <span class="team-designation" style="color: var(--gold); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 12px;"><%= member.designation %></span>
+                    <p class="team-bio" style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;"><%= member.bio %></p>
+                </div>
+                <% }) %>
+            </div>
+            
+            <div style="text-align: center; margin-top: 28px;">
+                <a href="/about#leadership" class="btn btn-outline-gold" style="font-size: 0.85rem; padding: 8px 18px;">
+                    Read Complete Executive Heritage <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+    <% } %>
+
     <!-- CTA Section -->
     <section class="cta-banner-section">
         <div class="container">
             <div class="cta-banner-card">
                 <div class="cta-text">
-                    <h2>Looking to Buy, Sell, or Invest in Hyderabad?</h2>
-                    <p>Speak directly with our principal real estate advisor for tailored options, private walkthroughs, and bespoke investment portfolios.</p>
+                    <h2>Looking to Buy, Sell, or Design in Hyderabad?</h2>
+                    <p>Speak directly with our principal advisors for tailored options, private walkthroughs, and turnkey interior design packages.</p>
                 </div>
                 <div class="cta-buttons">
                     <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal()">
@@ -360,8 +466,10 @@
 
     <%- include('../partials/footer') %>
     <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
 
     <!-- Scripts -->
     <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
 </body>
 </html>

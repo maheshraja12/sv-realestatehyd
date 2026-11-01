@@ -81,7 +81,7 @@
                         <tr>
                             <td>
                                 <% if (prop.cover_image) { %>
-                                <img src="<%= prop.cover_image %>" alt="" class="table-thumb">
+                                <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="table-thumb" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                                 <% } else { %>
                                 <div class="table-thumb-placeholder"><i class="fas fa-image"></i></div>
                                 <% } %>

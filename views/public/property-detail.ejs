@@ -82,14 +82,14 @@
                     <div class="prop-gallery-card">
                         <% if (images && images.length > 0) { %>
                         <div class="main-image-viewport">
-                            <img id="mainGalleryImage" src="<%= images[0].image_url %>" alt="<%= property.title %>" class="main-img">
+                            <img id="mainGalleryImage" src="<%= images[0].image_url %>" alt="<%= property.title %> — Authentic <%= (property.category || '').replace(/_/g, ' ') %> photo in <%= property.locality || 'Hyderabad' %>" class="main-img" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                             <span class="gallery-counter" id="galleryCounter">1 / <%= images.length %> Photos</span>
                         </div>
                         <% if (images.length > 1) { %>
                         <div class="thumbnails-track">
                             <% images.forEach((img, idx) => { %>
                             <div class="thumb-item <%= idx === 0 ? 'active' : '' %>" onclick="selectGalleryImage('<%= img.image_url %>', <%= idx + 1 %>)">
-                                <img src="<%= img.image_url %>" alt="Thumbnail <%= idx + 1 %>">
+                                <img src="<%= img.image_url %>" alt="<%= property.title %> — Photo <%= idx + 1 %>" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                             </div>
                             <% }) %>
                         </div>
@@ -303,7 +303,7 @@
                     <div class="property-card">
                         <div class="prop-card-media">
                             <% if (prop.cover_image) { %>
-                            <img src="<%= prop.cover_image %>" alt="<%= prop.title %>" class="prop-img" loading="lazy">
+                            <img src="<%= prop.cover_image %>" alt="<%= prop.title %> — <%= (prop.category || '').replace(/_/g, ' ') %> in <%= prop.locality || 'Hyderabad' %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
                             <% } else { %>
                             <div class="prop-img-placeholder"><i class="fas fa-building"></i></div>
                             <% } %>

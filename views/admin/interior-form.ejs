@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <a href="/admin/interiors" class="btn btn-secondary" style="margin-right: 12px;"><i class="fas fa-arrow-left"></i> Back</a>
+                <h2><%= project ? 'Edit Interior Project: ' + project.title : 'Create New Interior Project' %></h2>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <div class="card" style="max-width: 900px; margin: 0 auto;">
+                <form method="POST" action="<%= project ? '/admin/interiors/' + project.id : '/admin/interiors' %>" class="property-form">
+                    <div class="form-row cols-2">
+                        <div class="form-group">
+                            <label for="title">Project Title *</label>
+                            <input type="text" id="title" name="title" value="<%= project ? project.title : '' %>" required placeholder="e.g. Neopolis Sky Villa Contemporary 4BHK">
+                        </div>
+                        <div class="form-group">
+                            <label for="locality">Hyderabad Locality *</label>
+                            <input type="text" id="locality" name="locality" value="<%= project ? project.locality : '' %>" required placeholder="e.g. Kokapet, Tellapur, Financial District">
+                        </div>
+                    </div>
+
+                    <div class="form-row cols-3">
+                        <div class="form-group">
+                            <label for="property_type">Property Type *</label>
+                            <select id="property_type" name="property_type" required>
+                                <option value="Apartment" <%= project && project.property_type === 'Apartment' ? 'selected' : '' %>>Apartment / Flat</option>
+                                <option value="Villa" <%= project && project.property_type === 'Villa' ? 'selected' : '' %>>Luxury Villa</option>
+                                <option value="Commercial" <%= project && project.property_type === 'Commercial' ? 'selected' : '' %>>Commercial / Office</option>
+                                <option value="Independent House" <%= project && project.property_type === 'Independent House' ? 'selected' : '' %>>Independent House</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bhk_config">BHK Configuration</label>
+                            <select id="bhk_config" name="bhk_config">
+                                <option value="2BHK" <%= project && project.bhk_config === '2BHK' ? 'selected' : '' %>>2BHK</option>
+                                <option value="3BHK" <%= project && project.bhk_config === '3BHK' ? 'selected' : '' %>>3BHK</option>
+                                <option value="4BHK" <%= project && project.bhk_config === '4BHK' ? 'selected' : '' %>>4BHK</option>
+                                <option value="Villa" <%= project && project.bhk_config === 'Villa' ? 'selected' : '' %>>Villa</option>
+                                <option value="Commercial" <%= project && project.bhk_config === 'Commercial' ? 'selected' : '' %>>Commercial</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="design_style">Design Style</label>
+                            <input type="text" id="design_style" name="design_style" value="<%= project ? project.design_style : 'Contemporary Modern' %>" placeholder="e.g. Modern Minimalist, Neo-Traditional">
+                        </div>
+                    </div>
+
+                    <div class="form-row cols-2">
+                        <div class="form-group">
+                            <label for="budget_range">Budget Range (Optional for Public)</label>
+                            <input type="text" id="budget_range" name="budget_range" value="<%= project ? project.budget_range : '' %>" placeholder="e.g. ₹12 - ₹18 Lakhs">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cover_image">Primary Cover Image URL</label>
+                            <input type="url" id="cover_image" name="cover_image" value="<%= project ? project.cover_image : '' %>" placeholder="https://images.unsplash.com/...">
+                        </div>
+                    </div>
+
+                    <div class="form-row cols-2">
+                        <div class="form-group">
+                            <label for="before_image"><i class="fas fa-hammer text-gold"></i> Before Transformation Image URL (Raw Site / Bare Shell)</label>
+                            <input type="url" id="before_image" name="before_image" value="<%= project && project.before_image ? project.before_image : '' %>" placeholder="https://images.unsplash.com/photo-bare-shell...">
+                        </div>
+                        <div class="form-group">
+                            <label for="after_image"><i class="fas fa-magic text-gold"></i> After Transformation Image URL (Finished Handover)</label>
+                            <input type="url" id="after_image" name="after_image" value="<%= project && project.after_image ? project.after_image : '' %>" placeholder="https://images.unsplash.com/photo-finished-interior...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="short_description">Short Summary *</label>
+                        <textarea id="short_description" name="short_description" rows="2" required placeholder="Concise overview shown on project card..."><%= project ? project.short_description : '' %></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Full Architectural Description</label>
+                        <textarea id="description" name="description" rows="5" placeholder="Detailed description of joinery, materials used, false ceiling details, pooja room, and kitchen specs..."><%= project ? project.description : '' %></textarea>
+                    </div>
+
+                    <div class="form-row cols-2" style="margin-bottom: 24px;">
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" name="is_featured" value="1" <%= project && project.is_featured ? 'checked' : '' %>>
+                            Feature on Homepage & Showcase
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" name="is_published" value="1" <%= !project || project.is_published ? 'checked' : '' %>>
+                            Publish Immediately (Visible to Public)
+                        </label>
+                    </div>
+
+                    <div class="form-actions" style="display:flex; justify-content:flex-end; gap:12px;">
+                        <a href="/admin/interiors" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                            <i class="fas fa-save"></i> <%= project ? 'Update Interior Project' : 'Save & Publish Project' %>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+
