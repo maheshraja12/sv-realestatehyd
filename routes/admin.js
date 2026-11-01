@@ -598,7 +598,13 @@ router.post('/settings/permissions', requireSuperAdmin, async (req, res) => {
             ['admin_perm_dashboard', req.body.perm_dashboard ? '1' : '0'],
             ['admin_perm_properties', req.body.perm_properties ? '1' : '0'],
             ['admin_perm_leads', '1'], // Customer leads always accessible
-            ['admin_perm_appointments', req.body.perm_appointments ? '1' : '0']
+            ['admin_perm_appointments', req.body.perm_appointments ? '1' : '0'],
+            ['admin_perm_crm', req.body.perm_crm ? '1' : '0'],
+            ['admin_perm_pipeline', req.body.perm_pipeline ? '1' : '0'],
+            ['admin_perm_customers', req.body.perm_customers ? '1' : '0'],
+            ['admin_perm_followups', req.body.perm_followups ? '1' : '0'],
+            ['admin_perm_reports', req.body.perm_reports ? '1' : '0'],
+            ['admin_perm_interiors', req.body.perm_interiors ? '1' : '0']
         ];
 
         const upsert = db.prepare(`

@@ -211,34 +211,50 @@ router.post('/public', async (req, res) => {
             console.log(`✅ [MYSQL] Successfully stored enquiry #${mysqlRecord ? mysqlRecord.id : 'OK'} for ${customerName}`);
         }
 
-        const result = db.prepare(`
+        let result = null;
+        let finalLeadCode = leadCode;
+        let attempts = 0;
+        const insertStmt = db.prepare(`
             INSERT INTO leads (
                 lead_code, customer_name, full_name, phone, phone_number, email, property_id,
                 property_category, property_requirement, lead_category, service_type, budget, preferred_location,
                 message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
                 consent, source, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'new')
-        `).run(
-            leadCode,
-            customerName,
-            customerName,
-            cleanPhone,
-            cleanPhone,
-            data.email || null,
-            data.property_id ? parseInt(data.property_id) : null,
-            propertyReq,
-            propertyReq,
-            leadCategory,
-            serviceType,
-            data.budget || 'Consult / Market Price',
-            data.preferred_location || 'Hyderabad',
-            data.message || `Requirement: ${propertyReq}`,
-            contactPref,
-            appointmentDate,
-            appointmentDate,
-            appointmentTime,
-            source
-        );
+        `);
+
+        while (!result && attempts < 5) {
+            attempts++;
+            try {
+                result = insertStmt.run(
+                    finalLeadCode,
+                    customerName,
+                    customerName,
+                    cleanPhone,
+                    cleanPhone,
+                    data.email || null,
+                    data.property_id ? parseInt(data.property_id) : null,
+                    propertyReq,
+                    propertyReq,
+                    leadCategory,
+                    serviceType,
+                    data.budget || 'Consult / Market Price',
+                    data.preferred_location || 'Hyderabad',
+                    data.message || `Requirement: ${propertyReq}`,
+                    contactPref,
+                    appointmentDate,
+                    appointmentDate,
+                    appointmentTime,
+                    source
+                );
+            } catch (insertErr) {
+                if (insertErr.message && insertErr.message.includes('leads.lead_code') && attempts < 5) {
+                    finalLeadCode = generateLeadCode();
+                    continue;
+                }
+                throw insertErr;
+            }
+        }
 
         // Record initial status in history
         db.prepare(`
@@ -284,14 +300,14 @@ router.post('/public', async (req, res) => {
         const visitText = appointmentDate ? ` · Visit: ${appointmentDate} (${appointmentTime})` : '';
         notifyAllAdmins(db, 'lead',
             `New Enquiry: ${customerName}`,
-            `${customerName} (${cleanPhone}) · Looking for: ${propertyReq}${visitText}${propertyInfo ? ` · Prop: ${propertyInfo.title}` : ''}. Ref: ${leadCode}`,
+            `${customerName} (${cleanPhone}) · Looking for: ${propertyReq}${visitText}${propertyInfo ? ` · Prop: ${propertyInfo.title}` : ''}. Ref: ${finalLeadCode}`,
             `/admin/leads/${result.lastInsertRowid}`
         );
         
         res.status(201).json({
             message: `Thank you for contacting SV Real Estates Hyderabad. Your enquiry has been received.`,
-            lead_code: leadCode,
-            reference: leadCode
+            lead_code: finalLeadCode,
+            reference: finalLeadCode
         });
     } catch (err) {
         console.error('Create lead error:', err);

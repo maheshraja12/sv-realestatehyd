@@ -8,12 +8,12 @@ const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { getDb } = require('../../database/db');
-const { 
-    requireAuth, 
-    requireSuperAdmin, 
-    auditLog, 
-    logLeadActivity, 
-    getLeadFilterForUser 
+const {
+    requireAuth,
+    requireSuperAdmin,
+    auditLog,
+    logLeadActivity,
+    getLeadFilterForUser
 } = require('../../middleware/auth');
 
 // All CRM endpoints require authentication
@@ -219,13 +219,13 @@ router.patch('/pipeline/move', (req, res) => {
 
         // Audit log
         auditLog(
-            db, 
-            req.session.userId, 
-            req.session.userName, 
-            'pipeline_stage_change', 
-            'lead', 
-            lead_id, 
-            `${oldStatus} → ${validStage}`, 
+            db,
+            req.session.userId,
+            req.session.userName,
+            'pipeline_stage_change',
+            'lead',
+            lead_id,
+            `${oldStatus} → ${validStage}`,
             req.ip
         );
 
@@ -632,13 +632,13 @@ router.post('/customers/merge', requireSuperAdmin, (req, res) => {
         `).run(primary.id, ` [Merged into ${primary.customer_code}: ${reason || 'Duplicate'}]`, duplicate.id);
 
         auditLog(
-            db, 
-            req.session.userId, 
-            req.session.userName, 
-            'merge_customer', 
-            'customer_profiles', 
-            primary.id, 
-            `Merged ${duplicate.customer_code} into ${primary.customer_code}. Reason: ${reason || 'Duplicate merge'}`, 
+            db,
+            req.session.userId,
+            req.session.userName,
+            'merge_customer',
+            'customer_profiles',
+            primary.id,
+            `Merged ${duplicate.customer_code} into ${primary.customer_code}. Reason: ${reason || 'Duplicate merge'}`,
             req.ip
         );
 

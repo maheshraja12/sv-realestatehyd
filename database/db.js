@@ -642,6 +642,57 @@ function initializeDb() {
             console.warn('⚠️ Users table migration notice:', migErr.message);
         }
 
+        // Migrate appointments table status check constraint if needed to permit 'no_show'
+        try {
+            const aptTableInfo = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'appointments'").get();
+            if (aptTableInfo && aptTableInfo.sql && !aptTableInfo.sql.includes("'no_show'")) {
+                database.exec(`
+                    PRAGMA foreign_keys = OFF;
+                    CREATE TABLE appointments_migrated (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        appointment_code TEXT NOT NULL UNIQUE,
+                        lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+                        customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+                        property_id INTEGER REFERENCES properties(id) ON DELETE SET NULL,
+                        customer_name TEXT NOT NULL,
+                        phone TEXT NOT NULL,
+                        notes TEXT,
+                        requested_date TEXT NOT NULL,
+                        requested_time TEXT,
+                        confirmed_date TEXT,
+                        confirmed_time TEXT,
+                        status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
+                            'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'no_show'
+                        )),
+                        assigned_agent_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        result_notes TEXT,
+                        feedback_rating INTEGER,
+                        feedback_notes TEXT,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+                    INSERT OR IGNORE INTO appointments_migrated (
+                        id, appointment_code, lead_id, customer_id, property_id, customer_name, phone,
+                        notes, requested_date, requested_time, confirmed_date, confirmed_time, status,
+                        assigned_agent_id, result_notes, feedback_rating, feedback_notes, created_at, updated_at
+                    ) SELECT 
+                        id, appointment_code, lead_id, customer_id, property_id, customer_name, phone,
+                        notes, requested_date, requested_time, confirmed_date, confirmed_time, status,
+                        assigned_agent_id, result_notes, feedback_rating, feedback_notes, created_at, updated_at
+                    FROM appointments;
+                    DROP TABLE appointments;
+                    ALTER TABLE appointments_migrated RENAME TO appointments;
+                    CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+                    CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(requested_date);
+                    CREATE INDEX IF NOT EXISTS idx_appointments_property ON appointments(property_id);
+                    PRAGMA foreign_keys = ON;
+                `);
+                console.log('✅ [MIGRATION] appointments table upgraded with no_show status constraint');
+            }
+        } catch (migErr) {
+            console.warn('⚠️ Appointments table migration notice:', migErr.message);
+        }
+
         // Seed or verify Super Admin, Normal Admin, and default permissions
         try {
             const bcrypt = require('bcryptjs');

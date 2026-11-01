@@ -151,3 +151,4 @@ DO $$ BEGIN
         CREATE POLICY service_role_all_crm_teams ON public.crm_teams FOR ALL TO service_role USING (true) WITH CHECK (true);
     END IF;
 END $$;
+

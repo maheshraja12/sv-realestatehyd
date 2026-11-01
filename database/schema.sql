@@ -200,10 +200,13 @@ CREATE TABLE IF NOT EXISTS appointments (
     confirmed_date TEXT,
     confirmed_time TEXT,
     status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
-        'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled'
+        'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'no_show'
     )),
     assigned_agent_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     result_notes TEXT,
+    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+    feedback_rating INTEGER,
+    feedback_notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

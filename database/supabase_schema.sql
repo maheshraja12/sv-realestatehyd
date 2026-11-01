@@ -281,6 +281,110 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
+-- ==============================================================
+-- CRM MODULE TABLES (Pipeline, Customers, Follow-ups, Activities)
+-- ==============================================================
+
+-- Customer Profiles (360 Degree Customer Profiles)
+CREATE TABLE IF NOT EXISTS public.customer_profiles (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_code VARCHAR(100) NOT NULL UNIQUE,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE SET NULL,
+    full_name VARCHAR(200) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    alt_phone VARCHAR(50),
+    email VARCHAR(200),
+    address TEXT,
+    city VARCHAR(100) DEFAULT 'Hyderabad',
+    preferred_locations TEXT,
+    budget_range VARCHAR(100),
+    property_interests TEXT,
+    deal_status VARCHAR(50) NOT NULL DEFAULT 'active',
+    assigned_to BIGINT,
+    notes TEXT,
+    merged_into_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customer_profiles(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_assigned ON public.customer_profiles(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_customers_status ON public.customer_profiles(deal_status);
+
+-- Follow-Up Tasks & Reminders
+CREATE TABLE IF NOT EXISTS public.follow_up_tasks (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_code VARCHAR(100) NOT NULL UNIQUE,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE CASCADE,
+    customer_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE CASCADE,
+    assigned_to BIGINT,
+    title VARCHAR(250) NOT NULL,
+    description TEXT,
+    scheduled_at TIMESTAMPTZ NOT NULL,
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium',
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    result_notes TEXT,
+    completed_at TIMESTAMPTZ,
+    created_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_followups_scheduled ON public.follow_up_tasks(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_followups_status ON public.follow_up_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_followups_assigned ON public.follow_up_tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_followups_lead ON public.follow_up_tasks(lead_id);
+
+-- Lead & Customer Activity Timeline
+CREATE TABLE IF NOT EXISTS public.lead_activities (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE CASCADE,
+    customer_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE CASCADE,
+    user_id BIGINT,
+    user_name VARCHAR(200),
+    activity_type VARCHAR(50) NOT NULL,
+    title VARCHAR(250) NOT NULL,
+    notes TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activities_lead ON public.lead_activities(lead_id);
+CREATE INDEX IF NOT EXISTS idx_activities_customer ON public.lead_activities(customer_id);
+CREATE INDEX IF NOT EXISTS idx_activities_type ON public.lead_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_activities_created ON public.lead_activities(created_at);
+
+-- CRM Teams & Members
+CREATE TABLE IF NOT EXISTS public.crm_teams (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL UNIQUE,
+    description TEXT,
+    team_lead_id BIGINT,
+    is_active INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.crm_team_members (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    team_id BIGINT NOT NULL REFERENCES public.crm_teams(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL,
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(team_id, user_id)
+);
+
+-- CRM Lead Assignment Rules
+CREATE TABLE IF NOT EXISTS public.crm_lead_rules (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    rule_type VARCHAR(50) NOT NULL,
+    config JSONB,
+    is_active INT DEFAULT 1,
+    priority_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Row Level Security (RLS) Configuration
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
@@ -360,3 +464,30 @@ DROP POLICY IF EXISTS "Public can read website sections" ON public.website_secti
 CREATE POLICY "Public can read website sections" ON public.website_sections FOR SELECT TO anon, authenticated USING (is_active = 1);
 DROP POLICY IF EXISTS "Staff full access website sections" ON public.website_sections;
 CREATE POLICY "Staff full access website sections" ON public.website_sections FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+
+-- CRM Row Level Security
+ALTER TABLE public.customer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.follow_up_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lead_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_lead_rules ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Staff full access customer_profiles" ON public.customer_profiles;
+CREATE POLICY "Staff full access customer_profiles" ON public.customer_profiles FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access follow_up_tasks" ON public.follow_up_tasks;
+CREATE POLICY "Staff full access follow_up_tasks" ON public.follow_up_tasks FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access lead_activities" ON public.lead_activities;
+CREATE POLICY "Staff full access lead_activities" ON public.lead_activities FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_teams" ON public.crm_teams;
+CREATE POLICY "Staff full access crm_teams" ON public.crm_teams FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_team_members" ON public.crm_team_members;
+CREATE POLICY "Staff full access crm_team_members" ON public.crm_team_members FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_lead_rules" ON public.crm_lead_rules;
+CREATE POLICY "Staff full access crm_lead_rules" ON public.crm_lead_rules FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);

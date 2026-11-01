@@ -508,3 +508,90 @@ describe('8. Admin CRM Web Views', () => {
         assert.ok(text.includes('CRM & System Audit Logs'));
     });
 });
+
+describe('10. Site Visits (Appointments) CRM Synchronization & Admin Settings Permissions', () => {
+    let siteVisitAptId = null;
+
+    test('Public site visit booking creates appointment with SV-VISIT code', async () => {
+        const visitPhone = '97' + Math.floor(10000000 + Math.random() * 90000000);
+        const res = await fetch(`${baseUrl}/api/appointments/public`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name: 'CRM Site Visit Visitor',
+                phone: visitPhone,
+                requested_date: '2026-11-15',
+                requested_time: '11:00 AM - 01:00 PM',
+                notes: 'Interested in Kokapet 3BHK'
+            })
+        });
+        assert.strictEqual(res.status, 201);
+        const data = await res.json();
+        assert.ok(data.appointment_code.startsWith('SV-VISIT-'));
+
+        // Retrieve appointment id from DB
+        const { getDb } = require('../database/db');
+        const db = getDb();
+        const apt = db.prepare('SELECT id FROM appointments WHERE appointment_code = ?').get(data.appointment_code);
+        assert.ok(apt && apt.id);
+        siteVisitAptId = apt.id;
+    });
+
+    test('PATCH /api/appointments/:id supports "no_show" status', async () => {
+        assert.ok(siteVisitAptId);
+        const res = await fetch(`${baseUrl}/api/appointments/${siteVisitAptId}`, {
+            method: 'PATCH',
+            headers: {
+                'Cookie': superAdminCookie,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'no_show',
+                result_notes: 'Client was not reachable at the site gate.'
+            })
+        });
+        assert.strictEqual(res.status, 200);
+
+        const { getDb } = require('../database/db');
+        const db = getDb();
+        const updated = db.prepare('SELECT status, result_notes FROM appointments WHERE id = ?').get(siteVisitAptId);
+        assert.strictEqual(updated.status, 'no_show');
+        assert.strictEqual(updated.result_notes, 'Client was not reachable at the site gate.');
+    });
+
+    test('POST /admin/settings/permissions updates Normal Admin CRM and module permissions', async () => {
+        const res = await fetch(`${baseUrl}/admin/settings/permissions`, {
+            method: 'POST',
+            headers: {
+                'Cookie': superAdminCookie,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'perm_dashboard=1&perm_properties=1&perm_appointments=1&perm_crm=1&perm_pipeline=1&perm_customers=1&perm_followups=1&perm_reports=1&perm_interiors=1',
+            redirect: 'manual'
+        });
+        // Redirects to /admin/settings
+        assert.ok([302, 303].includes(res.status));
+
+        const { getDb } = require('../database/db');
+        const { getAdminPermissions } = require('../middleware/auth');
+        const db = getDb();
+        const perms = getAdminPermissions(db);
+        assert.strictEqual(perms.crm, true);
+        assert.strictEqual(perms.pipeline, true);
+        assert.strictEqual(perms.customers, true);
+        assert.strictEqual(perms.followups, true);
+        assert.strictEqual(perms.reports, true);
+        assert.strictEqual(perms.interiors, true);
+
+        // Clean up & restore default permissions so other test suites remain isolated
+        await fetch(`${baseUrl}/admin/settings/permissions`, {
+            method: 'POST',
+            headers: {
+                'Cookie': superAdminCookie,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'perm_dashboard=0&perm_properties=0&perm_appointments=0&perm_crm=1&perm_pipeline=1&perm_customers=1&perm_followups=1&perm_reports=1&perm_interiors=0',
+            redirect: 'manual'
+        });
+    });
+});

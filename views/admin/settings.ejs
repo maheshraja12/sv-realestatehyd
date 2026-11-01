@@ -92,6 +92,54 @@
                                         <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to view and update customer site visit bookings.</p>
                                     </div>
                                 </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_crm" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.crm) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">CRM Overview Dashboard</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to view high-level CRM pipeline metrics and activity feeds.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_pipeline" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.pipeline) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Interactive Sales Pipeline (Kanban)</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to access the drag-and-drop 12-stage sales pipeline board.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_customers" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.customers) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Customer Directory & 360 Profiles</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to manage verified customer profiles and merge duplicate contacts.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_followups" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.followups) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Follow-up Manager & Reminders</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to manage daily follow-up calls, tasks, and overdue reminders.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_reports" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.reports) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">CRM Reports & Analytics Charts</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to view funnel conversion analysis and source ROI graphs.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="perm_interiors" value="1" <%= (typeof adminPermissions !== 'undefined' && adminPermissions && adminPermissions.interiors) ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.9rem;">Home Interiors Management</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #9aa0ac;">Allow Normal Admin to manage interior portfolio projects and service offerings.</p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 

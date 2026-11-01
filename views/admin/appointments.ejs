@@ -40,6 +40,7 @@
                             <option value="rescheduled" <%= status === 'rescheduled' ? 'selected' : '' %>>Rescheduled</option>
                             <option value="completed" <%= status === 'completed' ? 'selected' : '' %>>Completed</option>
                             <option value="cancelled" <%= status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                            <option value="no_show" <%= status === 'no_show' ? 'selected' : '' %>>No Show</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-secondary"><i class="fas fa-filter"></i> Filter</button>
@@ -114,6 +115,7 @@
                                     <option value="rescheduled" <%= apt.status === 'rescheduled' ? 'selected' : '' %>>Rescheduled</option>
                                     <option value="completed" <%= apt.status === 'completed' ? 'selected' : '' %>>Completed</option>
                                     <option value="cancelled" <%= apt.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                    <option value="no_show" <%= apt.status === 'no_show' ? 'selected' : '' %>>No Show</option>
                                 </select>
                             </td>
                             <td>
