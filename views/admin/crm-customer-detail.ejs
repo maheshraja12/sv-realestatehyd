@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= customer.full_name %> (<%= customer.customer_code %>) — Customer 360</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-user-circle text-gold"></i> Customer 360: <%= customer.full_name %></h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:10px;">
+                <a href="/admin/crm/customers" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
+                    &larr; Back to Customers
+                </a>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- Customer Summary Banner -->
+            <div class="admin-card" style="margin-bottom: 24px; border-left: 4px solid var(--gold);">
+                <div class="card-body" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <div style="font-size:0.8rem; font-family:monospace; color:var(--gold);"><%= customer.customer_code %></div>
+                        <h2 style="font-size:1.4rem; color:#ffffff; margin:4px 0;"><%= customer.full_name %></h2>
+                        <div style="display:flex; gap:16px; font-size:0.85rem; color:var(--text-secondary); flex-wrap:wrap; margin-top:6px;">
+                            <span><i class="fas fa-phone text-gold"></i> <%= customer.phone %></span>
+                            <% if (customer.alt_phone) { %><span><i class="fab fa-whatsapp text-gold"></i> <%= customer.alt_phone %></span><% } %>
+                            <% if (customer.email) { %><span><i class="fas fa-envelope text-gold"></i> <%= customer.email %></span><% } %>
+                            <span><i class="fas fa-map-marker-alt text-gold"></i> <%= customer.city || 'Hyderabad' %></span>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                        <span class="status-badge status-<%= customer.deal_status %>" style="font-size:0.85rem; text-transform:uppercase;">
+                            Deal: <%= customer.deal_status.replace('_', ' ') %>
+                        </span>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">
+                            Agent: <strong style="color:#ffffff;"><%= customer.assigned_agent_name || 'Unassigned' %></strong>
+                        </div>
+                        <div class="quick-action-bar" style="margin-bottom:0;">
+                            <% const cleanPh = (customer.phone || '').replace(/[^0-9]/g, ''); %>
+                            <a href="https://wa.me/91<%= cleanPh.length >= 10 ? cleanPh.slice(-10) : cleanPh %>" target="_blank" class="btn-quick-action whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                            <a href="tel:<%= customer.phone %>" class="btn-quick-action call"><i class="fas fa-phone"></i> Call</a>
+                            <button type="button" onclick="openLogModal()" class="btn-quick-action"><i class="fas fa-plus"></i> Quick Log</button>
+                            <button type="button" onclick="openFollowupModal()" class="btn-quick-action"><i class="fas fa-calendar-plus text-gold"></i> Schedule Task</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Column Layout: Profile & Properties vs Activity Timeline -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+                <!-- Left Column: Interests & Enquiries -->
+                <div>
+                    <!-- Property Interests & Requirements -->
+                    <div class="admin-card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <h3 style="font-size:0.95rem; font-weight:700;"><i class="fas fa-home text-gold"></i> Requirements & Budget Profile</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="detail-row">
+                                <span class="detail-label">Property Interest</span>
+                                <span class="detail-value"><%= customer.property_interests || 'Any residential property' %></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Budget Range</span>
+                                <span class="detail-value" style="color:var(--gold);"><%= customer.budget_range || 'Market standard' %></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Preferred Localities</span>
+                                <span class="detail-value"><%= customer.preferred_locations || 'Hyderabad' %></span>
+                            </div>
+                            <% if (customer.notes) { %>
+                                <div class="detail-row">
+                                    <span class="detail-label">Advisor Notes</span>
+                                    <span class="detail-value" style="font-weight:400; color:var(--text-secondary);"><%= customer.notes %></span>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Linked Enquiries / Leads -->
+                    <div class="admin-card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <h3 style="font-size:0.95rem; font-weight:700;"><i class="fas fa-file-invoice text-gold"></i> Enquiries & Submissions (<%= leads.length %>)</h3>
+                        </div>
+                        <div class="card-body" style="padding:10px;">
+                            <% if (leads.length === 0) { %>
+                                <p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No linked enquiries found.</p>
+                            <% } else { %>
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <% leads.forEach(l => { %>
+                                        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:6px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <a href="/admin/leads/<%= l.id %>" style="color:var(--gold); font-weight:600; font-size:0.85rem; text-decoration:none;"><%= l.lead_code %></a>
+                                                <div style="font-size:0.8rem; color:#ffffff;"><%= l.property_category || l.property_requirement %></div>
+                                                <div style="font-size:0.75rem; color:var(--text-muted);"><%= formatDate(l.created_at) %> · Source: <%= l.source || 'Website' %></div>
+                                            </div>
+                                            <span class="status-badge status-<%= l.status %>" style="font-size:0.7rem; text-transform:uppercase;"><%= l.status %></span>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Scheduled & Past Site Visits -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3 style="font-size:0.95rem; font-weight:700;"><i class="fas fa-calendar-check text-gold"></i> Site Visits (<%= appointments.length %>)</h3>
+                        </div>
+                        <div class="card-body" style="padding:10px;">
+                            <% if (appointments.length === 0) { %>
+                                <p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No site visits scheduled yet.</p>
+                            <% } else { %>
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <% appointments.forEach(apt => { %>
+                                        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:6px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <div style="font-weight:600; font-size:0.85rem; color:#ffffff;"><%= apt.appointment_code %></div>
+                                                <div style="font-size:0.75rem; color:var(--gold);"><i class="fas fa-calendar"></i> <%= apt.requested_date %> <%= apt.requested_time || '' %></div>
+                                                <% if (apt.property_title) { %><div style="font-size:0.75rem; color:var(--text-secondary);"><%= apt.property_title %></div><% } %>
+                                            </div>
+                                            <span class="status-badge status-<%= apt.status %>" style="font-size:0.7rem; text-transform:uppercase;"><%= apt.status %></span>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Unified Activity Timeline -->
+                <div>
+                    <div class="admin-card">
+                        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-size:0.95rem; font-weight:700;"><i class="fas fa-stream text-gold"></i> Customer Activity Timeline (<%= activities.length %>)</h3>
+                            <button type="button" onclick="openLogModal()" class="btn btn-secondary" style="padding:4px 10px; font-size:0.8rem;">+ Log Activity</button>
+                        </div>
+                        <div class="card-body" style="padding:16px;">
+                            <% if (activities.length === 0) { %>
+                                <p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:30px;">
+                                    No interactions recorded yet. Use <strong>Quick Log</strong> above to log calls, WhatsApp chats, or notes.
+                                </p>
+                            <% } else { %>
+                                <div class="activity-timeline">
+                                    <% activities.forEach(act => { %>
+                                        <div class="timeline-item">
+                                            <div class="timeline-marker">
+                                                <% if (act.activity_type === 'call') { %><i class="fas fa-phone"></i>
+                                                <% } else if (act.activity_type === 'whatsapp') { %><i class="fab fa-whatsapp"></i>
+                                                <% } else if (act.activity_type === 'site_visit') { %><i class="fas fa-calendar-check"></i>
+                                                <% } else if (act.activity_type === 'status_change') { %><i class="fas fa-exchange-alt"></i>
+                                                <% } else { %><i class="fas fa-comment-alt"></i><% } %>
+                                            </div>
+                                            <div class="timeline-box">
+                                                <div class="timeline-header">
+                                                    <span class="timeline-title"><%= act.title %></span>
+                                                    <span class="timeline-time"><%= formatDateTime(act.created_at) %></span>
+                                                </div>
+                                                <% if (act.notes) { %>
+                                                    <div class="timeline-body"><%= act.notes %></div>
+                                                <% } %>
+                                                <div class="timeline-user">By <%= act.user_name || 'System' %></div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quick Log Activity Modal -->
+    <div id="quickLogModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:480px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-edit text-gold"></i> Log Customer Activity</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Activity Type:</label>
+                <select id="logType" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    <option value="call">Phone Call</option>
+                    <option value="whatsapp">WhatsApp Message</option>
+                    <option value="meeting">In-Person Meeting</option>
+                    <option value="site_visit">Site Visit Feedback</option>
+                    <option value="note">Internal Note</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Title / Summary:</label>
+                <input type="text" id="logTitle" placeholder="e.g. Discussed Tellapur Villa floor plans" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Detailed Notes / Outcome:</label>
+                <textarea id="logNotes" rows="3" placeholder="Client was positive, requested loan assistance details..." style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeLogModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitQuickLog()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Save Activity</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Follow-up Modal -->
+    <div id="followupModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:480px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-calendar-plus text-gold"></i> Schedule Follow-up Task</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Task Title:</label>
+                <input type="text" id="taskTitle" placeholder="e.g. Call to confirm bank approval letter" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Scheduled Date & Time:</label>
+                <input type="datetime-local" id="taskScheduledAt" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Priority:</label>
+                <select id="taskPriority" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeFollowupModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitFollowupTask()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Schedule Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CUSTOMER_ID = <%= customer.id %>;
+
+        function openLogModal() { document.getElementById('quickLogModal').style.display = 'flex'; }
+        function closeLogModal() { document.getElementById('quickLogModal').style.display = 'none'; }
+        function openFollowupModal() { document.getElementById('followupModal').style.display = 'flex'; }
+        function closeFollowupModal() { document.getElementById('followupModal').style.display = 'none'; }
+
+        async function submitQuickLog() {
+            const activity_type = document.getElementById('logType').value;
+            const title = document.getElementById('logTitle').value.trim();
+            const notes = document.getElementById('logNotes').value.trim();
+            if (!title) { alert('Please enter a title for the activity'); return; }
+
+            try {
+                const res = await fetch('/api/crm/activity/quick-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: CUSTOMER_ID, activity_type, title, notes })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to log activity'); }
+            } catch (e) { alert('Error logging activity'); }
+        }
+
+        async function submitFollowupTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const scheduled_at = document.getElementById('taskScheduledAt').value;
+            const priority = document.getElementById('taskPriority').value;
+            if (!title || !scheduled_at) { alert('Please provide both title and date/time'); return; }
+
+            try {
+                const res = await fetch('/api/crm/followups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: CUSTOMER_ID, title, scheduled_at, priority })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to schedule follow-up'); }
+            } catch (e) { alert('Error scheduling follow-up'); }
+        }
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

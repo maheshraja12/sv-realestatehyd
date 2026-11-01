@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employees & Teams — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-users-cog text-gold"></i> Employees & Sales Teams (<%= employees.length %>)</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="openNewEmployeeModal()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-user-plus"></i> Add Employee
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- Employee Table -->
+            <div class="admin-card">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="font-size:1.05rem; font-weight:700;"><i class="fas fa-id-badge text-gold"></i> Staff & Sales Executive Workload</h3>
+                </div>
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Role</th>
+                                <th>Team</th>
+                                <th>Status</th>
+                                <th>Assigned Leads</th>
+                                <th>Pending Tasks</th>
+                                <th>Site Visits</th>
+                                <th>Conversions</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% employees.forEach(emp => { %>
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600; color:#ffffff;"><%= emp.name %></div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted);"><%= emp.email %> · <%= emp.phone || 'No phone' %></div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge <%= emp.role === 'superadmin' ? 'status-published' : 'status-contacted' %>" style="font-size:0.75rem; text-transform:uppercase;">
+                                            <%= emp.role.replace('_', ' ') %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size:0.85rem; color:var(--text-secondary);"><%= emp.team_name || 'Direct / General' %></span>
+                                    </td>
+                                    <td>
+                                        <% if (emp.is_active) { %>
+                                            <span style="color:#4ade80; font-size:0.8rem; font-weight:600;"><i class="fas fa-check-circle"></i> Active</span>
+                                        <% } else { %>
+                                            <span style="color:#ef4444; font-size:0.8rem; font-weight:600;"><i class="fas fa-times-circle"></i> Inactive</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background:#202530; color:#ffffff; font-weight:700;"><%= emp.assigned_leads_count %></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background:#202530; color:#facc15; font-weight:700;"><%= emp.pending_tasks_count %></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background:#202530; color:#60a5fa; font-weight:700;"><%= emp.completed_visits_count %></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background:#202530; color:#4ade80; font-weight:700;"><%= emp.converted_count %></span>
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:inline-flex; gap:6px;">
+                                            <button type="button" onclick="openResetPasswordModal(<%= emp.id %>, '<%= emp.name.replace(/'/g, '') %>')" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            <% if (emp.role !== 'superadmin') { %>
+                                                <button type="button" onclick="toggleEmployeeActive(<%= emp.id %>, <%= emp.is_active ? 0 : 1 %>)" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:<%= emp.is_active ? '#ef4444' : '#4ade80' %>;" title="<%= emp.is_active ? 'Deactivate' : 'Activate' %>">
+                                                    <i class="fas <%= emp.is_active ? 'fa-ban' : 'fa-check' %>"></i>
+                                                </button>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Employee Modal -->
+    <div id="newEmployeeModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:480px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-user-plus text-gold"></i> Create New Employee Account</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Full Name:</label>
+                <input type="text" id="newEmpName" placeholder="e.g. Ramesh Reddy" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Email (Login ID):</label>
+                <input type="email" id="newEmpEmail" placeholder="e.g. ramesh@svrealestate.com" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Initial Password:</label>
+                <input type="password" id="newEmpPassword" placeholder="Minimum 6 characters" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Role:</label>
+                    <select id="newEmpRole" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                        <option value="sales_executive">Sales Executive</option>
+                        <option value="sales_manager">Sales Manager</option>
+                        <option value="receptionist">Receptionist</option>
+                        <option value="admin">Normal Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Mobile Number:</label>
+                    <input type="text" id="newEmpPhone" placeholder="e.g. 9848011223" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                </div>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Designation / Title:</label>
+                <input type="text" id="newEmpDesig" placeholder="e.g. Senior Real Estate Consultant" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeNewEmployeeModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitNewEmployee()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:440px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-key text-gold"></i> Reset Password</h3>
+            <p id="resetEmployeeName" style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:14px;"></p>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">New Password:</label>
+                <input type="password" id="resetNewPass" placeholder="Enter new password (min 6 chars)" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeResetPasswordModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitResetPassword()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResetEmpId = null;
+
+        function openNewEmployeeModal() { document.getElementById('newEmployeeModal').style.display = 'flex'; }
+        function closeNewEmployeeModal() { document.getElementById('newEmployeeModal').style.display = 'none'; }
+
+        async function submitNewEmployee() {
+            const name = document.getElementById('newEmpName').value.trim();
+            const email = document.getElementById('newEmpEmail').value.trim();
+            const password = document.getElementById('newEmpPassword').value;
+            const role = document.getElementById('newEmpRole').value;
+            const phone = document.getElementById('newEmpPhone').value.trim();
+            const designation = document.getElementById('newEmpDesig').value.trim();
+
+            if (!name || !email || !password) {
+                alert('Name, Email, and Password are required');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/crm/employees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, role, phone, designation })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || 'Employee created');
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Failed to create employee');
+                }
+            } catch (e) { alert('Error creating employee'); }
+        }
+
+        function openResetPasswordModal(id, name) {
+            currentResetEmpId = id;
+            document.getElementById('resetEmployeeName').innerText = 'Employee: ' + name;
+            document.getElementById('resetNewPass').value = '';
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+        }
+        function closeResetPasswordModal() { document.getElementById('resetPasswordModal').style.display = 'none'; }
+
+        async function submitResetPassword() {
+            const new_password = document.getElementById('resetNewPass').value;
+            if (!new_password || new_password.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/crm/employees/' + currentResetEmpId + '/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message);
+                    closeResetPasswordModal();
+                } else {
+                    alert(data.error || 'Failed to reset password');
+                }
+            } catch (e) { alert('Error resetting password'); }
+        }
+
+        async function toggleEmployeeActive(id, is_active) {
+            if (!confirm(is_active ? 'Reactivate this employee?' : 'Deactivate this employee? They will not be able to log in.')) return;
+            try {
+                const res = await fetch('/api/crm/employees/' + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to update status'); }
+            } catch (e) { alert('Error updating status'); }
+        }
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

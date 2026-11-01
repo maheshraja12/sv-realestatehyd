@@ -163,14 +163,18 @@
                     <div class="sidebar-card">
                         <h4>Lead Status</h4>
                         <select id="leadStatus" class="filter-select" onchange="updateLeadStatusDetail(<%= lead.id %>, this.value)">
-                            <option value="new" <%= lead.status === 'new' ? 'selected' : '' %>>New</option>
-                            <option value="contacted" <%= lead.status === 'contacted' ? 'selected' : '' %>>Contacted</option>
-                            <option value="interested" <%= lead.status === 'interested' ? 'selected' : '' %>>Interested</option>
-                            <option value="site_visit_scheduled" <%= lead.status === 'site_visit_scheduled' ? 'selected' : '' %>>Site Visit Scheduled</option>
-                            <option value="negotiation" <%= lead.status === 'negotiation' ? 'selected' : '' %>>Negotiation</option>
-                            <option value="converted" <%= lead.status === 'converted' ? 'selected' : '' %>>Converted</option>
-                            <option value="lost" <%= lead.status === 'lost' ? 'selected' : '' %>>Lost</option>
-                            <option value="spam" <%= lead.status === 'spam' ? 'selected' : '' %>>Spam</option>
+                            <option value="new" <%= lead.status === 'new' ? 'selected' : '' %>>1. New Lead</option>
+                            <option value="not_contacted" <%= lead.status === 'not_contacted' ? 'selected' : '' %>>2. Not Contacted</option>
+                            <option value="contacted" <%= lead.status === 'contacted' ? 'selected' : '' %>>3. Contacted</option>
+                            <option value="qualified" <%= lead.status === 'qualified' ? 'selected' : '' %>>4. Qualified</option>
+                            <option value="interested" <%= lead.status === 'interested' ? 'selected' : '' %>>5. Interested</option>
+                            <option value="site_visit_scheduled" <%= lead.status === 'site_visit_scheduled' ? 'selected' : '' %>>6. Site Visit Scheduled</option>
+                            <option value="site_visit_completed" <%= lead.status === 'site_visit_completed' ? 'selected' : '' %>>7. Site Visit Completed</option>
+                            <option value="negotiation" <%= lead.status === 'negotiation' ? 'selected' : '' %>>8. Negotiation</option>
+                            <option value="booking_in_progress" <%= lead.status === 'booking_in_progress' ? 'selected' : '' %>>9. Booking in Progress</option>
+                            <option value="converted" <%= lead.status === 'converted' ? 'selected' : '' %>>10. Converted</option>
+                            <option value="lost" <%= lead.status === 'lost' ? 'selected' : '' %>>11. Lost</option>
+                            <option value="spam" <%= lead.status === 'spam' ? 'selected' : '' %>>12. Invalid / Spam</option>
                         </select>
                     </div>
 
@@ -191,7 +195,9 @@
 
                     <div class="sidebar-card">
                         <h4>Quick Actions</h4>
-                        <div class="quick-actions">
+                        <div class="quick-actions" style="display:flex; flex-direction:column; gap:8px;">
+                            <button type="button" onclick="convertToCustomer(<%= lead.id %>)" class="btn btn-primary btn-block" style="background:var(--gold); color:#0c0f17; font-weight:700;"><i class="fas fa-address-card"></i> Convert to Customer</button>
+                            <button type="button" onclick="openScheduleTaskModal()" class="btn btn-secondary btn-block"><i class="fas fa-calendar-plus text-gold"></i> Schedule Task</button>
                             <button onclick="updateLeadStatusDetail(<%= lead.id %>, 'converted')" class="btn btn-success btn-block"><i class="fas fa-trophy"></i> Mark Converted</button>
                             <button onclick="updateLeadStatusDetail(<%= lead.id %>, 'lost')" class="btn btn-ghost btn-block"><i class="fas fa-times"></i> Mark Lost</button>
                         </div>
@@ -249,6 +255,43 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ next_follow_up: date || null })
             }).then(r => { if (r.ok) showToast('Follow-up date set'); else showToast('Failed', 'error'); });
+        }
+
+        async function convertToCustomer(id) {
+            if (!confirm('Convert this lead into a permanent Customer 360 profile?')) return;
+            try {
+                const res = await fetch(`/api/crm/leads/${id}/convert-to-customer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || 'Converted to customer successfully');
+                    window.location.href = `/admin/crm/customers/${data.customer_id}`;
+                } else {
+                    alert(data.error || 'Failed to convert lead');
+                }
+            } catch (e) {
+                alert('Network error converting lead');
+            }
+        }
+
+        function openScheduleTaskModal() {
+            const dt = prompt('Enter follow-up task description and due date (YYYY-MM-DD):', '<%= (lead.appointment_date || new Date().toISOString().slice(0,10)) %>');
+            if (!dt) return;
+            fetch('/api/crm/followups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lead_id: <%= lead.id %>,
+                    title: 'Follow-up regarding ' + '<%= (lead.property_category || "Property Buying").replace(/'/g, "") %>',
+                    scheduled_at: dt.includes('T') ? dt : dt + ' 10:00:00',
+                    priority: 'medium'
+                })
+            }).then(r => r.json()).then(d => {
+                alert(d.message || 'Task scheduled');
+                location.reload();
+            });
         }
     </script>
 </body>

@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const router = express.Router();
 const { getDb } = require('../../database/db');
 const { cloudLeadsConfigured, submitCloudLead, listCloudLeads } = require('../../database/cloud-leads');
-const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
+const { requireAuth, auditLog, notifyAllAdmins, logLeadActivity } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
 const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
 const { 
@@ -24,9 +24,15 @@ function generateLeadCode() {
     let nextNum = 1;
     if (lastLead && lastLead.lead_code) {
         const match = lastLead.lead_code.match(/SV-LEAD-(\d+)/);
-        if (match) nextNum = parseInt(match[1]) + 1;
+        if (match) nextNum = parseInt(match[1], 10) + 1;
     }
-    return `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    let code = `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    const checkStmt = db.prepare("SELECT id FROM leads WHERE lead_code = ?");
+    while (checkStmt.get(code)) {
+        nextNum++;
+        code = `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    }
+    return code;
 }
 
 // ── Public Endpoint ───────────────────────────────────────
@@ -603,8 +609,14 @@ router.get('/:id', requireAuth, async (req, res) => {
 const handleStatusUpdate = async (req, res) => {
     const db = getDb();
     const { status } = req.body;
-    const validStatuses = ['new', 'contacted', 'interested', 'site_visit_scheduled', 'negotiation', 'converted', 'lost', 'spam'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const validStatuses = [
+        'new', 'not_contacted', 'contacted', 'qualified', 'interested',
+        'site_visit_scheduled', 'site_visit_completed', 'negotiation',
+        'booking_in_progress', 'converted', 'lost', 'spam'
+    ];
+    const normalizedStatus = String(status || '').toLowerCase().trim().replace(/\s+/g, '_');
+    if (!validStatuses.includes(normalizedStatus)) return res.status(400).json({ error: 'Invalid status' });
+    const finalStatus = normalizedStatus;
 
     let lead = null;
     try {
@@ -628,14 +640,23 @@ const handleStatusUpdate = async (req, res) => {
         db.prepare("UPDATE leads SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, req.params.id);
         db.prepare(`
             INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
-            VALUES (?, ?, ?, ?)
-        `).run(req.params.id, lead.status, status, req.session ? req.session.userId : null);
+            VALUES (?, ?, ?, ?)`).run(req.params.id, lead.status, finalStatus, req.session ? req.session.userId : null);
 
         // Auto-add system note
         db.prepare(`
             INSERT INTO lead_notes (lead_id, user_id, note, note_type)
             VALUES (?, ?, ?, 'status_change')
-        `).run(req.params.id, req.session ? req.session.userId : null, `Status changed from "${lead.status}" to "${status}"`);
+        `).run(req.params.id, req.session ? req.session.userId : null, `Status changed from "${lead.status}" to "${finalStatus}"`);
+
+        // Record in CRM Activity Timeline
+        logLeadActivity(db, {
+            leadId: req.params.id,
+            userId: req.session ? req.session.userId : null,
+            userName: req.session ? req.session.userName : 'Admin',
+            type: 'status_change',
+            title: `Status changed to ${finalStatus.replace(/_/g, ' ')}`,
+            notes: `Status changed from "${lead.status}" to "${finalStatus}"`
+        });
     } catch (e) {}
 
     // Sync to PostgreSQL / Supabase if configured

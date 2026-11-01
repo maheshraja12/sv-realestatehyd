@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Reports & Analytics — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-chart-pie text-gold"></i> Reports & Performance Analytics</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <div class="date-filter-group" style="display:flex; gap:6px;">
+                    <a href="/admin/crm/reports?range=today" class="btn btn-secondary <%= range === 'today' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">Today</a>
+                    <a href="/admin/crm/reports?range=7d" class="btn btn-secondary <%= range === '7d' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">7 Days</a>
+                    <a href="/admin/crm/reports?range=30d" class="btn btn-secondary <%= range === '30d' || !range ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">30 Days</a>
+                    <a href="/admin/crm/reports?range=all" class="btn btn-secondary <%= range === 'all' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">All</a>
+                </div>
+                <a href="/api/leads/export/csv" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-file-csv"></i> Export Leads CSV
+                </a>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- KPI Summary Cards -->
+            <div class="stats-grid" style="margin-bottom: 24px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)"><i class="fas fa-filter"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= analytics.kpis.totalLeads %></span>
+                        <span class="stat-label">Total Inflow</span>
+                    </div>
+                </div>
+                <div class="stat-card highlight">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#059669,#047857)"><i class="fas fa-percentage"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= analytics.kpis.conversionRate %>%</span>
+                        <span class="stat-label">Conversion Rate</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-car-side"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= analytics.kpis.siteVisitsDone %></span>
+                        <span class="stat-label">Completed Site Visits</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"><i class="fas fa-handshake"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= analytics.kpis.activeDeals %></span>
+                        <span class="stat-label">Active Negotiations</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two Charts: Stage Funnel & Lead Source Distribution -->
+            <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom: 24px;">
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-stream text-gold"></i> Pipeline Distribution by Stage</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="stageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-chart-pie text-gold"></i> Lead Sources</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="sourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Performance Leaderboard -->
+            <div class="admin-card">
+                <div class="card-header">
+                    <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-medal text-gold"></i> Sales Performance & Executive Leaderboard</h3>
+                </div>
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <% if (!analytics.leaderboard || analytics.leaderboard.length === 0) { %>
+                        <p style="color:var(--text-muted); font-size:0.85rem; padding:20px; text-align:center;">No agent activities recorded for this period.</p>
+                    <% } else { %>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Sales Executive</th>
+                                    <th>Total Leads Handled</th>
+                                    <th>Site Visits Done</th>
+                                    <th>Deals Converted</th>
+                                    <th>Conversion %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% analytics.leaderboard.forEach((agent, idx) => { %>
+                                    <tr>
+                                        <td>
+                                            <% if (idx === 0) { %><i class="fas fa-trophy text-gold"></i> #1
+                                            <% } else { %>#<%= idx + 1 %><% } %>
+                                        </td>
+                                        <td style="font-weight:600; color:#ffffff;"><%= agent.name %></td>
+                                        <td><span class="badge" style="background:#202530; color:#ffffff;"><%= agent.total_handled %></span></td>
+                                        <td><span class="badge" style="background:#202530; color:#facc15;"><%= agent.visits_count || 0 %></span></td>
+                                        <td><span class="badge" style="background:#202530; color:#4ade80;"><%= agent.converted_count || 0 %></span></td>
+                                        <td>
+                                            <strong style="color:var(--gold);">
+                                                <%= agent.total_handled > 0 ? ((agent.converted_count / agent.total_handled) * 100).toFixed(1) : 0 %>%
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const funnelData = <%- JSON.stringify(analytics.funnel) %>;
+        const sourceData = <%- JSON.stringify(analytics.sources) %>;
+
+        // Stage Funnel Bar Chart
+        const stageCtx = document.getElementById('stageChart').getContext('2d');
+        new Chart(stageCtx, {
+            type: 'bar',
+            data: {
+                labels: funnelData.map(f => f.name),
+                datasets: [{
+                    label: 'Leads',
+                    data: funnelData.map(f => f.count),
+                    backgroundColor: funnelData.map(f => f.color || '#d4af37'),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#8c9ba5', font: { size: 10 } }, grid: { display: false } },
+                    y: { ticks: { color: '#8c9ba5', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
+        // Source Pie Chart
+        const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+        new Chart(sourceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: sourceData.map(s => s.source_name.toUpperCase()),
+                datasets: [{
+                    data: sourceData.map(s => s.count),
+                    backgroundColor: ['#d4af37', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#8c9ba5', font: { size: 11 } } }
+                }
+            }
+        });
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
