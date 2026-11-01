@@ -8,7 +8,9 @@
     "dev": "node --watch server.js",
     "seed": "node database/seed.js",
     "sync:media": "node scripts/download-offline-media.js",
-    "test": "node --test --test-concurrency=1 tests/workflow.test.js tests/crm.test.js"
+    "test": "node --test --test-concurrency=1 tests/100-cases.test.js tests/workflow.test.js tests/crm.test.js tests/supabase-sync.test.js",
+    "test:cases": "node --test tests/100-cases.test.js",
+    "test:supabase": "node --test tests/supabase-sync.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

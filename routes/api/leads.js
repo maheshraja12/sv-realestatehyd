@@ -699,11 +699,18 @@ router.patch('/:id/status', requireAuth, handleStatusUpdate);
 router.put('/:id/status', requireAuth, handleStatusUpdate);
 
 // PATCH /api/leads/:id/assign — Assign agent
-router.patch('/:id/assign', requireAuth, (req, res) => {
+router.patch('/:id/assign', requireAuth, async (req, res) => {
     const db = getDb();
     const { agent_id } = req.body;
     db.prepare("UPDATE leads SET assigned_agent_id = ?, updated_at = datetime('now') WHERE id = ?").run(agent_id || null, req.params.id);
     
+    if (isPostgresConfigured()) {
+        try {
+            const { updateLead } = require('../../database/postgres');
+            await updateLead(req.params.id, { assigned_agent_id: agent_id || null, assigned_to: agent_id || null });
+        } catch (e) {}
+    }
+
     const agentName = agent_id ? db.prepare('SELECT name FROM users WHERE id = ?').get(agent_id)?.name : 'Unassigned';
     db.prepare(`
         INSERT INTO lead_notes (lead_id, user_id, note, note_type)
@@ -729,10 +736,18 @@ router.post('/:id/notes', requireAuth, (req, res) => {
 });
 
 // PATCH /api/leads/:id/follow-up — Set follow-up date
-router.patch('/:id/follow-up', requireAuth, (req, res) => {
+router.patch('/:id/follow-up', requireAuth, async (req, res) => {
     const db = getDb();
     const { next_follow_up } = req.body;
     db.prepare("UPDATE leads SET next_follow_up = ?, updated_at = datetime('now') WHERE id = ?").run(next_follow_up || null, req.params.id);
+
+    if (isPostgresConfigured()) {
+        try {
+            const { updateLead } = require('../../database/postgres');
+            await updateLead(req.params.id, { next_follow_up_date: next_follow_up || null });
+        } catch (e) {}
+    }
+
     res.json({ message: 'Follow-up date updated' });
 });
 

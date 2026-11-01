@@ -190,6 +190,18 @@ router.patch('/:id', requireAuth, (req, res) => {
 
     db.prepare(`UPDATE appointments SET ${updates.join(', ')} WHERE id = ?`).run(...params);
 
+    // Sync to persistent cloud database (Supabase / PostgreSQL)
+    if (isPostgresConfigured()) {
+        try {
+            const { updateAppointment } = require('../../database/postgres');
+            updateAppointment(req.params.id, {
+                status, confirmed_date, confirmed_time, assigned_agent_id, result_notes, feedback_rating, feedback_notes, customer_id
+            }).catch(e => console.error('Cloud appointment update error:', e));
+        } catch (pgErr) {
+            console.error('PostgreSQL appointment update error:', pgErr);
+        }
+    }
+
     // Activity timeline & CRM lead synchronization
     const leadId = appointment.lead_id || (appointment.phone ? db.prepare('SELECT id FROM leads WHERE phone_number = ? OR phone = ? ORDER BY id DESC LIMIT 1').get(appointment.phone, appointment.phone)?.id : null);
     const resolvedCustomerId = appointment.customer_id || customer_id || (leadId ? db.prepare('SELECT customer_id FROM leads WHERE id = ?').get(leadId)?.customer_id : null);

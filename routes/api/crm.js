@@ -9,6 +9,16 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { getDb } = require('../../database/db');
 const {
+    isPostgresConfigured,
+    updateLeadStatus: updatePgLeadStatus,
+    updateLead: updatePgLead,
+    insertCustomerProfile: insertPgCustomer,
+    updateCustomerProfile: updatePgCustomer,
+    insertFollowUpTask: insertPgFollowup,
+    updateFollowUpTask: updatePgFollowup,
+    insertLeadActivity: insertPgActivity
+} = require('../../database/postgres');
+const {
     requireAuth,
     requireSuperAdmin,
     auditLog,
@@ -199,6 +209,19 @@ router.patch('/pipeline/move', (req, res) => {
         const oldStatus = lead.status;
         db.prepare("UPDATE leads SET status = ?, updated_at = datetime('now') WHERE id = ?").run(validStage, lead_id);
 
+        if (isPostgresConfigured()) {
+            updatePgLeadStatus(lead_id, validStage).catch(() => {});
+            insertPgActivity({
+                lead_id,
+                customer_id: lead.customer_id,
+                user_id: req.session.userId,
+                user_name: req.session.userName || 'Admin',
+                activity_type: 'status_change',
+                title: `Stage moved to ${stageMeta.name}`,
+                notes: reason || `Pipeline transition from ${oldStatus} to ${stageMeta.name}`
+            }).catch(() => {});
+        }
+
         // Record in status history
         db.prepare(`
             INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
@@ -355,6 +378,10 @@ router.post('/followups', (req, res) => {
                 WHERE id = ?
             `).run(scheduled_at, scheduled_at, lead_id);
 
+            if (isPostgresConfigured()) {
+                updatePgLead(lead_id, { next_follow_up_date: scheduled_at }).catch(() => {});
+            }
+
             logLeadActivity(db, {
                 leadId: lead_id,
                 customerId: customer_id || null,
@@ -365,6 +392,21 @@ router.post('/followups', (req, res) => {
                 notes: `${description || ''} · Due: ${scheduled_at}`,
                 metadata: { task_code: taskCode, scheduled_at, priority }
             });
+        }
+
+        if (isPostgresConfigured()) {
+            insertPgFollowup({
+                task_code: taskCode,
+                lead_id: lead_id || null,
+                customer_id: customer_id || null,
+                assigned_to: assignee,
+                title: title.trim(),
+                description: description || null,
+                scheduled_at,
+                priority: priority || 'medium',
+                status: 'pending',
+                created_by: req.session.userId
+            }).catch(() => {});
         }
 
         res.status(201).json({
@@ -393,6 +435,14 @@ router.patch('/followups/:id', (req, res) => {
                 WHERE id = ?
             `).run(result_notes || 'Completed successfully', req.params.id);
 
+            if (isPostgresConfigured()) {
+                updatePgFollowup(req.params.id, {
+                    status: 'completed',
+                    completed_at: new Date().toISOString(),
+                    result_notes: result_notes || 'Completed successfully'
+                }).catch(() => {});
+            }
+
             if (task.lead_id) {
                 logLeadActivity(db, {
                     leadId: task.lead_id,
@@ -410,6 +460,13 @@ router.patch('/followups/:id', (req, res) => {
                 SET scheduled_at = ?, status = 'pending', updated_at = datetime('now')
                 WHERE id = ?
             `).run(reschedule_at, req.params.id);
+
+            if (isPostgresConfigured()) {
+                updatePgFollowup(req.params.id, {
+                    scheduled_at: reschedule_at,
+                    status: 'pending'
+                }).catch(() => {});
+            }
 
             if (task.lead_id) {
                 db.prepare("UPDATE leads SET next_follow_up = ?, next_follow_up_date = ? WHERE id = ?").run(reschedule_at, reschedule_at, task.lead_id);
@@ -576,6 +633,23 @@ router.post('/leads/:id/convert-to-customer', (req, res) => {
 
         // Link lead to this customer
         db.prepare("UPDATE leads SET customer_id = ? WHERE id = ?").run(customer.id, lead.id);
+
+        if (isPostgresConfigured()) {
+            insertPgCustomer({
+                customer_code: customer.customer_code,
+                lead_id: lead.id,
+                full_name: lead.customer_name || lead.full_name || 'Customer',
+                phone: lead.phone,
+                alt_phone: lead.whatsapp_number || null,
+                email: lead.email || null,
+                preferred_locations: lead.preferred_location || 'Hyderabad',
+                budget_range: lead.budget || null,
+                property_interests: lead.property_category || lead.property_requirement || null,
+                assigned_to: lead.assigned_to || lead.assigned_agent_id || req.session.userId,
+                notes: `Converted from lead ${lead.lead_code}`
+            }).catch(() => {});
+            updatePgLead(lead.id, { customer_id: customer.id }).catch(() => {});
+        }
 
         logLeadActivity(db, {
             leadId: lead.id,
@@ -885,6 +959,19 @@ router.post('/activity/quick-log', (req, res) => {
 
         if (lead_id) {
             db.prepare("UPDATE leads SET last_contacted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(lead_id);
+        }
+
+        if (isPostgresConfigured()) {
+            insertPgActivity({
+                lead_id: lead_id || null,
+                customer_id: customer_id || null,
+                user_id: req.session.userId,
+                user_name: req.session.userName,
+                activity_type,
+                title: title.trim(),
+                notes: notes || null,
+                metadata: { outcome }
+            }).catch(() => {});
         }
 
         res.status(201).json({ success: true, message: 'Activity logged successfully' });
