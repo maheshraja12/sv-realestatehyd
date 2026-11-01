@@ -125,3 +125,4 @@ DROP POLICY IF EXISTS "Public can delete appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Public can read customer_profiles" ON public.customer_profiles;
 DROP POLICY IF EXISTS "Public can update customer_profiles" ON public.customer_profiles;
 DROP POLICY IF EXISTS "Public can delete customer_profiles" ON public.customer_profiles;
+
