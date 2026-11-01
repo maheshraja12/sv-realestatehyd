@@ -31,7 +31,7 @@
                 </div>
                 <div class="brand-text">
                     <span class="brand-title"><%= businessName %></span>
-                    <span class="brand-subtitle"><%= typeof businessTagline !== 'undefined' ? businessTagline : 'Building Construction & Materials Supplier' %></span>
+                    <span class="brand-subtitle"><%= typeof businessTagline !== 'undefined' ? businessTagline : 'Luxury Properties, Gated Communities & Home Interiors' %></span>
                 </div>
             </a>
 
@@ -39,9 +39,10 @@
                 <ul class="nav-links">
                     <li><a href="/" class="<%= path === '/' ? 'active' : '' %>">Home</a></li>
                     <li><a href="/properties" class="<%= path.startsWith('/properties') ? 'active' : '' %>">Properties</a></li>
-                    <li><a href="/about" class="<%= path === '/about' ? 'active' : '' %>">About Us</a></li>
+                    <li><a href="/interiors" class="<%= path.startsWith('/interiors') ? 'active' : '' %>" style="color:var(--gold-light); font-weight:700;"><i class="fas fa-couch text-gold"></i> Home Interiors</a></li>
                     <li><a href="/services" class="<%= path === '/services' ? 'active' : '' %>">Services</a></li>
                     <li><a href="/locations" class="<%= path === '/locations' ? 'active' : '' %>">Locations</a></li>
+                    <li><a href="/about" class="<%= path === '/about' ? 'active' : '' %>">About Us</a></li>
                     <li><a href="/contact" class="<%= path === '/contact' ? 'active' : '' %>">Contact Us</a></li>
                     <% if (typeof currentUser !== 'undefined' && currentUser) { %>
                         <% if (currentUser.isSuperAdmin) { %>

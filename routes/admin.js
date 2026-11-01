@@ -693,6 +693,317 @@ router.post('/settings/password', async (req, res) => {
     }
 });
 
+
+// ==============================================================
+// WEBSITE CONTROL CENTER (SUPER ADMIN CMS)
+// ==============================================================
+
+// GET /admin/cms — Central Website CMS Dashboard
+router.get('/cms', requireSuperAdmin, (req, res) => {
+    const db = getDb();
+    const settings = {};
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    rows.forEach(r => { settings[r.key] = r.value; });
+
+    let leadership = [];
+    try {
+        leadership = db.prepare('SELECT * FROM leadership_profiles ORDER BY display_order ASC, id ASC').all();
+    } catch (e) {}
+
+    let auditLogs = [];
+    try {
+        auditLogs = db.prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 30').all();
+    } catch (e) {}
+
+    let interiorServices = [];
+    try {
+        interiorServices = db.prepare('SELECT * FROM interior_services ORDER BY display_order ASC, id ASC').all();
+    } catch (e) {}
+
+    const message = req.query.msg || null;
+    const error = req.query.err || null;
+
+    res.render('admin/cms', {
+        title: 'Website Control Center — SV Real Estates Super Admin',
+        settings,
+        leadership,
+        interiorServices,
+        auditLogs,
+        message,
+        error,
+        unreadNotifications: 0
+    });
+});
+
+// POST /admin/cms/services — Update Service Details & Visibility
+router.post('/cms/services', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const { service_id, starting_price, is_active } = req.body;
+        if (service_id) {
+            db.prepare("UPDATE interior_services SET starting_price = COALESCE(?, starting_price), is_active = ?, updated_at = datetime('now') WHERE id = ?")
+                .run(starting_price || null, is_active ? 1 : 0, parseInt(service_id, 10));
+            const { auditLog } = require('../middleware/auth');
+            auditLog(db, req.session.userId, req.session.userName, 'update', 'service', parseInt(service_id, 10), `Updated service #${service_id}`, req.ip);
+        }
+        res.redirect('/admin/cms?msg=Service+settings+updated+successfully');
+    } catch (err) {
+        console.error('Error updating CMS service:', err);
+        res.redirect('/admin/cms?err=Failed+to+update+service+settings');
+    }
+});
+
+// POST /admin/cms/company — Save Business Identity & Contact Info
+router.post('/cms/company', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const allowed = [
+            'business_name', 'business_tagline', 'business_phone', 'business_whatsapp',
+            'business_email', 'business_address', 'business_instagram', 'business_hours'
+        ];
+        const upsert = db.prepare(`
+            INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        `);
+        for (const k of allowed) {
+            if (req.body[k] !== undefined) upsert.run(k, String(req.body[k]).trim());
+        }
+        auditLog(db, req.session.userId, req.session.userName, 'update_company_profile', 'settings', null, 'Company profile details updated', req.ip);
+        res.redirect('/admin/cms?msg=Company+profile+saved+successfully');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+save+company+profile');
+    }
+});
+
+// POST /admin/cms/leadership — Add New Leadership Profile
+router.post('/cms/leadership', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const { name, designation, role_type, bio, experience_years, photo_url, linkedin_url, show_on_about, show_on_home, is_active } = req.body;
+        db.prepare(`
+            INSERT INTO leadership_profiles (name, designation, role_type, bio, experience_years, photo_url, linkedin_url, show_on_about, show_on_home, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            (name || '').trim(),
+            (designation || '').trim(),
+            role_type || 'director',
+            (bio || '').trim(),
+            parseInt(experience_years, 10) || 15,
+            photo_url ? photo_url.trim() : null,
+            linkedin_url ? linkedin_url.trim() : null,
+            show_on_about ? 1 : 0,
+            show_on_home ? 1 : 0,
+            is_active ? 1 : 0
+        );
+        auditLog(db, req.session.userId, req.session.userName, 'create_leader', 'leadership_profiles', null, `Added leadership profile for ${name}`, req.ip);
+        res.redirect('/admin/cms?msg=Leadership+profile+added+successfully');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+add+leadership+profile');
+    }
+});
+
+// POST /admin/cms/leadership/:id/delete — Delete Leadership Profile
+router.post('/cms/leadership/:id/delete', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        db.prepare('DELETE FROM leadership_profiles WHERE id = ?').run(req.params.id);
+        auditLog(db, req.session.userId, req.session.userName, 'delete_leader', 'leadership_profiles', req.params.id, 'Deleted leadership profile', req.ip);
+        res.redirect('/admin/cms?msg=Leadership+profile+deleted');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+delete+leadership+profile');
+    }
+});
+
+// POST /admin/cms/homepage — Save Homepage Copy & Statistics
+router.post('/cms/homepage', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const allowed = ['hero_headline', 'hero_subheading', 'stat_years', 'stat_acres', 'stat_titles', 'stat_clients'];
+        const upsert = db.prepare(`
+            INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        `);
+        for (const k of allowed) {
+            if (req.body[k] !== undefined) upsert.run(k, String(req.body[k]).trim());
+        }
+        auditLog(db, req.session.userId, req.session.userName, 'update_homepage_copy', 'settings', null, 'Homepage hero copy and statistics updated', req.ip);
+        res.redirect('/admin/cms?msg=Homepage+content+saved+successfully');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+save+homepage+content');
+    }
+});
+
+// POST /admin/cms/seo — Save Search Engine Meta
+router.post('/cms/seo', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const allowed = ['seo_default_title', 'seo_default_desc', 'seo_keywords'];
+        const upsert = db.prepare(`
+            INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        `);
+        for (const k of allowed) {
+            if (req.body[k] !== undefined) upsert.run(k, String(req.body[k]).trim());
+        }
+        auditLog(db, req.session.userId, req.session.userName, 'update_seo', 'settings', null, 'SEO defaults updated', req.ip);
+        res.redirect('/admin/cms?msg=SEO+defaults+saved+successfully');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+save+SEO+defaults');
+    }
+});
+
+// POST /admin/cms/branding — Save Theme & WhatsApp Toggle
+router.post('/cms/branding', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const upsert = db.prepare(`
+            INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        `);
+        if (req.body.theme_accent_gold) upsert.run('theme_accent_gold', req.body.theme_accent_gold.trim());
+        if (req.body.theme_primary_color) upsert.run('theme_primary_color', req.body.theme_primary_color.trim());
+        upsert.run('whatsapp_floating_enabled', req.body.whatsapp_floating_enabled ? '1' : '0');
+        upsert.run('announcement_bar_enabled', req.body.announcement_bar_enabled ? '1' : '0');
+        if (req.body.announcement_text !== undefined) upsert.run('announcement_text', req.body.announcement_text.trim());
+
+        auditLog(db, req.session.userId, req.session.userName, 'update_branding', 'settings', null, 'Branding settings updated', req.ip);
+        res.redirect('/admin/cms?msg=Branding+settings+updated+successfully');
+    } catch (e) {
+        res.redirect('/admin/cms?err=Failed+to+save+branding+settings');
+    }
+});
+
+// ==============================================================
+// HOME INTERIORS MANAGEMENT ROUTES
+// ==============================================================
+
+// GET /admin/interiors — List All Interior Projects
+router.get('/interiors', requirePermission('interiors'), (req, res) => {
+    const db = getDb();
+    let projects = [];
+    try {
+        projects = db.prepare('SELECT * FROM interior_projects ORDER BY is_featured DESC, id DESC').all();
+    } catch (e) {}
+    const message = req.query.msg || null;
+    res.render('admin/interiors', {
+        title: 'Home Interiors Management — SV Real Estates Admin',
+        projects,
+        message,
+        unreadNotifications: 0
+    });
+});
+
+// GET /admin/interiors/new — Form for New Interior Project
+router.get('/interiors/new', requirePermission('interiors'), (req, res) => {
+    res.render('admin/interior-form', {
+        title: 'Add New Interior Project — SV Real Estates Admin',
+        project: null,
+        unreadNotifications: 0
+    });
+});
+
+// GET /admin/interiors/:id/edit — Edit Existing Interior Project
+router.get('/interiors/:id/edit', requirePermission('interiors'), (req, res) => {
+    const db = getDb();
+    let project = null;
+    try {
+        project = db.prepare('SELECT * FROM interior_projects WHERE id = ?').get(req.params.id);
+    } catch (e) {}
+    if (!project) return res.redirect('/admin/interiors');
+    const bImg = db.prepare("SELECT image_url FROM interior_project_images WHERE project_id = ? AND image_type = 'before' LIMIT 1").get(project.id);
+    const aImg = db.prepare("SELECT image_url FROM interior_project_images WHERE project_id = ? AND image_type = 'after' LIMIT 1").get(project.id);
+    project.before_image = bImg ? bImg.image_url : '';
+    project.after_image = aImg ? aImg.image_url : '';
+    res.render('admin/interior-form', {
+        title: `Edit ${project.title} — SV Real Estates Admin`,
+        project,
+        unreadNotifications: 0
+    });
+});
+
+// POST /admin/interiors — Create Interior Project
+router.post('/interiors', requirePermission('interiors'), (req, res) => {
+    try {
+        const db = getDb();
+        const { title, locality, property_type, bhk_config, design_style, budget_range, cover_image, short_description, description, is_featured, is_published } = req.body;
+        const slug = (title || 'interior-project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
+        const code = `SV-INT-${Date.now().toString().slice(-5)}`;
+        const result = db.prepare(`
+            INSERT INTO interior_projects (
+                project_code, title, slug, locality, city, property_type, bhk_config,
+                design_style, budget_range, completion_status, short_description, description,
+                cover_image, is_featured, is_published
+            ) VALUES (?, ?, ?, ?, 'Hyderabad', ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?)
+        `).run(
+            code, (title || '').trim(), slug, (locality || 'Hyderabad').trim(),
+            property_type || 'Apartment', bhk_config || '3BHK',
+            design_style || 'Contemporary Modern', (budget_range || '').trim(),
+            (short_description || '').trim(), (description || '').trim(),
+            cover_image ? cover_image.trim() : null,
+            is_featured ? 1 : 0, is_published ? 1 : 0
+        );
+        const newProjId = result.lastInsertRowid;
+        if (req.body.before_image) {
+            db.prepare("INSERT INTO interior_project_images (project_id, image_url, title, image_type, is_before_after, display_order) VALUES (?, ?, 'Before Construction', 'before', 1, 10)").run(newProjId, req.body.before_image.trim());
+        }
+        if (req.body.after_image) {
+            db.prepare("INSERT INTO interior_project_images (project_id, image_url, title, image_type, is_before_after, display_order) VALUES (?, ?, 'After Completion', 'after', 1, 11)").run(newProjId, req.body.after_image.trim());
+        }
+        auditLog(db, req.session.userId, req.session.userName, 'create_interior_project', 'interior_projects', newProjId, `Created interior project: ${title}`, req.ip);
+        res.redirect('/admin/interiors?msg=Interior+project+created+successfully');
+    } catch (e) {
+        res.redirect('/admin/interiors?err=Failed+to+create+interior+project');
+    }
+});
+
+// POST /admin/interiors/:id — Update Interior Project
+router.post('/interiors/:id', requirePermission('interiors'), (req, res) => {
+    try {
+        const db = getDb();
+        const { title, locality, property_type, bhk_config, design_style, budget_range, cover_image, short_description, description, is_featured, is_published } = req.body;
+        db.prepare(`
+            UPDATE interior_projects SET
+                title = ?, locality = ?, property_type = ?, bhk_config = ?, design_style = ?,
+                budget_range = ?, cover_image = ?, short_description = ?, description = ?,
+                is_featured = ?, is_published = ?, updated_at = datetime('now')
+            WHERE id = ?
+        `).run(
+            (title || '').trim(), (locality || 'Hyderabad').trim(),
+            property_type || 'Apartment', bhk_config || '3BHK',
+            design_style || 'Contemporary Modern', (budget_range || '').trim(),
+            cover_image ? cover_image.trim() : null,
+            (short_description || '').trim(), (description || '').trim(),
+            is_featured ? 1 : 0, is_published ? 1 : 0,
+            req.params.id
+        );
+        const updProjId = parseInt(req.params.id, 10);
+        if (req.body.before_image) {
+            db.prepare("DELETE FROM interior_project_images WHERE project_id = ? AND image_type = 'before'").run(updProjId);
+            db.prepare("INSERT INTO interior_project_images (project_id, image_url, title, image_type, is_before_after, display_order) VALUES (?, ?, 'Before Construction', 'before', 1, 10)").run(updProjId, req.body.before_image.trim());
+        }
+        if (req.body.after_image) {
+            db.prepare("DELETE FROM interior_project_images WHERE project_id = ? AND image_type = 'after'").run(updProjId);
+            db.prepare("INSERT INTO interior_project_images (project_id, image_url, title, image_type, is_before_after, display_order) VALUES (?, ?, 'After Completion', 'after', 1, 11)").run(updProjId, req.body.after_image.trim());
+        }
+        auditLog(db, req.session.userId, req.session.userName, 'update_interior_project', 'interior_projects', req.params.id, `Updated interior project #${req.params.id}`, req.ip);
+        res.redirect('/admin/interiors?msg=Interior+project+updated+successfully');
+    } catch (e) {
+        res.redirect('/admin/interiors?err=Failed+to+update+interior+project');
+    }
+});
+
+// POST /admin/interiors/:id/delete — Delete Interior Project
+router.post('/interiors/:id/delete', requirePermission('interiors'), (req, res) => {
+    try {
+        const db = getDb();
+        db.prepare('DELETE FROM interior_projects WHERE id = ?').run(req.params.id);
+        auditLog(db, req.session.userId, req.session.userName, 'delete_interior_project', 'interior_projects', req.params.id, 'Deleted interior project', req.ip);
+        res.redirect('/admin/interiors?msg=Interior+project+deleted');
+    } catch (e) {
+        res.redirect('/admin/interiors?err=Failed+to+delete+interior+project');
+    }
+});
+
 // Fallback: any other unmatched /admin/* route redirects directly to appropriate admin landing page
 router.use((req, res) => {
     const cleanUrl = (req.originalUrl || req.url || '').split('?')[0].replace(/\/+$/, '');

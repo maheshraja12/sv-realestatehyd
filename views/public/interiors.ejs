@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="SV Home Interiors Hyderabad — Bespoke luxury interior design for 2BHK, 3BHK, luxury villas, and modular kitchens across Hyderabad. 45-day handover with 10-year warranty.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Hero Banner -->
+    <section class="page-banner" style="background: linear-gradient(180deg, rgba(11,12,16,0.85) 0%, rgba(11,12,16,0.95) 100%), url('https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; padding: 100px 0 70px;">
+        <div class="container page-banner-inner text-center">
+            <span class="page-tag"><i class="fas fa-couch text-gold"></i> BESPOKE ARCHITECTURAL INTERIORS • HYDERABAD</span>
+            <h1 class="page-title">Elevate Your Living With <span class="gold-gradient-text">SV Home Interiors</span></h1>
+            <p class="page-subtitle" style="max-width: 800px; margin: 15px auto 30px;">
+                Complete interior design & execution for 2BHK, 3BHK, luxury villas, and commercial spaces across Kokapet, Tellapur, Financial District, and all over Hyderabad. 45-day guaranteed handover with a 10-year warranty.
+            </p>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal('Home Interiors')">
+                    <i class="fas fa-calendar-check"></i> Book Free 3D Consultation
+                </button>
+                <a href="/interiors/projects" class="btn btn-outline-gold btn-large">
+                    <i class="fas fa-images"></i> Explore Portfolio
+                </a>
+                <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Home%20Interiors,%20I%20am%20looking%20for%20an%20interior%20design%20consultation." target="_blank" class="btn btn-whatsapp btn-large">
+                    <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Metrics Ribbon -->
+    <section class="section" style="padding: 40px 0; background: var(--bg-dark); border-bottom: 1px solid var(--border-dark);">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; text-align: center;">
+                <div class="stat-box">
+                    <span style="font-family: var(--font-heading); font-size: 2.2rem; color: var(--gold); font-weight: 700;">45 Days</span>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Guaranteed Turnkey Handover</p>
+                </div>
+                <div class="stat-box">
+                    <span style="font-family: var(--font-heading); font-size: 2.2rem; color: var(--gold); font-weight: 700;">10 Years</span>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Material & Hardware Warranty</p>
+                </div>
+                <div class="stat-box">
+                    <span style="font-family: var(--font-heading); font-size: 2.2rem; color: var(--gold); font-weight: 700;">100%</span>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Factory Machine Precision Joinery</p>
+                </div>
+                <div class="stat-box">
+                    <span style="font-family: var(--font-heading); font-size: 2.2rem; color: var(--gold); font-weight: 700;">Zero</span>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Hidden Costs or Escalations</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interior Services Grid (12 Core Services) -->
+    <section class="section" id="services">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">SOLUTIONS & SPECIALTIES</span>
+                <h2 class="section-title">End-to-End <span class="gold-gradient-text">Interior Solutions</span></h2>
+                <p class="section-subtitle">Tailored architectural joinery, modular installations, and bespoke living spaces.</p>
+            </div>
+
+            <div class="features-grid">
+                <% if (typeof services !== 'undefined' && services && services.length > 0) { %>
+                    <% services.forEach(service => { %>
+                    <div class="feature-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div class="feature-icon"><i class="fas <%= service.icon || 'fa-couch' %> text-gold"></i></div>
+                            <h3><%= service.title %></h3>
+                            <p><%= service.short_description %></p>
+                        </div>
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-dark); display: flex; justify-content: space-between; align-items: center;">
+                            <% if (service.starting_price) { %>
+                            <span style="color: var(--gold-light); font-weight: 700; font-size: 0.9rem;"><%= service.starting_price %></span>
+                            <% } else { %>
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">Custom Quote</span>
+                            <% } %>
+                            <button type="button" class="btn btn-outline-gold" style="padding: 6px 14px; font-size: 0.8rem;" onclick="openEnquiryModal('Home Interiors', '<%= (service.title || '').replace(/'/g, '\\\'') %>')">
+                                Enquire
+                            </button>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } %>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/interiors/services" class="btn btn-gold">
+                    <i class="fas fa-list-ul"></i> View Detailed Service Catalog
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Projects Showcase -->
+    <section class="section" style="background: var(--bg-dark);" id="projects">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">RECENT TRANSFORMATIONS</span>
+                <h2 class="section-title">Featured <span class="gold-gradient-text">Hyderabad Projects</span></h2>
+                <p class="section-subtitle">A glimpse into recent homes designed and crafted by our master interior team.</p>
+            </div>
+
+            <div class="properties-grid">
+                <% if (typeof projects !== 'undefined' && projects && projects.length > 0) { %>
+                    <% projects.forEach(proj => { %>
+                    <div class="property-card">
+                        <div class="prop-card-media" style="aspect-ratio: 4/3; width: 100%; height: auto; min-height: 250px;">
+                            <img src="<%= proj.cover_image || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80' %>" alt="<%= proj.title %>" class="prop-img" loading="lazy" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
+                            <div class="prop-badge-top">
+                                <span class="badge-featured"><i class="fas fa-check-circle"></i> Completed</span>
+                                <span class="badge-category"><%= proj.bhk_config || proj.property_type %></span>
+                            </div>
+                            <% if (proj.budget_range) { %>
+                            <div class="prop-price-tag"><%= proj.budget_range %></div>
+                            <% } %>
+                        </div>
+                        <div class="prop-card-body">
+                            <div class="prop-location">
+                                <i class="fas fa-map-marker-alt text-gold"></i>
+                                <span><%= proj.locality %>, <%= proj.city || 'Hyderabad' %></span>
+                            </div>
+                            <h3 class="prop-title">
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>"><%= proj.title %></a>
+                            </h3>
+                            <p class="prop-desc"><%= proj.short_description %></p>
+                            <div class="prop-specs-row" style="margin-top: 12px;">
+                                <div class="spec-item"><i class="fas fa-paint-roller"></i> <%= proj.design_style || 'Contemporary' %></div>
+                                <div class="spec-item"><i class="fas fa-building"></i> <%= proj.property_type %></div>
+                            </div>
+                            <div class="prop-card-footer" style="margin-top: 16px;">
+                                <button type="button" class="btn btn-card-enquire" onclick="openEnquiryModal('Home Interiors', '<%= (proj.title || '').replace(/'/g, '\\\'') %>')">
+                                    <i class="fas fa-envelope"></i> Get Similar Estimate
+                                </button>
+                                <a href="/interiors/projects/<%= proj.slug || proj.id %>" class="btn btn-card-details">
+                                    View Project <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } %>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/interiors/projects" class="btn btn-outline-gold btn-large">
+                    <i class="fas fa-th-large"></i> View All Portfolio Projects
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Design & Execution Process -->
+    <section class="section" id="process">
+        <div class="container">
+            <div class="section-header text-center">
+                <span class="section-badge">HOW WE WORK</span>
+                <h2 class="section-title">Our Seamless <span class="gold-gradient-text">Execution Process</span></h2>
+                <p class="section-subtitle">From initial sketch to key handover in 4 transparent stages.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px;">
+                <div class="feature-card" style="text-align: center; position: relative;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(212,175,55,0.15); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-family: var(--font-heading); font-size: 1.4rem; color: var(--gold); font-weight: 700;">
+                        1
+                    </div>
+                    <h3>Consultation & Site Recce</h3>
+                    <p>Our senior architect visits your property for millimeter-accurate laser measurement, lifestyle discovery, and space planning.</p>
+                </div>
+
+                <div class="feature-card" style="text-align: center; position: relative;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(212,175,55,0.15); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-family: var(--font-heading); font-size: 1.4rem; color: var(--gold); font-weight: 700;">
+                        2
+                    </div>
+                    <h3>3D Designs & Material Selection</h3>
+                    <p>Review photorealistic 3D renders of your home. Select laminates, acrylics, quartz, lighting, and German fittings with transparent estimates.</p>
+                </div>
+
+                <div class="feature-card" style="text-align: center; position: relative;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(212,175,55,0.15); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-family: var(--font-heading); font-size: 1.4rem; color: var(--gold); font-weight: 700;">
+                        3
+                    </div>
+                    <h3>Precision Factory Joinery</h3>
+                    <p>Panels are machine-cut with CNC precision and PUR edge-banded in high-tech facilities to prevent bubbling, peeling, or pest damage.</p>
+                </div>
+
+                <div class="feature-card" style="text-align: center; position: relative;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(212,175,55,0.15); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-family: var(--font-heading); font-size: 1.4rem; color: var(--gold); font-weight: 700;">
+                        4
+                    </div>
+                    <h3>On-Site Fitting & Handover</h3>
+                    <p>Final installation by certified master carpenters with 120-point quality audit, deep cleaning, and 10-year warranty certificate handover.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Consultation CTA Banner -->
+    <section class="cta-banner-section" style="padding: 70px 0;">
+        <div class="container">
+            <div class="cta-banner-card">
+                <div class="cta-text">
+                    <h2>Ready to Craft Your Dream Interior in Hyderabad?</h2>
+                    <p>Book a free 30-minute design consultation with our senior interior architects today. No obligations.</p>
+                </div>
+                <div class="cta-buttons">
+                    <button type="button" class="btn btn-gold btn-large" onclick="openEnquiryModal('Home Interiors')">
+                        <i class="fas fa-calendar-check"></i> Book Consultation
+                    </button>
+                    <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Home%20Interiors,%20I%20would%20like%20to%20discuss%20my%20flat%20interior." target="_blank" class="btn btn-whatsapp btn-large">
+                        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
+</body>
+</html>
+

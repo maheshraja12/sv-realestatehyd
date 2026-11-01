@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="<%= project.short_description || project.title %> — Completed by SV Home Interiors Hyderabad in <%= project.locality %>">
+    <meta property="og:title" content="<%= project.title %> — SV Home Interiors Hyderabad">
+    <meta property="og:description" content="<%= project.short_description %>">
+    <% if (project.cover_image) { %>
+    <meta property="og:image" content="<%= project.cover_image %>">
+    <% } %>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Breadcrumb & Detail Header -->
+    <section class="detail-header-section">
+        <div class="container">
+            <div class="breadcrumb-nav">
+                <a href="/">Home</a>
+                <span class="bc-sep">/</span>
+                <a href="/interiors">Home Interiors</a>
+                <span class="bc-sep">/</span>
+                <a href="/interiors/projects">Projects</a>
+                <span class="bc-sep">/</span>
+                <span class="bc-current"><%= project.title %></span>
+            </div>
+
+            <div class="prop-detail-header-flex">
+                <div class="header-main-info">
+                    <div class="prop-tags-row">
+                        <span class="badge-category"><%= project.property_type %></span>
+                        <span class="badge-purpose"><%= project.bhk_config || 'Interior' %></span>
+                        <span class="badge-code"><%= project.project_code || 'SV-INTERIOR' %></span>
+                        <span class="badge-verified"><i class="fas fa-check-circle text-gold"></i> Fully Handed Over</span>
+                    </div>
+                    <h1 class="prop-detail-title"><%= project.title %></h1>
+                    <p class="prop-detail-location">
+                        <i class="fas fa-map-marker-alt text-gold"></i>
+                        <%= project.locality %>, <%= project.city || 'Hyderabad' %>
+                    </p>
+                </div>
+
+                <div class="header-price-info">
+                    <div class="detail-price-box">
+                        <span class="price-label">Project Budget</span>
+                        <h2 class="detail-price-val">
+                            <%= project.budget_range || 'Custom Scope' %>
+                        </h2>
+                        <span class="badge-negotiable"><i class="fas fa-calendar-check"></i> Turnkey Execution</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Detail Content Grid -->
+    <section class="section prop-detail-content-section">
+        <div class="container">
+            <div class="detail-layout-grid">
+                <!-- Left Column — Media, Specs, Description -->
+                <div class="detail-left-col">
+                    <!-- Gallery Viewport -->
+                    <div class="prop-gallery-card">
+                        <div class="main-image-viewport" style="aspect-ratio: 16/10; max-height: 520px; overflow: hidden; background: #000; border-radius: var(--radius-sm);">
+                            <img id="mainGalleryImage" src="<%= project.cover_image || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80' %>" alt="<%= project.title %>" class="main-img" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
+                        </div>
+
+                        <% if (typeof images !== 'undefined' && images && images.length > 1) { %>
+                        <div class="thumbnails-track" style="display: flex; gap: 10px; margin-top: 14px; overflow-x: auto; padding-bottom: 8px;">
+                            <% images.forEach((img, idx) => { %>
+                            <div class="thumb-item <%= idx === 0 ? 'active' : '' %>" onclick="document.getElementById('mainGalleryImage').src = '<%= img.image_url %>'" style="cursor: pointer; width: 100px; height: 75px; flex-shrink: 0; border-radius: 6px; overflow: hidden; border: 2px solid var(--border-dark);">
+                                <img src="<%= img.image_url %>" alt="Photo <%= idx + 1 %>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='/images/brand-banner.png';">
+                            </div>
+                            <% }) %>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Key Project Specifications -->
+                    <div class="key-specs-card" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 22px; margin: 24px 0;">
+                        <div class="key-spec-cell" style="display: flex; gap: 12px; align-items: center;">
+                            <i class="fas fa-paint-brush text-gold" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Design Style</span>
+                                <strong style="color: var(--text-light);"><%= project.design_style || 'Contemporary' %></strong>
+                            </div>
+                        </div>
+
+                        <div class="key-spec-cell" style="display: flex; gap: 12px; align-items: center;">
+                            <i class="fas fa-home text-gold" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Configuration</span>
+                                <strong style="color: var(--text-light);"><%= project.bhk_config || project.property_type %></strong>
+                            </div>
+                        </div>
+
+                        <div class="key-spec-cell" style="display: flex; gap: 12px; align-items: center;">
+                            <i class="fas fa-map-marker-alt text-gold" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Locality</span>
+                                <strong style="color: var(--text-light);"><%= project.locality %></strong>
+                            </div>
+                        </div>
+
+                        <div class="key-spec-cell" style="display: flex; gap: 12px; align-items: center;">
+                            <i class="fas fa-clock text-gold" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Execution Timeline</span>
+                                <strong style="color: var(--text-light);">45 Days Handover</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Before and After Transformation Showcase -->
+                    <% if (typeof beforeImage !== 'undefined' && beforeImage && typeof afterImage !== 'undefined' && afterImage) { %>
+                    <div class="before-after-card" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px;">
+                        <h3 style="font-size: 1.15rem; margin-bottom: 16px; color: var(--text-light);"><i class="fas fa-columns text-gold"></i> Site Transformation: Before & After</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <span class="badge" style="background: rgba(255,255,255,0.1); margin-bottom: 8px; display: inline-block;">Before: Bare Shell</span>
+                                <div style="aspect-ratio: 4/3; border-radius: 6px; overflow: hidden;">
+                                    <img src="<%= beforeImage %>" alt="Before Construction" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge" style="background: rgba(212,175,55,0.2); color: var(--gold); margin-bottom: 8px; display: inline-block;">After: Finished Handover</span>
+                                <div style="aspect-ratio: 4/3; border-radius: 6px; overflow: hidden; border: 1px solid var(--gold);">
+                                    <img src="<%= afterImage %>" alt="Finished Handover" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <!-- Project Story & Description -->
+                    <div class="detail-description-card" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 28px; margin-bottom: 24px;">
+                        <h2 style="font-size: 1.4rem; margin-bottom: 16px; color: var(--text-light);">Project Overview & Concept</h2>
+                        <div style="color: var(--text-muted); line-height: 1.8; font-size: 1rem;">
+                            <p style="margin-bottom: 14px;"><%= project.description || project.short_description %></p>
+                            <p>Every element was manufactured in our partner German CNC joinery facility with 1mm edge banding, ensuring moisture protection in Hyderabad humid monsoon seasons and lifelong hinge performance.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column — Consultation CTA Card -->
+                <div class="detail-sidebar-col">
+                    <div class="contact-agent-card" style="background: var(--bg-card); border: 1px solid var(--gold); border-radius: var(--radius-md); padding: 28px; position: sticky; top: 100px;">
+                        <span class="badge-featured" style="margin-bottom: 12px; display: inline-block;">INTERIOR ADVISORY</span>
+                        <h3 style="font-size: 1.3rem; margin-bottom: 8px;">Design Your Dream Home</h3>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
+                            Inspired by this <%= project.locality %> project? Connect directly with our interior architect for a personalized layout and budget forecast.
+                        </p>
+
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button type="button" class="btn btn-gold btn-large" style="width: 100%;" onclick="openEnquiryModal('Home Interiors', '<%= (project.title || '').replace(/'/g, '\\\'') %>')">
+                                <i class="fas fa-calendar-check"></i> Book Design Session
+                            </button>
+                            <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Home%20Interiors,%20I%20like%20the%20<%= encodeURIComponent(project.title) %>%20project%20and%20want%20a%20similar%20estimate." target="_blank" class="btn btn-whatsapp btn-large" style="width: 100%;">
+                                <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                            </a>
+                            <a href="tel:<%= businessPhone %>" class="btn btn-outline-gold" style="width: 100%;">
+                                <i class="fas fa-phone-alt"></i> Call <%= businessPhone %>
+                            </a>
+                        </div>
+
+                        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-dark); font-size: 0.85rem; color: var(--text-dim); display: flex; flex-direction: column; gap: 8px;">
+                            <div><i class="fas fa-check text-gold"></i> Free 3D photorealistic visualization</div>
+                            <div><i class="fas fa-check text-gold"></i> 10-year hardware warranty</div>
+                            <div><i class="fas fa-check text-gold"></i> Guaranteed 45-day handover</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
+</body>
+</html>
+

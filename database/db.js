@@ -77,7 +77,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Satya_sree_nivriti_homes_bk_enclave.jpg?width=1200'
         },
         {
             id: 2,
@@ -107,7 +107,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Rajapushpa_Imperia_Tower_A.jpg?width=1200'
         },
         {
             id: 3,
@@ -129,7 +129,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Farm_on_the_outskirts_of_Hyderabad.jpg?width=1200'
         },
         {
             id: 4,
@@ -154,7 +154,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sukhii_Ubuntu%2C_Hyderabad_-_High-rise_residential_towers_with_rooftop_sky_bridges.jpg?width=1200'
         },
         {
             id: 5,
@@ -179,7 +179,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_Gateway_of_My_Home_Bhooja_Block_J.jpg?width=1200'
         },
         {
             id: 6,
@@ -204,7 +204,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Aparna%27s_Elixir_Gated_Community.jpg?width=1200'
         },
         {
             id: 7,
@@ -226,7 +226,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Neopolis_to_Kokapet_%E2%80%93_Emerging_Urban_Corridor.jpg?width=1200'
         },
         {
             id: 8,
@@ -252,7 +252,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ali_Yawar_Jung_Mansion%2C_Banjara_Hills.png?width=1200'
         },
         {
             id: 9,
@@ -274,7 +274,7 @@ function createMemoryDb() {
             availability: 'available',
             is_featured: 1,
             published_at: new Date().toISOString(),
-            cover_image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
+            cover_image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Facade_of_BN_Tech_Square_at_Gachibowli_illuminated_by_Sunset.jpg?width=1200'
         }
     ];
 
@@ -461,7 +461,9 @@ function initializeDb() {
                 { name: 'phone_number', type: 'TEXT' },
                 { name: 'appointment_date', type: 'TEXT' },
                 { name: 'appointment_time', type: 'TEXT' },
-                { name: 'property_requirement', type: 'TEXT' }
+                { name: 'property_requirement', type: 'TEXT' },
+                { name: 'lead_category', type: "TEXT DEFAULT 'Property Buying'" },
+                { name: 'service_type', type: 'TEXT' }
             ];
             for (const col of requiredCols) {
                 if (!columns.includes(col.name)) {

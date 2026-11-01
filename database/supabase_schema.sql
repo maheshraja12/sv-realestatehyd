@@ -1,6 +1,9 @@
 -- ==============================================================
 -- SV Real Estates Hyderabad — Supabase PostgreSQL Schema
--- Tables: public.session, public.leads, public.enquiries, public.appointments, public.settings
+-- Tables: public.session, public.leads, public.enquiries, public.appointments, public.settings,
+--         public.leadership_profiles, public.team_members, public.interior_services,
+--         public.interior_projects, public.interior_project_images, public.website_pages,
+--         public.website_sections, public.content_revisions, public.admin_audit_logs
 -- Run this in your Supabase SQL Editor if needed (auto-migrated by app as well)
 -- ==============================================================
 
@@ -25,6 +28,8 @@ CREATE TABLE IF NOT EXISTS public.leads (
     property_id INT,
     property_category VARCHAR(100),
     property_requirement VARCHAR(200),
+    lead_category VARCHAR(100) DEFAULT 'Property Buying',
+    service_type VARCHAR(100),
     budget VARCHAR(100),
     preferred_location VARCHAR(200),
     message TEXT,
@@ -43,9 +48,10 @@ CREATE TABLE IF NOT EXISTS public.leads (
 
 CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON public.leads(phone);
+CREATE INDEX IF NOT EXISTS idx_leads_category ON public.leads(lead_category);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at DESC);
 
--- 3. Also provide public.enquiries view or table for compatibility
+-- 3. Compatibility Enquiries Table
 CREATE TABLE IF NOT EXISTS public.enquiries (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     lead_code VARCHAR(50),
@@ -94,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
 
 INSERT INTO public.settings (key, value) VALUES
     ('business_name', 'Sri Venkateswara Real Estates & Building Materials'),
-    ('business_tagline', 'Luxury Properties, Gated Communities & Building Construction'),
+    ('business_tagline', 'Luxury Properties, Gated Communities & Home Interiors'),
     ('business_phone', '+91 9346423434'),
     ('business_email', 'svsrivenkateswara99@gmail.com'),
     ('business_whatsapp', '919346423434'),
@@ -103,85 +109,254 @@ INSERT INTO public.settings (key, value) VALUES
     ('admin_perm_dashboard', '0'),
     ('admin_perm_properties', '0'),
     ('admin_perm_leads', '1'),
-    ('admin_perm_appointments', '0')
+    ('admin_perm_appointments', '0'),
+    ('theme_primary_color', '#0a0d14'),
+    ('theme_accent_gold', '#d4af37'),
+    ('whatsapp_floating_enabled', '1'),
+    ('announcement_bar_enabled', '0'),
+    ('announcement_text', '')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
--- 6. Admin Users Table (For Super Admin and Normal Admin accounts)
+-- 6. Admin Users Table
 CREATE TABLE IF NOT EXISTS public.users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     email VARCHAR(200) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin', 'admin', 'agent')),
+    role VARCHAR(50) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin', 'admin', 'property_manager', 'sales_staff', 'interior_manager', 'staff', 'agent')),
     is_active INT NOT NULL DEFAULT 1,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed default Super Admin and Normal Admin in Supabase (BCrypt hashes for SuperAdmin@SV2024 and Admin@SV2024)
 INSERT INTO public.users (name, email, password_hash, role, is_active) VALUES
     ('SV Super Admin', 'superadmin@svrealestate.com', '$2a$10$MXv9CNsonmpzFy7zQXAMe.sLLhAPs.rPHlKwQgY26aj8h.cd0N0Zu', 'superadmin', 1),
     ('SV Staff Admin', 'admin@svrealestate.com', '$2a$10$GHBRBZWJoYyPhtnXZkMB1unMHhM5bEbanT6pV7tK9OEPwQcsG4fgK', 'admin', 1)
 ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role;
 
--- Enable Row Level Security (RLS) policies for security
+-- 7. Leadership & Executive Team Profiles (CMS Managed)
+CREATE TABLE IF NOT EXISTS public.leadership_profiles (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    designation VARCHAR(150) NOT NULL,
+    role_type VARCHAR(100) NOT NULL DEFAULT 'director',
+    bio TEXT,
+    photo_url TEXT,
+    experience_years INT DEFAULT 15,
+    achievements TEXT,
+    linkedin_url VARCHAR(300),
+    display_order INT DEFAULT 0,
+    is_active INT DEFAULT 1,
+    show_on_home INT DEFAULT 0,
+    show_on_about INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_leadership_active ON public.leadership_profiles(is_active, display_order);
+
+-- 8. Team Members Table
+CREATE TABLE IF NOT EXISTS public.team_members (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    designation VARCHAR(150) NOT NULL,
+    department VARCHAR(100) DEFAULT 'Real Estate Advisory',
+    photo_url TEXT,
+    bio TEXT,
+    phone VARCHAR(50),
+    email VARCHAR(200),
+    linkedin_url VARCHAR(300),
+    display_order INT DEFAULT 0,
+    is_active INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. Home Interior Services Catalog (12 Supported Services)
+CREATE TABLE IF NOT EXISTS public.interior_services (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    slug VARCHAR(150) NOT NULL UNIQUE,
+    category VARCHAR(100) DEFAULT 'residential',
+    short_description TEXT,
+    full_description TEXT,
+    icon VARCHAR(100) DEFAULT 'fa-couch',
+    image_url TEXT,
+    features TEXT,
+    starting_price VARCHAR(100),
+    display_order INT DEFAULT 0,
+    is_active INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_interior_services_active ON public.interior_services(is_active, display_order);
+
+-- 10. Interior Projects Portfolio
+CREATE TABLE IF NOT EXISTS public.interior_projects (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_code VARCHAR(50) UNIQUE,
+    title VARCHAR(250) NOT NULL,
+    slug VARCHAR(200) NOT NULL UNIQUE,
+    locality VARCHAR(150) NOT NULL,
+    city VARCHAR(100) DEFAULT 'Hyderabad',
+    property_type VARCHAR(100) NOT NULL,
+    bhk_config VARCHAR(50),
+    design_style VARCHAR(100),
+    budget_range VARCHAR(100),
+    completion_status VARCHAR(50) DEFAULT 'completed',
+    short_description TEXT,
+    description TEXT,
+    cover_image TEXT,
+    is_featured INT DEFAULT 0,
+    is_published INT DEFAULT 1,
+    views_count INT DEFAULT 0,
+    published_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_interior_projects_status ON public.interior_projects(is_published, is_featured);
+
+-- 11. Interior Project Gallery & Before/After Images
+CREATE TABLE IF NOT EXISTS public.interior_project_images (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    project_id BIGINT REFERENCES public.interior_projects(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    title VARCHAR(200),
+    image_type VARCHAR(50) DEFAULT 'gallery',
+    is_before_after INT DEFAULT 0,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. Website Pages & Sections CMS
+CREATE TABLE IF NOT EXISTS public.website_pages (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    title VARCHAR(200) NOT NULL,
+    meta_title VARCHAR(250),
+    meta_description TEXT,
+    hero_heading VARCHAR(250),
+    hero_subheading TEXT,
+    banner_image TEXT,
+    is_published INT DEFAULT 1,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.website_sections (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    page_slug VARCHAR(100) NOT NULL,
+    section_key VARCHAR(100) NOT NULL,
+    heading VARCHAR(250),
+    subheading TEXT,
+    content_json JSONB DEFAULT '{}'::jsonb,
+    image_url TEXT,
+    display_order INT DEFAULT 0,
+    is_active INT DEFAULT 1,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_page_section UNIQUE (page_slug, section_key)
+);
+
+-- 13. Content Revision History & Rollback
+CREATE TABLE IF NOT EXISTS public.content_revisions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id VARCHAR(100) NOT NULL,
+    revision_data JSONB NOT NULL,
+    created_by BIGINT,
+    created_by_name VARCHAR(200),
+    note VARCHAR(250),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. Admin Audit Logs
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT,
+    user_name VARCHAR(200),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id VARCHAR(100),
+    details TEXT,
+    ip_address VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Row Level Security (RLS) Configuration
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leadership_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.interior_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.interior_projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.interior_project_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.website_pages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.website_sections ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous & authenticated to insert, select, and update leads and appointments
+-- Allow anonymous & authenticated to INSERT leads/appointments
 DROP POLICY IF EXISTS "Public can insert leads" ON public.leads;
 CREATE POLICY "Public can insert leads" ON public.leads FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can read leads" ON public.leads;
-CREATE POLICY "Public can read leads" ON public.leads FOR SELECT TO anon, authenticated USING (true);
-
-DROP POLICY IF EXISTS "Public can update leads" ON public.leads;
-CREATE POLICY "Public can update leads" ON public.leads FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public can insert enquiries" ON public.enquiries;
 CREATE POLICY "Public can insert enquiries" ON public.enquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Public can read enquiries" ON public.enquiries;
-CREATE POLICY "Public can read enquiries" ON public.enquiries FOR SELECT TO anon, authenticated USING (true);
-
-DROP POLICY IF EXISTS "Public can update enquiries" ON public.enquiries;
-CREATE POLICY "Public can update enquiries" ON public.enquiries FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Public can insert appointments" ON public.appointments;
 CREATE POLICY "Public can insert appointments" ON public.appointments FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+-- Protect customer PII: authenticated staff & service role only can read/modify leads
+DROP POLICY IF EXISTS "Public can read leads" ON public.leads;
+DROP POLICY IF EXISTS "Public can update leads" ON public.leads;
+DROP POLICY IF EXISTS "Staff full access leads" ON public.leads;
+CREATE POLICY "Staff full access leads" ON public.leads FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read enquiries" ON public.enquiries;
+DROP POLICY IF EXISTS "Public can update enquiries" ON public.enquiries;
+DROP POLICY IF EXISTS "Staff full access enquiries" ON public.enquiries;
+CREATE POLICY "Staff full access enquiries" ON public.enquiries FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Public can read appointments" ON public.appointments;
-CREATE POLICY "Public can read appointments" ON public.appointments FOR SELECT TO anon, authenticated USING (true);
-
 DROP POLICY IF EXISTS "Public can update appointments" ON public.appointments;
-CREATE POLICY "Public can update appointments" ON public.appointments FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Staff full access appointments" ON public.appointments;
+CREATE POLICY "Staff full access appointments" ON public.appointments FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
 
--- Allow service_role and postgres full access to everything
-DROP POLICY IF EXISTS "Service role full access leads" ON public.leads;
-CREATE POLICY "Service role full access leads" ON public.leads FOR ALL TO service_role USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Service role full access enquiries" ON public.enquiries;
-CREATE POLICY "Service role full access enquiries" ON public.enquiries FOR ALL TO service_role USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Service role full access appointments" ON public.appointments;
-CREATE POLICY "Service role full access appointments" ON public.appointments FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- Enable RLS and add policies for settings
-ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+-- Public read policies for CMS content
 DROP POLICY IF EXISTS "Public can read settings" ON public.settings;
 CREATE POLICY "Public can read settings" ON public.settings FOR SELECT TO anon, authenticated USING (true);
-DROP POLICY IF EXISTS "Public can insert settings" ON public.settings;
-CREATE POLICY "Public can insert settings" ON public.settings FOR INSERT TO anon, authenticated WITH CHECK (true);
-DROP POLICY IF EXISTS "Public can update settings" ON public.settings;
-CREATE POLICY "Public can update settings" ON public.settings FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-DROP POLICY IF EXISTS "Service role full access settings" ON public.settings;
-CREATE POLICY "Service role full access settings" ON public.settings FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Staff full access settings" ON public.settings;
+CREATE POLICY "Staff full access settings" ON public.settings FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
 
--- Enable RLS and add policies for users (protect password hashes from public access)
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Service role full access users" ON public.users;
 CREATE POLICY "Service role full access users" ON public.users FOR ALL TO service_role USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Authenticated can read users" ON public.users;
 CREATE POLICY "Authenticated can read users" ON public.users FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Public can read leadership" ON public.leadership_profiles;
+CREATE POLICY "Public can read leadership" ON public.leadership_profiles FOR SELECT TO anon, authenticated USING (is_active = 1);
+DROP POLICY IF EXISTS "Staff full access leadership" ON public.leadership_profiles;
+CREATE POLICY "Staff full access leadership" ON public.leadership_profiles FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read interior services" ON public.interior_services;
+CREATE POLICY "Public can read interior services" ON public.interior_services FOR SELECT TO anon, authenticated USING (is_active = 1);
+DROP POLICY IF EXISTS "Staff full access interior services" ON public.interior_services;
+CREATE POLICY "Staff full access interior services" ON public.interior_services FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read interior projects" ON public.interior_projects;
+CREATE POLICY "Public can read interior projects" ON public.interior_projects FOR SELECT TO anon, authenticated USING (is_published = 1);
+DROP POLICY IF EXISTS "Staff full access interior projects" ON public.interior_projects;
+CREATE POLICY "Staff full access interior projects" ON public.interior_projects FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read interior project images" ON public.interior_project_images;
+CREATE POLICY "Public can read interior project images" ON public.interior_project_images FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Staff full access interior project images" ON public.interior_project_images;
+CREATE POLICY "Staff full access interior project images" ON public.interior_project_images FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read website pages" ON public.website_pages;
+CREATE POLICY "Public can read website pages" ON public.website_pages FOR SELECT TO anon, authenticated USING (is_published = 1);
+DROP POLICY IF EXISTS "Staff full access website pages" ON public.website_pages;
+CREATE POLICY "Staff full access website pages" ON public.website_pages FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read website sections" ON public.website_sections;
+CREATE POLICY "Public can read website sections" ON public.website_sections FOR SELECT TO anon, authenticated USING (is_active = 1);
+DROP POLICY IF EXISTS "Staff full access website sections" ON public.website_sections;
+CREATE POLICY "Staff full access website sections" ON public.website_sections FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="Book an interior design consultation in Hyderabad with SV Home Interiors. Free 3D plan & itemized estimate for flats and villas.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="site-body">
+    <%- include('../partials/header') %>
+
+    <!-- Page Banner -->
+    <section class="page-banner">
+        <div class="container page-banner-inner">
+            <span class="page-tag"><i class="fas fa-calendar-check text-gold"></i> FREE 3D ARCHITECTURAL CONSULTATION</span>
+            <h1 class="page-title">Book an <span class="gold-gradient-text">Interior Consultation</span></h1>
+            <p class="page-subtitle">Connect with our senior interior architects for floor-plan assessment, budget planning, and 3D preview.</p>
+        </div>
+    </section>
+
+    <!-- Consultation Form Section -->
+    <section class="section">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: start;">
+                <!-- Form Box -->
+                <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 36px;">
+                    <h2 style="font-size: 1.4rem; margin-bottom: 8px; color: var(--text-light);">Interior Design Requirement</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Fill in your details below. Our design consultant will reach out within 2 business hours.</p>
+
+                    <form id="interiorDirectForm" onsubmit="event.preventDefault(); return handleInteriorConsultSubmit(event);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-user text-gold"></i> Full Name *</label>
+                                <input type="text" id="intName" name="full_name" required placeholder="Enter full name" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-phone-alt text-gold"></i> Mobile Number *</label>
+                                <input type="tel" id="intPhone" name="phone_number" required placeholder="10-digit mobile number" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-envelope text-gold"></i> Email Address (Optional)</label>
+                                <input type="email" id="intEmail" name="email" placeholder="email@example.com" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-map-marker-alt text-gold"></i> Property Locality *</label>
+                                <input type="text" id="intLocality" name="preferred_location" required placeholder="e.g. Kokapet, Tellapur, Miyapur" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-home text-gold"></i> Home Configuration *</label>
+                                <select id="intConfig" name="property_requirement" required style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                                    <option value="2BHK Home Interior">2BHK Flat Interior</option>
+                                    <option value="3BHK Home Interior" selected>3BHK Flat Interior</option>
+                                    <option value="4BHK Home Interior">4BHK Flat Interior</option>
+                                    <option value="Luxury Villa Interior">Luxury Villa Interior</option>
+                                    <option value="Modular Kitchen Only">Modular Kitchen Only</option>
+                                    <option value="Commercial / Office Interior">Office / Commercial Space</option>
+                                    <option value="Renovation & Remodeling">Renovation / Remodeling</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-rupee-sign text-gold"></i> Estimated Budget</label>
+                                <select id="intBudget" name="budget" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+                                    <option value="₹5 - ₹8 Lakhs">₹5 - ₹8 Lakhs (Essential Package)</option>
+                                    <option value="₹8 - ₹14 Lakhs" selected>₹8 - ₹14 Lakhs (Premium Package)</option>
+                                    <option value="₹14 - ₹25 Lakhs">₹14 - ₹25 Lakhs (Luxury Package)</option>
+                                    <option value="₹25 Lakhs+">₹25 Lakhs+ (Ultra Luxury / Villa)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 22px;">
+                            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fas fa-comment-alt text-gold"></i> Special Requirements / Floor Plan Notes</label>
+                            <textarea id="intMessage" name="message" rows="3" placeholder="Tell us about your possession date, favorite design styles, or specific room needs..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-dark); padding: 12px 14px; border-radius: 6px; color: #fff; font-size: 0.95rem;"></textarea>
+                        </div>
+
+                        <div id="intErrorAlert" style="display: none; background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 14px;">
+                            <i class="fas fa-exclamation-circle"></i> <span id="intErrorText">Please fill in required fields.</span>
+                        </div>
+
+                        <div id="intSuccessAlert" style="display: none; background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 14px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 14px; text-align: center;">
+                            <i class="fas fa-check-circle text-gold"></i> <strong id="intSuccessMsg">Thank you! Your interior consultation is confirmed. Reference: <span id="intRefCode"></span></strong>
+                        </div>
+
+                        <button type="submit" id="intSubmitBtn" class="btn btn-gold btn-large" style="width: 100%;">
+                            <i class="fas fa-paper-plane"></i> Book Free Consultation
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Info Sidebox -->
+                <div>
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: var(--radius-md); padding: 30px; margin-bottom: 24px;">
+                        <span class="section-badge">STUDIO EXPERIENCE</span>
+                        <h3 style="font-size: 1.25rem; margin: 10px 0 14px;">What Happens Next?</h3>
+                        <ul class="check-list" style="display: flex; flex-direction: column; gap: 14px; color: var(--text-muted); font-size: 0.9rem;">
+                            <li><i class="fas fa-check-circle text-gold"></i> <strong>Initial Phone Discovery:</strong> Understand your room dimensions, family lifestyle, and design preferences.</li>
+                            <li><i class="fas fa-check-circle text-gold"></i> <strong>Site Laser Measurement:</strong> Millimeter-exact survey of your flat or villa in Hyderabad.</li>
+                            <li><i class="fas fa-check-circle text-gold"></i> <strong>3D Concept Presentation:</strong> Walk through interactive 3D renders with material samples.</li>
+                            <li><i class="fas fa-check-circle text-gold"></i> <strong>Fixed Transparent Quotation:</strong> Complete itemized Bill of Quantities (BOQ) with zero hidden extras.</li>
+                        </ul>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, rgba(37,211,102,0.1), rgba(212,175,55,0.05)); border: 1px solid rgba(37,211,102,0.3); border-radius: var(--radius-md); padding: 24px; text-align: center;">
+                        <i class="fab fa-whatsapp text-whatsapp" style="font-size: 2.2rem; margin-bottom: 10px; display: inline-block;"></i>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 6px;">Prefer WhatsApp?</h4>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Send your builder floor plan directly on WhatsApp for an instant budget ballpark.</p>
+                        <a href="https://wa.me/<%= businessWhatsapp %>?text=Hello%20SV%20Home%20Interiors,%20sharing%20my%20floor%20plan%20for%20an%20interior%20quotation." target="_blank" class="btn btn-whatsapp" style="width: 100%;">
+                            <i class="fab fa-whatsapp"></i> Chat with Senior Architect
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <%- include('../partials/footer') %>
+    <%- include('../partials/enquiry-modal') %>
+    <%- include('../partials/chatbot') %>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/chatbot.js"></script>
+    <script>
+    async function handleInteriorConsultSubmit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('intSubmitBtn');
+        const errAlert = document.getElementById('intErrorAlert');
+        const errText = document.getElementById('intErrorText');
+        const succAlert = document.getElementById('intSuccessAlert');
+        const refSpan = document.getElementById('intRefCode');
+
+        errAlert.style.display = 'none';
+        succAlert.style.display = 'none';
+
+        const name = document.getElementById('intName').value.trim();
+        const phone = document.getElementById('intPhone').value.trim();
+        const email = document.getElementById('intEmail').value.trim();
+        const locality = document.getElementById('intLocality').value.trim();
+        const config = document.getElementById('intConfig').value;
+        const budget = document.getElementById('intBudget').value;
+        const message = document.getElementById('intMessage').value.trim();
+
+        if (!name || name.length < 2) {
+            errText.textContent = 'Please enter your full name.';
+            errAlert.style.display = 'block';
+            return false;
+        }
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        if (cleanPhone.length < 10) {
+            errText.textContent = 'Please enter a valid 10-digit mobile number.';
+            errAlert.style.display = 'block';
+            return false;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+        try {
+            const res = await fetch('/api/leads/public', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: name,
+                    phone: cleanPhone,
+                    email: email || null,
+                    preferred_location: locality,
+                    property_requirement: config,
+                    lead_category: 'Home Interiors',
+                    service_type: config,
+                    budget: budget,
+                    message: message || `Interior Consultation for ${config} in ${locality} (Budget: ${budget})`,
+                    source: 'interior_contact_page'
+                })
+            });
+            const data = await res.json();
+            if (res.ok || res.status === 201) {
+                const code = data.lead_code || data.reference || 'SV-LEAD-CONFIRMED';
+                refSpan.textContent = code;
+                succAlert.style.display = 'block';
+                document.getElementById('interiorDirectForm').reset();
+                btn.style.display = 'none';
+            } else {
+                errText.textContent = (data.errors && data.errors[0]) || data.error || 'Submission failed. Please try again.';
+                errAlert.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Book Free Consultation';
+            }
+        } catch (err) {
+            errText.textContent = 'Network error. Please call us or WhatsApp directly.';
+            errAlert.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Book Free Consultation';
+        }
+        return false;
+    }
+    </script>
+</body>
+</html>
+

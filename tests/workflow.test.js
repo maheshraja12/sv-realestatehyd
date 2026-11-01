@@ -14,6 +14,7 @@ let server;
 let port;
 let baseUrl;
 let sessionCookie = '';
+let superAdminCookie = '';
 
 before(async () => {
     server = http.createServer(app);
@@ -159,7 +160,6 @@ describe('4. Security & Access Control Policies', () => {
 });
 
 describe('5. Admin Authentication & Role-Based Permissions Workflow', () => {
-    let superAdminCookie = '';
     let normalAdminCookie = '';
 
     test('Super Admin successfully logs in and redirects to /admin/dashboard', async () => {
@@ -305,3 +305,150 @@ describe('6. Properties Catalog & Search Quality', () => {
     });
 });
 
+
+describe('7. Home Interiors Business & Public Experience', () => {
+    test('GET /interiors returns 200 OK and renders Home Interiors portal', async () => {
+        const res = await fetch(`${baseUrl}/interiors`);
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Home Interiors') || html.includes('Interior'));
+        assert.ok(html.includes('Modular Kitchen') || html.includes('Services'));
+    });
+
+    test('GET /interiors/services returns 200 OK and lists 12 interior services', async () => {
+        const res = await fetch(`${baseUrl}/interiors/services`);
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Full Home Interiors'));
+        assert.ok(html.includes('Modular Kitchen'));
+        assert.ok(html.includes('2BHK'));
+    });
+
+    test('GET /interiors/projects returns 200 OK and renders portfolio gallery', async () => {
+        const res = await fetch(`${baseUrl}/interiors/projects`);
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Portfolio') || html.includes('Projects'));
+    });
+
+    test('GET /interiors/contact returns 200 OK with dedicated consultation booking form', async () => {
+        const res = await fetch(`${baseUrl}/interiors/contact`);
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Interior') && (html.includes('Consultation') || html.includes('Requirement')));
+    });
+});
+
+describe('8. Super Admin CMS & Website Control Center', () => {
+    test('Super Admin can access /admin/cms Website Control Center', async () => {
+        const res = await fetch(`${baseUrl}/admin/cms`, {
+            headers: { 'Cookie': superAdminCookie }
+        });
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Website Control Center') || html.includes('CMS'));
+    });
+
+    test('Super Admin can access /admin/interiors project manager', async () => {
+        const res = await fetch(`${baseUrl}/admin/interiors`, {
+            headers: { 'Cookie': superAdminCookie }
+        });
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Interior') || html.includes('Projects'));
+    });
+
+    test('Public /about renders leadership dynamically from database', async () => {
+        const res = await fetch(`${baseUrl}/about`);
+        assert.strictEqual(res.status, 200);
+        const html = await res.text();
+        assert.ok(html.includes('Leadership') || html.includes('About'));
+    });
+});
+
+describe('9. Enquiry Experience & Lead Categorization', () => {
+    test('General enquiry without date/time succeeds with HTTP 201 and auto-defaults', async () => {
+        const payload = {
+            full_name: 'Flexible Buyer',
+            phone_number: '9848011223',
+            property_requirement: 'Villa',
+            // appointment_date and appointment_time omitted intentionally
+            source: 'website'
+        };
+        const res = await fetch(`${baseUrl}/api/leads/public`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        assert.strictEqual(res.status, 201);
+        const data = await res.json();
+        assert.ok(data.lead_code.startsWith('SV-LEAD'));
+    });
+
+    test('Interior enquiry assigns lead_category = "Home Interiors"', async () => {
+        const payload = {
+            full_name: 'Interior Client',
+            phone_number: '9848033445',
+            property_requirement: 'Modular Kitchen',
+            lead_category: 'Home Interiors',
+            source: 'website'
+        };
+        const res = await fetch(`${baseUrl}/api/leads/public`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        assert.strictEqual(res.status, 201);
+        const data = await res.json();
+        assert.ok(data.lead_code.startsWith('SV-LEAD'));
+
+        const { getDb } = require('../database/db');
+        const db = getDb();
+        const saved = db.prepare('SELECT lead_category, service_type FROM leads WHERE lead_code = ?').get(data.lead_code);
+        assert.ok(saved);
+        assert.strictEqual(saved.lead_category, 'Home Interiors');
+        assert.strictEqual(saved.service_type, 'interiors');
+    });
+
+    test('GET /api/leads/export/csv returns 200 OK and text/csv for authorized admin', async () => {
+        const res = await fetch(`${baseUrl}/api/leads/export/csv`, {
+            headers: { 'Cookie': superAdminCookie }
+        });
+        assert.strictEqual(res.status, 200);
+        const contentType = res.headers.get('content-type') || '';
+        assert.ok(contentType.includes('csv') || contentType.includes('text/'));
+        const csv = await res.text();
+        assert.ok(csv.includes('Lead Code') || csv.includes('Customer Name') || csv.includes('Phone'));
+    });
+});
+
+describe('10. SEO & AI Chatbot Endpoints', () => {
+    test('GET /sitemap.xml returns valid XML sitemap with real estate & interior URLs', async () => {
+        const res = await fetch(`${baseUrl}/sitemap.xml`);
+        assert.strictEqual(res.status, 200);
+        const xml = await res.text();
+        assert.ok(xml.includes('<?xml'));
+        assert.ok(xml.includes('/interiors'));
+        assert.ok(xml.includes('/properties'));
+    });
+
+    test('GET /robots.txt returns valid robots instructions and sitemap link', async () => {
+        const res = await fetch(`${baseUrl}/robots.txt`);
+        assert.strictEqual(res.status, 200);
+        const txt = await res.text();
+        assert.ok(txt.includes('User-agent: *'));
+        assert.ok(txt.includes('Sitemap:'));
+    });
+
+    test('POST /api/chatbot/search returns matching property recommendations', async () => {
+        const res = await fetch(`${baseUrl}/api/chatbot/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'Kokapet Villa' })
+        });
+        assert.strictEqual(res.status, 200);
+        const data = await res.json();
+        assert.ok(Array.isArray(data.properties));
+        assert.ok(typeof data.count === 'number');
+    });
+});

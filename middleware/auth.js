@@ -8,6 +8,8 @@ function getAdminPermissions(db) {
         properties: false,
         leads: true,
         appointments: false,
+        interiors: false,
+        cms: false,
         settings: false
     };
     try {
@@ -137,6 +139,8 @@ function loadUser(req, res, next) {
                 properties: true,
                 leads: true,
                 appointments: true,
+                interiors: true,
+                cms: true,
                 settings: true
             };
         } else {
@@ -174,7 +178,7 @@ function createNotification(db, userId, type, title, message, link) {
 
 function notifyAllAdmins(db, type, title, message, link) {
     try {
-        const admins = db.prepare("SELECT id FROM users WHERE role = 'admin' AND is_active = 1").all();
+        const admins = db.prepare("SELECT id FROM users WHERE (role = 'admin' OR role = 'superadmin') AND is_active = 1").all();
         const stmt = db.prepare(`
             INSERT INTO notifications (user_id, type, title, message, link)
             VALUES (?, ?, ?, ?, ?)

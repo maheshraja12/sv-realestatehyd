@@ -55,6 +55,14 @@ router.post('/public', async (req, res) => {
             const appointmentDate = data.appointment_date || data.preferred_visit_date || null;
             const appointmentTime = data.appointment_time || '10:00 AM - 12:00 PM';
             const propertyReq = data.property_requirement || data.property_category || 'Residential Plot';
+        const leadCategory = data.lead_category || (
+            propertyReq.toLowerCase().includes('interior') ||
+            propertyReq.toLowerCase().includes('modular') ||
+            propertyReq.toLowerCase().includes('renovation')
+                ? 'Home Interiors'
+                : 'Property Buying'
+        );
+        const serviceType = data.service_type || (leadCategory === 'Home Interiors' ? 'interiors' : 'real_estate');
             const validSources = ['website', 'chatbot', 'phone', 'walkin', 'referral', 'other'];
             const validPrefs = ['phone', 'whatsapp', 'email', 'any'];
             const source = data.source && validSources.includes(data.source) ? data.source : 'website';
@@ -110,6 +118,14 @@ router.post('/public', async (req, res) => {
 
         // Normalize property requirement
         const propertyReq = data.property_requirement || data.property_category || 'Residential Plot';
+        const leadCategory = data.lead_category || (
+            propertyReq.toLowerCase().includes('interior') ||
+            propertyReq.toLowerCase().includes('modular') ||
+            propertyReq.toLowerCase().includes('renovation')
+                ? 'Home Interiors'
+                : 'Property Buying'
+        );
+        const serviceType = data.service_type || (leadCategory === 'Home Interiors' ? 'interiors' : 'real_estate');
 
         // Prevent rapid accidental double-clicks (same phone within 2 seconds)
         const recent = db.prepare(`
@@ -192,10 +208,10 @@ router.post('/public', async (req, res) => {
         const result = db.prepare(`
             INSERT INTO leads (
                 lead_code, customer_name, full_name, phone, phone_number, email, property_id,
-                property_category, property_requirement, budget, preferred_location,
+                property_category, property_requirement, lead_category, service_type, budget, preferred_location,
                 message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
                 consent, source, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'new')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'new')
         `).run(
             leadCode,
             customerName,
@@ -206,6 +222,8 @@ router.post('/public', async (req, res) => {
             data.property_id ? parseInt(data.property_id) : null,
             propertyReq,
             propertyReq,
+            leadCategory,
+            serviceType,
             data.budget || 'Consult / Market Price',
             data.preferred_location || 'Hyderabad',
             data.message || `Requirement: ${propertyReq}`,
@@ -420,6 +438,74 @@ router.get('/', requireAuth, async (req, res) => {
     res.json({ leads, total, page, totalPages: Math.ceil(total / limit) });
 });
 
+
+function safeCsvCell(val) {
+    let s = String(val || '').replace(/"/g, '""');
+    if (/^[=+@\-]/.test(s)) {
+        s = "'" + s;
+    }
+    return '"' + s + '"';
+}
+
+// GET /api/leads/export/csv — Export leads to CSV (Registered before /:id)
+router.get('/export/csv', requireAuth, async (req, res) => {
+    const db = getDb();
+    let leads = [];
+
+    if (process.env.VERCEL || isPostgresConfigured()) {
+        try {
+            const pgResult = await fetchPgLeads({ limit: 5000, offset: 0 });
+            if (pgResult && pgResult.success && pgResult.data && pgResult.data.length > 0) {
+                leads = pgResult.data.map(l => ({
+                    lead_code: l.lead_code || `SV-LEAD-${String(l.id).padStart(5, '0')}`,
+                    customer_name: l.customer_name || l.full_name || 'Buyer',
+                    phone: l.phone || l.phone_number || '',
+                    email: l.email || '',
+                    budget: l.budget || '',
+                    message: l.message || '',
+                    status: l.status || 'new',
+                    contact_preference: l.contact_preference || 'phone',
+                    property_title: l.property_category || l.property_requirement || 'General Enquiry',
+                    agent_name: 'Unassigned',
+                    created_at: l.created_at
+                }));
+            }
+        } catch (pgErr) {
+            console.error('Cloud CSV export notice:', pgErr.message);
+        }
+    }
+
+    if (leads.length === 0) {
+        try {
+            leads = db.prepare(`
+                SELECT l.lead_code, l.customer_name, l.phone, l.email, l.budget,
+                    l.message, l.status, l.contact_preference, l.created_at,
+                    p.title as property_title, u.name as agent_name
+                FROM leads l
+                LEFT JOIN properties p ON l.property_id = p.id
+                LEFT JOIN users u ON l.assigned_agent_id = u.id
+                ORDER BY l.created_at DESC
+            `).all();
+        } catch (e) {}
+    }
+
+    const headers = ['Lead Code', 'Customer Name', 'Phone', 'Email', 'Budget', 'Message', 'Status', 'Contact Preference', 'Property', 'Agent', 'Date'];
+    const csv = [
+        headers.join(','),
+        ...leads.map(l => [
+            safeCsvCell(l.lead_code), safeCsvCell(l.customer_name), safeCsvCell(l.phone), safeCsvCell(l.email),
+            safeCsvCell(l.budget), safeCsvCell(l.message), safeCsvCell(l.status), safeCsvCell(l.contact_preference),
+            safeCsvCell(l.property_title), safeCsvCell(l.agent_name), safeCsvCell(l.created_at)
+        ].join(','))
+    ].join('\n');
+
+    auditLog(db, req.session.userId, req.session.userName, 'export', 'lead', null, 'CSV export', req.ip);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=sv-leads-${new Date().toISOString().slice(0,10)}.csv`);
+    res.send(csv);
+});
+
 // GET /api/leads/:id — Lead detail (admin)
 router.get('/:id', requireAuth, async (req, res) => {
     const db = getDb();
@@ -613,64 +699,6 @@ router.patch('/:id/follow-up', requireAuth, (req, res) => {
     res.json({ message: 'Follow-up date updated' });
 });
 
-// GET /api/leads/export/csv — Export leads to CSV
-router.get('/export/csv', requireAuth, async (req, res) => {
-    const db = getDb();
-    let leads = [];
 
-    if (process.env.VERCEL || isPostgresConfigured()) {
-        try {
-            const pgResult = await fetchPgLeads({ limit: 5000, offset: 0 });
-            if (pgResult && pgResult.success && pgResult.data && pgResult.data.length > 0) {
-                leads = pgResult.data.map(l => ({
-                    lead_code: l.lead_code || `SV-LEAD-${String(l.id).padStart(5, '0')}`,
-                    customer_name: l.customer_name || l.full_name || 'Buyer',
-                    phone: l.phone || l.phone_number || '',
-                    email: l.email || '',
-                    budget: l.budget || '',
-                    message: l.message || '',
-                    status: l.status || 'new',
-                    contact_preference: l.contact_preference || 'phone',
-                    property_title: l.property_category || l.property_requirement || 'General Enquiry',
-                    agent_name: 'Unassigned',
-                    created_at: l.created_at
-                }));
-            }
-        } catch (pgErr) {
-            console.error('Cloud CSV export notice:', pgErr.message);
-        }
-    }
-
-    if (leads.length === 0) {
-        try {
-            leads = db.prepare(`
-                SELECT l.lead_code, l.customer_name, l.phone, l.email, l.budget,
-                    l.message, l.status, l.contact_preference, l.created_at,
-                    p.title as property_title, u.name as agent_name
-                FROM leads l
-                LEFT JOIN properties p ON l.property_id = p.id
-                LEFT JOIN users u ON l.assigned_agent_id = u.id
-                ORDER BY l.created_at DESC
-            `).all();
-        } catch (e) {}
-    }
-
-    const headers = ['Lead Code', 'Customer Name', 'Phone', 'Email', 'Budget', 'Message', 'Status', 'Contact Preference', 'Property', 'Agent', 'Date'];
-    const csv = [
-        headers.join(','),
-        ...leads.map(l => [
-            l.lead_code, `"${l.customer_name || ''}"`, l.phone, l.email || '',
-            l.budget || '', `"${(l.message || '').replace(/"/g, '""')}"`,
-            l.status, l.contact_preference, `"${l.property_title || ''}"`,
-            l.agent_name || '', l.created_at
-        ].join(','))
-    ].join('\n');
-
-    auditLog(db, req.session.userId, req.session.userName, 'export', 'lead', null, 'CSV export', req.ip);
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=sv-leads-${new Date().toISOString().slice(0,10)}.csv`);
-    res.send(csv);
-});
 
 module.exports = router;

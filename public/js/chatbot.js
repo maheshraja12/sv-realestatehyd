@@ -69,7 +69,7 @@ async function handleChatSubmit(e) {
         await processUserMessage(msg, typingId);
     } catch (err) {
         removeTypingIndicator(typingId);
-        appendMessage('I apologize, but I encountered a momentary connection hiccup. Would you like to speak directly with an advisor at +91-9876543210?', 'bot');
+        appendMessage('I apologize, but I encountered a momentary connection hiccup. Would you like to speak directly with an advisor at +91 9346423434?', 'bot');
     }
 }
 
@@ -135,7 +135,24 @@ async function processUserMessage(msg, typingId) {
     // Office address
     if (lower.includes('office') || lower.includes('location') || lower.includes('address') || lower.includes('where')) {
         removeTypingIndicator(typingId);
-        appendMessage("Our corporate office is located at <strong>Road No. 36, Jubilee Hills, Hyderabad, Telangana 500033</strong>. We are open from 8:00 AM to 9:00 PM throughout the week.", 'bot');
+        appendMessage("Our corporate office is located at <strong># MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085</strong>. We are open from 8:00 AM to 9:00 PM throughout the week.", 'bot');
+        return;
+    }
+
+    // Home Interiors Inquiry
+    if (lower.includes('interior') || lower.includes('kitchen') || lower.includes('wardrobe') || lower.includes('renovation') || lower.includes('furnish') || lower.includes('false ceiling') || lower.includes('modular')) {
+        removeTypingIndicator(typingId);
+        const interiorHtml = `
+            <div style="margin-top:10px; background:#0f1116; padding:12px; border-radius:8px; border:1px solid #272c38;">
+                <p style="font-size:0.85rem; margin-bottom:8px; color:#d4af37;"><strong>SV Home Interiors & Architectural Design:</strong></p>
+                <p style="font-size:0.82rem; color:#bbb; margin-bottom:10px;">We specialize in turnkey 2BHK, 3BHK, luxury villa interiors, and German modular kitchens across Hyderabad.</p>
+                <div style="display:flex; gap:8px;">
+                    <a href="/interiors" style="background:#d4af37; color:#000; padding:6px 12px; border-radius:4px; font-weight:700; text-decoration:none; font-size:0.8rem;">Explore Interiors</a>
+                    <a href="/interiors/contact" style="background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:6px 12px; border-radius:4px; font-weight:600; text-decoration:none; font-size:0.8rem;">Book Consultation</a>
+                </div>
+            </div>
+        `;
+        appendMessage("Looking to design your home? Our interior division delivers customized 3D designs, turnkey execution, and modular factory finishes.", 'bot', interiorHtml);
         return;
     }
 
@@ -246,6 +263,6 @@ async function submitChatEnquiry() {
             appendMessage(result.error || 'Failed to register enquiry. Please call us directly.', 'bot');
         }
     } catch (e) {
-        appendMessage('Connection error. Please call our office directly at +91-9876543210.', 'bot');
+        appendMessage('Connection error. Please call our office directly at +91 9346423434.', 'bot');
     }
 }

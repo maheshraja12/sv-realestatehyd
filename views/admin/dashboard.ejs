@@ -98,6 +98,20 @@
                         <span class="stat-label">Converted</span>
                     </div>
                 </div>
+                <div class="stat-card" style="border-left: 3px solid #d4af37;">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#c59b27,#d4af37); color:#0c0f17;"><i class="fas fa-couch"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= stats.interiorEnquiries || 0 %></span>
+                        <span class="stat-label">Interior Leads</span>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-left: 3px solid #667eea;">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="fas fa-paint-roller"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= stats.interiorProjects || 0 %></span>
+                        <span class="stat-label">Interior Projects</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Charts Row -->
@@ -164,9 +178,15 @@
                                     <% } %>
                                 </div>
                                 <div style="display:flex; flex-wrap:wrap; gap:6px; margin: 4px 0;">
+                                    <% if (lead.lead_category === 'Home Interiors' || lead.service_type === 'interiors' || (lead.property_requirement && lead.property_requirement.includes('Interior'))) { %>
+                                    <span class="badge" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-size:0.75rem; padding:2px 8px; border-radius:4px;">
+                                        <i class="fas fa-couch"></i> Home Interiors
+                                    </span>
+                                    <% } else { %>
                                     <span class="badge-type-meet" style="font-size:0.75rem;">
                                         <i class="fas fa-home"></i> <%= lead.property_requirement || lead.property_category || 'Residential Plot' %>
                                     </span>
+                                    <% } %>
                                     <% if (lead.appointment_time) { %>
                                     <span class="badge" style="background:rgba(212,175,55,0.12); color:var(--gold); font-size:0.72rem; padding:2px 6px; border-radius:4px;">
                                         <i class="fas fa-clock"></i> <%= lead.appointment_time %>
