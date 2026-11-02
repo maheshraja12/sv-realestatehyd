@@ -289,7 +289,35 @@ h1, h2, h3, h4 {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+}
+
+.btn-admin-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--gold-light, #f5d77f);
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.32);
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.btn-admin-header:hover {
+    background: rgba(212, 175, 55, 0.22);
+    border-color: var(--gold, #d4af37);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.28);
+    transform: translateY(-1px);
+}
+
+.mobile-nav-admin {
+    display: none;
 }
 
 .mobile-toggle {
@@ -2896,6 +2924,8 @@ h1, h2, h3, h4 {
     }
     .nav-links.active { display: flex; }
     .mobile-toggle { display: flex; }
+    .mobile-nav-admin { display: block; }
+    .btn-admin-header { padding: 6px 10px; font-size: 0.76rem; }
     .hero-title { font-size: 2.2rem; }
     .hero-search-form { grid-template-columns: 1fr; }
     .hero-stats-row { gap: 20px; }

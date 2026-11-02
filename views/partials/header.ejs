@@ -10,6 +10,7 @@
                 <a href="<%= typeof businessInstagram !== 'undefined' && businessInstagram ? businessInstagram : 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr' %>" target="_blank" rel="noopener noreferrer" class="topbar-link" title="Follow on Instagram"><i class="fab fa-instagram text-gold"></i> @sv.realestatehyd</a>
                 <a href="tel:<%= businessPhone %>" class="topbar-link"><i class="fas fa-phone-alt text-gold"></i> <%= businessPhone %></a>
                 <a href="https://wa.me/<%= businessWhatsapp %>" target="_blank" class="topbar-link text-whatsapp"><i class="fab fa-whatsapp"></i> Chat on WhatsApp</a>
+                <a href="<%= (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.isSuperAdmin ? '/admin/dashboard' : '/admin/leads') : '/admin/login' %>" class="topbar-admin-badge" title="Admin Portal"><i class="fas fa-user-shield"></i> Admin</a>
             </div>
         </div>
     </div>
@@ -35,6 +36,7 @@
                     <li><a href="/locations" class="<%= path === '/locations' ? 'active' : '' %>">Locations</a></li>
                     <li><a href="/about" class="<%= path === '/about' ? 'active' : '' %>">About Us</a></li>
                     <li><a href="/contact" class="<%= path === '/contact' ? 'active' : '' %>">Contact Us</a></li>
+                    <li class="mobile-nav-admin"><a href="<%= (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.isSuperAdmin ? '/admin/dashboard' : '/admin/leads') : '/admin/login' %>" style="color:var(--gold); font-weight:600;"><i class="fas fa-user-shield"></i> Admin</a></li>
                 </ul>
             </nav>
 
@@ -42,6 +44,9 @@
                 <button type="button" class="btn btn-gold btn-header-cta" onclick="openEnquiryModal()">
                     <i class="fas fa-envelope"></i> Enquire Now
                 </button>
+                <a href="<%= (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.isSuperAdmin ? '/admin/dashboard' : '/admin/leads') : '/admin/login' %>" class="btn btn-admin-header" title="Admin Portal">
+                    <i class="fas fa-user-shield"></i> Admin
+                </a>
                 <button class="mobile-toggle" id="mobileNavToggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
                     <span></span><span></span><span></span>
                 </button>
