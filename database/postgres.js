@@ -398,8 +398,18 @@ async function fetchLeads(options = {}) {
                 params.push(parseInt(options.offset, 10));
             }
 
-            const rowsRes = await p.query(query, params);
-            return { success: true, data: rowsRes.rows, count: total };
+            if (total > 0) {
+                const rowsRes = await p.query(query, params);
+                return { success: true, data: rowsRes.rows, count: total };
+            }
+            try {
+                const { getDb } = require('./db');
+                const localDb = getDb();
+                const localLeads = localDb.prepare('SELECT * FROM leads ORDER BY id DESC').all();
+                if (localLeads && localLeads.length >= 37) {
+                    return { success: true, data: localLeads, count: localLeads.length, fallback: true };
+                }
+            } catch (e) {}
         } catch (err) {
             console.error('❌ [POSTGRES] fetchLeads pool error:', err.message);
         }
@@ -421,7 +431,7 @@ async function fetchLeads(options = {}) {
                 query = query.range(from, to);
             }
             const { data, count, error } = await query;
-            if (!error && data) {
+            if (!error && data && data.length > 0) {
                 return { success: true, data, count: count || data.length };
             }
 
@@ -444,6 +454,14 @@ async function fetchLeads(options = {}) {
                     email: e.email,
                     message: e.message
                 }));
+                try {
+                    const { getDb } = require('./db');
+                    const localDb = getDb();
+                    const localLeads = localDb.prepare('SELECT * FROM leads ORDER BY id DESC').all();
+                    if (localLeads && localLeads.length >= 37) {
+                        return { success: true, data: localLeads, count: localLeads.length, fallback: true };
+                    }
+                } catch (e) {}
                 return { success: true, data: mapped, count: enqCount || mapped.length };
             }
         } catch (sbErr) {
