@@ -6,7 +6,7 @@ const crypto = require('node:crypto');
 const router = express.Router();
 const { getDb } = require('../../database/db');
 const { cloudLeadsConfigured, submitCloudLead, listCloudLeads } = require('../../database/cloud-leads');
-const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
+const { requireAuth, auditLog, notifyAllAdmins, logLeadActivity } = require('../../middleware/auth');
 const { sanitizeObject, validateEnquiryData } = require('../../middleware/validation');
 const { insertEnquiry, fetchEnquiries, getEnquiryById, isMySqlConfigured, updateEnquiryStatus } = require('../../database/mysql');
 const { 
@@ -24,9 +24,15 @@ function generateLeadCode() {
     let nextNum = 1;
     if (lastLead && lastLead.lead_code) {
         const match = lastLead.lead_code.match(/SV-LEAD-(\d+)/);
-        if (match) nextNum = parseInt(match[1]) + 1;
+        if (match) nextNum = parseInt(match[1], 10) + 1;
     }
-    return `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    let code = `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    const checkStmt = db.prepare("SELECT id FROM leads WHERE lead_code = ?");
+    while (checkStmt.get(code)) {
+        nextNum++;
+        code = `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+    }
+    return code;
 }
 
 // ── Public Endpoint ───────────────────────────────────────
@@ -205,34 +211,50 @@ router.post('/public', async (req, res) => {
             console.log(`✅ [MYSQL] Successfully stored enquiry #${mysqlRecord ? mysqlRecord.id : 'OK'} for ${customerName}`);
         }
 
-        const result = db.prepare(`
+        let result = null;
+        let finalLeadCode = leadCode;
+        let attempts = 0;
+        const insertStmt = db.prepare(`
             INSERT INTO leads (
                 lead_code, customer_name, full_name, phone, phone_number, email, property_id,
                 property_category, property_requirement, lead_category, service_type, budget, preferred_location,
                 message, contact_preference, preferred_visit_date, appointment_date, appointment_time,
                 consent, source, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'new')
-        `).run(
-            leadCode,
-            customerName,
-            customerName,
-            cleanPhone,
-            cleanPhone,
-            data.email || null,
-            data.property_id ? parseInt(data.property_id) : null,
-            propertyReq,
-            propertyReq,
-            leadCategory,
-            serviceType,
-            data.budget || 'Consult / Market Price',
-            data.preferred_location || 'Hyderabad',
-            data.message || `Requirement: ${propertyReq}`,
-            contactPref,
-            appointmentDate,
-            appointmentDate,
-            appointmentTime,
-            source
-        );
+        `);
+
+        while (!result && attempts < 5) {
+            attempts++;
+            try {
+                result = insertStmt.run(
+                    finalLeadCode,
+                    customerName,
+                    customerName,
+                    cleanPhone,
+                    cleanPhone,
+                    data.email || null,
+                    data.property_id ? parseInt(data.property_id) : null,
+                    propertyReq,
+                    propertyReq,
+                    leadCategory,
+                    serviceType,
+                    data.budget || 'Consult / Market Price',
+                    data.preferred_location || 'Hyderabad',
+                    data.message || `Requirement: ${propertyReq}`,
+                    contactPref,
+                    appointmentDate,
+                    appointmentDate,
+                    appointmentTime,
+                    source
+                );
+            } catch (insertErr) {
+                if (insertErr.message && insertErr.message.includes('leads.lead_code') && attempts < 5) {
+                    finalLeadCode = generateLeadCode();
+                    continue;
+                }
+                throw insertErr;
+            }
+        }
 
         // Record initial status in history
         db.prepare(`
@@ -278,14 +300,14 @@ router.post('/public', async (req, res) => {
         const visitText = appointmentDate ? ` · Visit: ${appointmentDate} (${appointmentTime})` : '';
         notifyAllAdmins(db, 'lead',
             `New Enquiry: ${customerName}`,
-            `${customerName} (${cleanPhone}) · Looking for: ${propertyReq}${visitText}${propertyInfo ? ` · Prop: ${propertyInfo.title}` : ''}. Ref: ${leadCode}`,
+            `${customerName} (${cleanPhone}) · Looking for: ${propertyReq}${visitText}${propertyInfo ? ` · Prop: ${propertyInfo.title}` : ''}. Ref: ${finalLeadCode}`,
             `/admin/leads/${result.lastInsertRowid}`
         );
         
         res.status(201).json({
             message: `Thank you for contacting SV Real Estates Hyderabad. Your enquiry has been received.`,
-            lead_code: leadCode,
-            reference: leadCode
+            lead_code: finalLeadCode,
+            reference: finalLeadCode
         });
     } catch (err) {
         console.error('Create lead error:', err);
@@ -603,8 +625,14 @@ router.get('/:id', requireAuth, async (req, res) => {
 const handleStatusUpdate = async (req, res) => {
     const db = getDb();
     const { status } = req.body;
-    const validStatuses = ['new', 'contacted', 'interested', 'site_visit_scheduled', 'negotiation', 'converted', 'lost', 'spam'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const validStatuses = [
+        'new', 'not_contacted', 'contacted', 'qualified', 'interested',
+        'site_visit_scheduled', 'site_visit_completed', 'negotiation',
+        'booking_in_progress', 'converted', 'lost', 'spam'
+    ];
+    const normalizedStatus = String(status || '').toLowerCase().trim().replace(/\s+/g, '_');
+    if (!validStatuses.includes(normalizedStatus)) return res.status(400).json({ error: 'Invalid status' });
+    const finalStatus = normalizedStatus;
 
     let lead = null;
     try {
@@ -628,14 +656,23 @@ const handleStatusUpdate = async (req, res) => {
         db.prepare("UPDATE leads SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, req.params.id);
         db.prepare(`
             INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
-            VALUES (?, ?, ?, ?)
-        `).run(req.params.id, lead.status, status, req.session ? req.session.userId : null);
+            VALUES (?, ?, ?, ?)`).run(req.params.id, lead.status, finalStatus, req.session ? req.session.userId : null);
 
         // Auto-add system note
         db.prepare(`
             INSERT INTO lead_notes (lead_id, user_id, note, note_type)
             VALUES (?, ?, ?, 'status_change')
-        `).run(req.params.id, req.session ? req.session.userId : null, `Status changed from "${lead.status}" to "${status}"`);
+        `).run(req.params.id, req.session ? req.session.userId : null, `Status changed from "${lead.status}" to "${finalStatus}"`);
+
+        // Record in CRM Activity Timeline
+        logLeadActivity(db, {
+            leadId: req.params.id,
+            userId: req.session ? req.session.userId : null,
+            userName: req.session ? req.session.userName : 'Admin',
+            type: 'status_change',
+            title: `Status changed to ${finalStatus.replace(/_/g, ' ')}`,
+            notes: `Status changed from "${lead.status}" to "${finalStatus}"`
+        });
     } catch (e) {}
 
     // Sync to PostgreSQL / Supabase if configured
@@ -662,11 +699,18 @@ router.patch('/:id/status', requireAuth, handleStatusUpdate);
 router.put('/:id/status', requireAuth, handleStatusUpdate);
 
 // PATCH /api/leads/:id/assign — Assign agent
-router.patch('/:id/assign', requireAuth, (req, res) => {
+router.patch('/:id/assign', requireAuth, async (req, res) => {
     const db = getDb();
     const { agent_id } = req.body;
     db.prepare("UPDATE leads SET assigned_agent_id = ?, updated_at = datetime('now') WHERE id = ?").run(agent_id || null, req.params.id);
     
+    if (isPostgresConfigured()) {
+        try {
+            const { updateLead } = require('../../database/postgres');
+            await updateLead(req.params.id, { assigned_agent_id: agent_id || null, assigned_to: agent_id || null });
+        } catch (e) {}
+    }
+
     const agentName = agent_id ? db.prepare('SELECT name FROM users WHERE id = ?').get(agent_id)?.name : 'Unassigned';
     db.prepare(`
         INSERT INTO lead_notes (lead_id, user_id, note, note_type)
@@ -692,10 +736,18 @@ router.post('/:id/notes', requireAuth, (req, res) => {
 });
 
 // PATCH /api/leads/:id/follow-up — Set follow-up date
-router.patch('/:id/follow-up', requireAuth, (req, res) => {
+router.patch('/:id/follow-up', requireAuth, async (req, res) => {
     const db = getDb();
     const { next_follow_up } = req.body;
     db.prepare("UPDATE leads SET next_follow_up = ?, updated_at = datetime('now') WHERE id = ?").run(next_follow_up || null, req.params.id);
+
+    if (isPostgresConfigured()) {
+        try {
+            const { updateLead } = require('../../database/postgres');
+            await updateLead(req.params.id, { next_follow_up_date: next_follow_up || null });
+        } catch (e) {}
+    }
+
     res.json({ message: 'Follow-up date updated' });
 });
 

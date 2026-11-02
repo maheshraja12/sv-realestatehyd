@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Follow-up Manager — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-calendar-check text-gold"></i> Follow-up Manager</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="openNewTaskModal()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-plus"></i> Schedule Follow-up
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- Tabs -->
+            <div class="crm-tabs">
+                <a href="/admin/crm/followups?tab=today" class="crm-tab-btn <%= currentTab === 'today' ? 'active' : '' %>">
+                    <i class="fas fa-sun"></i> Today's Follow-ups <span class="crm-tab-badge"><%= counts.today %></span>
+                </a>
+                <a href="/admin/crm/followups?tab=overdue" class="crm-tab-btn <%= currentTab === 'overdue' ? 'active' : '' %>">
+                    <i class="fas fa-exclamation-circle text-danger"></i> Overdue <span class="crm-tab-badge" style="background:#ef4444; color:#ffffff;"><%= counts.overdue %></span>
+                </a>
+                <a href="/admin/crm/followups?tab=upcoming" class="crm-tab-btn <%= currentTab === 'upcoming' ? 'active' : '' %>">
+                    <i class="fas fa-calendar-alt"></i> Upcoming <span class="crm-tab-badge"><%= counts.upcoming %></span>
+                </a>
+                <a href="/admin/crm/followups?tab=completed" class="crm-tab-btn <%= currentTab === 'completed' ? 'active' : '' %>">
+                    <i class="fas fa-check-circle"></i> Completed <span class="crm-tab-badge"><%= counts.completed %></span>
+                </a>
+                <a href="/admin/crm/followups?tab=all" class="crm-tab-btn <%= currentTab === 'all' ? 'active' : '' %>">
+                    <i class="fas fa-list"></i> All Tasks <span class="crm-tab-badge"><%= counts.all %></span>
+                </a>
+            </div>
+
+            <!-- Follow-ups Table -->
+            <div class="admin-card">
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <% if (!tasks || tasks.length === 0) { %>
+                        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                            <i class="fas fa-check-circle" style="font-size:2.5rem; color:var(--gold); margin-bottom:12px; display:block;"></i>
+                            <h3>No tasks in this section</h3>
+                            <p style="font-size:0.9rem; margin-top:6px;">All follow-ups for this view are up to date.</p>
+                        </div>
+                    <% } else { %>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Task Code</th>
+                                    <th>Task Title & Client</th>
+                                    <th>Scheduled Date & Time</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Assigned Agent</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% tasks.forEach(t => { %>
+                                    <tr>
+                                        <td><span style="font-family:monospace; color:var(--gold);"><%= t.task_code %></span></td>
+                                        <td>
+                                            <div style="font-weight:600; color:#ffffff;"><%= t.title %></div>
+                                            <% if (t.customer_name) { %>
+                                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
+                                                    <i class="fas fa-user"></i> <%= t.customer_name %> (<%= t.phone %>)
+                                                    <% if (t.lead_id) { %>
+                                                        · <a href="/admin/leads/<%= t.lead_id %>" style="color:var(--gold); font-size:0.75rem;">View Lead &rarr;</a>
+                                                    <% } %>
+                                                </div>
+                                            <% } %>
+                                            <% if (t.result_notes) { %>
+                                                <div style="font-size:0.75rem; color:#4ade80; margin-top:3px;"><i class="fas fa-check"></i> <%= t.result_notes %></div>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:600;"><%= formatDateTime(t.scheduled_at) %></div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge badge-priority-<%= t.priority %>" style="font-size:0.7rem; text-transform:uppercase;"><%= t.priority %></span>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-<%= t.status %>" style="font-size:0.7rem; text-transform:uppercase;"><%= t.status %></span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size:0.85rem;"><%= t.assigned_agent_name || 'Unassigned' %></span>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="display:inline-flex; gap:6px;">
+                                                <% if (t.phone) { %>
+                                                    <% const cleanPh = t.phone.replace(/[^0-9]/g, ''); %>
+                                                    <a href="https://wa.me/91<%= cleanPh.length >= 10 ? cleanPh.slice(-10) : cleanPh %>" target="_blank" class="btn btn-secondary" style="padding:4px 8px; color:#25d366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                                                    <a href="tel:<%= t.phone %>" class="btn btn-secondary" style="padding:4px 8px; color:#22c55e;" title="Call"><i class="fas fa-phone"></i></a>
+                                                <% } %>
+                                                <% if (t.status === 'pending') { %>
+                                                    <button type="button" onclick="openCompleteModal(<%= t.id %>, '<%= (t.title || '').replace(/'/g, '') %>')" class="btn btn-secondary" style="padding:4px 10px; font-size:0.8rem; color:#4ade80;" title="Mark Complete">
+                                                        <i class="fas fa-check"></i> Done
+                                                    </button>
+                                                    <button type="button" onclick="openRescheduleModal(<%= t.id %>)" class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" title="Reschedule">
+                                                        <i class="fas fa-clock"></i>
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Complete Follow-up Modal -->
+    <div id="completeModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:440px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-check-circle text-gold"></i> Complete Follow-up</h3>
+            <p id="completeTaskTitle" style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;"></p>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Outcome / Result Notes:</label>
+                <textarea id="completeNotes" rows="3" placeholder="Client confirmed site visit this Saturday at 11 AM..." style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeCompleteModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitCompleteTask()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Mark Completed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reschedule Modal -->
+    <div id="rescheduleModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:440px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-clock text-gold"></i> Reschedule Follow-up</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">New Date & Time:</label>
+                <input type="datetime-local" id="rescheduleDate" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Reason:</label>
+                <input type="text" id="rescheduleReason" placeholder="Client traveling, call next Tuesday" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeRescheduleModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitRescheduleTask()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Task Modal -->
+    <div id="newTaskModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:480px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-calendar-plus text-gold"></i> Schedule New Follow-up</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Lead ID (optional):</label>
+                <input type="number" id="newTaskLeadId" placeholder="e.g. 10" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Task Title:</label>
+                <input type="text" id="newTaskTitle" placeholder="e.g. Share quotation for Bachupally apartment" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Scheduled Date & Time:</label>
+                <input type="datetime-local" id="newTaskScheduledAt" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Priority:</label>
+                <select id="newTaskPriority" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeNewTaskModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitNewTask()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentActionTaskId = null;
+
+        function openCompleteModal(id, title) {
+            currentActionTaskId = id;
+            document.getElementById('completeTaskTitle').innerText = title;
+            document.getElementById('completeNotes').value = '';
+            document.getElementById('completeModal').style.display = 'flex';
+        }
+        function closeCompleteModal() { document.getElementById('completeModal').style.display = 'none'; }
+
+        async function submitCompleteTask() {
+            const result_notes = document.getElementById('completeNotes').value.trim();
+            try {
+                const res = await fetch('/api/crm/followups/' + currentActionTaskId, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'completed', result_notes })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to update task'); }
+            } catch (e) { alert('Error updating task'); }
+        }
+
+        function openRescheduleModal(id) {
+            currentActionTaskId = id;
+            document.getElementById('rescheduleDate').value = '';
+            document.getElementById('rescheduleReason').value = '';
+            document.getElementById('rescheduleModal').style.display = 'flex';
+        }
+        function closeRescheduleModal() { document.getElementById('rescheduleModal').style.display = 'none'; }
+
+        async function submitRescheduleTask() {
+            const reschedule_at = document.getElementById('rescheduleDate').value;
+            const result_notes = document.getElementById('rescheduleReason').value.trim();
+            if (!reschedule_at) { alert('Please choose a new date & time'); return; }
+
+            try {
+                const res = await fetch('/api/crm/followups/' + currentActionTaskId, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reschedule_at, result_notes })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to reschedule task'); }
+            } catch (e) { alert('Error rescheduling task'); }
+        }
+
+        function openNewTaskModal() { document.getElementById('newTaskModal').style.display = 'flex'; }
+        function closeNewTaskModal() { document.getElementById('newTaskModal').style.display = 'none'; }
+
+        async function submitNewTask() {
+            const lead_id = document.getElementById('newTaskLeadId').value.trim();
+            const title = document.getElementById('newTaskTitle').value.trim();
+            const scheduled_at = document.getElementById('newTaskScheduledAt').value;
+            const priority = document.getElementById('newTaskPriority').value;
+
+            if (!title || !scheduled_at) { alert('Title and Scheduled Date are required'); return; }
+
+            try {
+                const res = await fetch('/api/crm/followups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lead_id: lead_id || null, title, scheduled_at, priority })
+                });
+                if (res.ok) { window.location.reload(); }
+                else { alert('Failed to create task'); }
+            } catch (e) { alert('Error creating task'); }
+        }
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

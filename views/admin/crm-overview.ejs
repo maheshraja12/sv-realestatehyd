@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Control Center — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-chart-line text-gold"></i> CRM Control Center</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <div class="date-filter-group" style="display:flex; gap:6px;">
+                    <a href="/admin/crm?range=today" class="btn btn-secondary <%= range === 'today' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">Today</a>
+                    <a href="/admin/crm?range=7d" class="btn btn-secondary <%= range === '7d' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">7 Days</a>
+                    <a href="/admin/crm?range=30d" class="btn btn-secondary <%= range === '30d' || !range ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">30 Days</a>
+                    <a href="/admin/crm?range=all" class="btn btn-secondary <%= range === 'all' ? 'btn-gold' : '' %>" style="padding:6px 12px; font-size:0.8rem;">All</a>
+                </div>
+                <a href="/admin/crm/pipeline" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:7px 14px; font-size:0.85rem;">
+                    <i class="fas fa-stream"></i> Open Pipeline
+                </a>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- CRM KPI Cards -->
+            <div class="stats-grid" style="margin-bottom: 24px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= kpis.totalLeads %></span>
+                        <span class="stat-label">Total Leads (<%= rangeName %>)</span>
+                    </div>
+                </div>
+                <div class="stat-card highlight">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#d97706,#b45309)"><i class="fas fa-hand-holding-usd"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number">₹<%= (kpis.pipelineValue / 10000000).toFixed(2) %> Cr</span>
+                        <span class="stat-label">Active Pipeline Value</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= kpis.overdueFollowups %></span>
+                        <span class="stat-label">Overdue Follow-ups</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#047857)"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= kpis.siteVisits %></span>
+                        <span class="stat-label">Scheduled Visits</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)"><i class="fas fa-trophy"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-number"><%= kpis.conversionRate %>%</span>
+                        <span class="stat-label">Lead Conversion Rate</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Shortcuts -->
+            <div class="quick-action-bar" style="margin-bottom: 24px;">
+                <a href="/admin/crm/pipeline" class="btn-quick-action"><i class="fas fa-stream text-gold"></i> 12-Stage Pipeline</a>
+                <a href="/admin/crm/followups?tab=today" class="btn-quick-action"><i class="fas fa-calendar-day text-gold"></i> Today's Follow-ups (<%= kpis.todayFollowups %>)</a>
+                <a href="/admin/crm/customers" class="btn-quick-action"><i class="fas fa-address-book text-gold"></i> Customer 360</a>
+                <a href="/admin/appointments" class="btn-quick-action"><i class="fas fa-car text-gold"></i> Site Visits</a>
+                <a href="/admin/crm/reports" class="btn-quick-action"><i class="fas fa-chart-bar text-gold"></i> Analytics Reports</a>
+                <a href="/admin/crm/import-export" class="btn-quick-action"><i class="fas fa-file-import text-gold"></i> Import / Export</a>
+            </div>
+
+            <!-- 12-Stage Funnel Progress Row -->
+            <div class="admin-card" style="margin-bottom: 24px;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="font-size:1.05rem; font-weight:700;"><i class="fas fa-filter text-gold"></i> Real Estate Sales Funnel (12 Stages)</h3>
+                    <a href="/admin/crm/pipeline" style="color:var(--gold); font-size:0.85rem; text-decoration:none;">View Full Kanban &rarr;</a>
+                </div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                        <% stages.forEach(s => { %>
+                        <div style="background:#14171d; border:1px solid var(--border-color); border-top:3px solid <%= s.color %>; border-radius:6px; padding:10px; text-align:center;">
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:4px;"><%= s.name %></span>
+                            <span style="font-size:1.25rem; font-weight:700; color:#ffffff;"><%= s.count %></span>
+                        </div>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two-Column Layout: Pending Follow-ups + Live Customer Activity Timeline -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+                <!-- Pending Follow-ups -->
+                <div class="admin-card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-bell text-gold"></i> High Priority Follow-ups</h3>
+                        <a href="/admin/crm/followups" style="color:var(--gold); font-size:0.85rem; text-decoration:none;">All Follow-ups &rarr;</a>
+                    </div>
+                    <div class="card-body" style="padding:14px;">
+                        <% if (!pendingTasks || pendingTasks.length === 0) { %>
+                            <p style="color:var(--text-muted); font-size:0.88rem; text-align:center; padding:20px;">No pending follow-ups due. Great job!</p>
+                        <% } else { %>
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <% pendingTasks.forEach(task => { %>
+                                    <div style="background:#14171d; border:1px solid var(--border-color); border-radius:6px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                                        <div>
+                                            <div style="font-weight:600; font-size:0.9rem; color:#ffffff;"><%= task.title %></div>
+                                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
+                                                <i class="fas fa-user"></i> <%= task.customer_name || 'Prospect' %> (<%= task.phone || '' %>)
+                                            </div>
+                                            <div style="font-size:0.75rem; color:var(--gold); margin-top:4px;">
+                                                <i class="fas fa-clock"></i> Scheduled: <%= formatDate(task.scheduled_at) %>
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <span class="status-badge badge-priority-<%= task.priority %>" style="font-size:0.7rem; text-transform:uppercase;"><%= task.priority %></span>
+                                            <div style="margin-top:6px;">
+                                                <a href="/admin/leads/<%= task.lead_id %>" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;">View</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Recent Activities Timeline -->
+                <div class="admin-card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-history text-gold"></i> Live Customer Activity Timeline</h3>
+                        <a href="/admin/crm/audit-logs" style="color:var(--gold); font-size:0.85rem; text-decoration:none;">Audit Logs &rarr;</a>
+                    </div>
+                    <div class="card-body" style="padding:16px;">
+                        <% if (!recentActivities || recentActivities.length === 0) { %>
+                            <p style="color:var(--text-muted); font-size:0.88rem; text-align:center; padding:20px;">No recent customer activities recorded yet.</p>
+                        <% } else { %>
+                            <div class="activity-timeline">
+                                <% recentActivities.forEach(act => { %>
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker">
+                                            <% if (act.activity_type === 'call') { %><i class="fas fa-phone"></i>
+                                            <% } else if (act.activity_type === 'whatsapp') { %><i class="fab fa-whatsapp"></i>
+                                            <% } else if (act.activity_type === 'site_visit') { %><i class="fas fa-calendar-check"></i>
+                                            <% } else if (act.activity_type === 'status_change') { %><i class="fas fa-exchange-alt"></i>
+                                            <% } else { %><i class="fas fa-comment-alt"></i><% } %>
+                                        </div>
+                                        <div class="timeline-box">
+                                            <div class="timeline-header">
+                                                <span class="timeline-title"><%= act.title %></span>
+                                                <span class="timeline-time"><%= formatDateTime(act.created_at) %></span>
+                                            </div>
+                                            <% if (act.notes) { %>
+                                                <div class="timeline-body"><%= act.notes %></div>
+                                            <% } %>
+                                            <div class="timeline-user">By <%= act.user_name || 'System' %></div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

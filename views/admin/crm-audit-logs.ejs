@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Audit Logs — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-history text-gold"></i> CRM & System Audit Logs (<%= total %>)</h2>
+            </div>
+            <div class="header-right">
+                <button type="button" onclick="window.location.reload()" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-sync-alt"></i> Refresh Logs
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <div class="admin-card">
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <% if (!logs || logs.length === 0) { %>
+                        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                            <p>No audit records found.</p>
+                        </div>
+                    <% } else { %>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Target Entity</th>
+                                    <th>Details</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% logs.forEach(log => { %>
+                                    <tr>
+                                        <td>
+                                            <span style="font-size:0.82rem; color:var(--text-muted);"><%= formatDateTime(log.created_at) %></span>
+                                        </td>
+                                        <td>
+                                            <strong style="color:#ffffff;"><%= log.user_name || 'System' %></strong>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-published" style="font-size:0.72rem; text-transform:uppercase;">
+                                                <%= log.action %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size:0.85rem;"><%= log.entity_type %> <%= log.entity_id ? '#' + log.entity_id : '' %></span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size:0.85rem; color:var(--text-secondary);"><%= log.details || '—' %></span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size:0.8rem; font-family:monospace; color:var(--text-muted);"><%= log.ip_address || 'local' %></span>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+                <div class="pagination" style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+                    <% for (let p = 1; p <= totalPages; p++) { %>
+                        <a href="/admin/crm/audit-logs?page=<%= p %>" class="btn <%= p === page ? 'btn-primary' : 'btn-secondary' %>" style="padding:6px 12px; font-size:0.85rem;">
+                            <%= p %>
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </main>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

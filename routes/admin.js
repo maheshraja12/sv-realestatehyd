@@ -598,7 +598,13 @@ router.post('/settings/permissions', requireSuperAdmin, async (req, res) => {
             ['admin_perm_dashboard', req.body.perm_dashboard ? '1' : '0'],
             ['admin_perm_properties', req.body.perm_properties ? '1' : '0'],
             ['admin_perm_leads', '1'], // Customer leads always accessible
-            ['admin_perm_appointments', req.body.perm_appointments ? '1' : '0']
+            ['admin_perm_appointments', req.body.perm_appointments ? '1' : '0'],
+            ['admin_perm_crm', req.body.perm_crm ? '1' : '0'],
+            ['admin_perm_pipeline', req.body.perm_pipeline ? '1' : '0'],
+            ['admin_perm_customers', req.body.perm_customers ? '1' : '0'],
+            ['admin_perm_followups', req.body.perm_followups ? '1' : '0'],
+            ['admin_perm_reports', req.body.perm_reports ? '1' : '0'],
+            ['admin_perm_interiors', req.body.perm_interiors ? '1' : '0']
         ];
 
         const upsert = db.prepare(`
@@ -1001,6 +1007,425 @@ router.post('/interiors/:id/delete', requirePermission('interiors'), (req, res) 
         res.redirect('/admin/interiors?msg=Interior+project+deleted');
     } catch (e) {
         res.redirect('/admin/interiors?err=Failed+to+delete+interior+project');
+    }
+});
+
+
+// ── CRM COMPLETE SYSTEM ROUTES ──────────────────────────────
+
+// GET /admin/crm — CRM Overview
+router.get('/crm', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const range = req.query.range || '30d';
+
+        let dateFilter = "datetime('now', '-30 days')";
+        let rangeName = '30 Days';
+        if (range === 'today') { dateFilter = "date('now')"; rangeName = 'Today'; }
+        else if (range === '7d') { dateFilter = "datetime('now', '-7 days')"; rangeName = '7 Days'; }
+        else if (range === 'all') { dateFilter = "'2000-01-01'"; rangeName = 'All Time'; }
+
+        const isExactDate = range === 'today';
+        const dateCond = isExactDate ? "date(l.created_at) = date('now')" : `l.created_at >= ${dateFilter}`;
+
+        const totalLeads = db.prepare(`SELECT count(*) as c FROM leads l WHERE ${dateCond}`).get().c;
+        const convertedLeads = db.prepare(`SELECT count(*) as c FROM leads l WHERE ${dateCond} AND l.status = 'converted'`).get().c;
+        const siteVisits = db.prepare("SELECT count(*) as c FROM appointments WHERE status IN ('requested', 'confirmed')").get().c;
+        const overdueFollowups = db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE scheduled_at < datetime('now') AND status = 'pending'").get().c;
+        const todayFollowups = db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE date(scheduled_at) = date('now') AND status = 'pending'").get().c;
+
+        // Pipeline value
+        const budgetRows = db.prepare("SELECT budget FROM leads WHERE status NOT IN ('converted', 'lost', 'spam')").all();
+        let pipelineValue = 0;
+        budgetRows.forEach(r => {
+            if (!r.budget) return;
+            const s = String(r.budget).toLowerCase().replace(/,/g, '').trim();
+            const cr = s.match(/([\d.]+)\s*(cr|crore)/);
+            if (cr) pipelineValue += parseFloat(cr[1]) * 10000000;
+            else {
+                const l = s.match(/([\d.]+)\s*(l|lakh)/);
+                if (l) pipelineValue += parseFloat(l[1]) * 100000;
+                else {
+                    const m = s.match(/(\d+)/);
+                    if (m) pipelineValue += parseInt(m[1], 10);
+                }
+            }
+        });
+
+        const stagesDef = [
+            { id: 'new', name: 'New Lead', color: '#3b82f6' },
+            { id: 'not_contacted', name: 'Not Contacted', color: '#64748b' },
+            { id: 'contacted', name: 'Contacted', color: '#0ea5e9' },
+            { id: 'qualified', name: 'Qualified', color: '#8b5cf6' },
+            { id: 'interested', name: 'Interested', color: '#ec4899' },
+            { id: 'site_visit_scheduled', name: 'Site Visit Scheduled', color: '#f59e0b' },
+            { id: 'site_visit_completed', name: 'Site Visit Completed', color: '#10b981' },
+            { id: 'negotiation', name: 'Negotiation', color: '#f97316' },
+            { id: 'booking_in_progress', name: 'Booking in Progress', color: '#d97706' },
+            { id: 'converted', name: 'Converted', color: '#059669' },
+            { id: 'lost', name: 'Lost', color: '#ef4444' },
+            { id: 'spam', name: 'Invalid / Spam', color: '#6b7280' }
+        ];
+
+        const stages = stagesDef.map(s => {
+            const c = db.prepare("SELECT count(*) as c FROM leads WHERE status = ?").get(s.id).c;
+            return { ...s, count: c };
+        });
+
+        const pendingTasks = db.prepare(`
+            SELECT t.*, l.customer_name, l.phone
+            FROM follow_up_tasks t
+            LEFT JOIN leads l ON t.lead_id = l.id
+            WHERE t.status = 'pending'
+            ORDER BY t.scheduled_at ASC LIMIT 6
+        `).all();
+
+        const recentActivities = db.prepare(`
+            SELECT * FROM lead_activities ORDER BY created_at DESC LIMIT 6
+        `).all();
+
+        const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+
+        res.render('admin/crm-overview', {
+            title: 'CRM Overview — SV Real Estates Admin',
+            range,
+            rangeName,
+            kpis: {
+                totalLeads,
+                pipelineValue,
+                overdueFollowups,
+                todayFollowups,
+                siteVisits,
+                conversionRate
+            },
+            stages,
+            pendingTasks,
+            recentActivities
+        });
+    } catch (err) {
+        console.error('CRM Overview error:', err);
+        res.redirect('/admin/dashboard');
+    }
+});
+
+// GET /admin/crm/pipeline — 12-Stage Kanban Pipeline
+router.get('/crm/pipeline', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const agents = db.prepare("SELECT id, name FROM users WHERE is_active = 1").all();
+        res.render('admin/crm-pipeline', {
+            title: 'Sales Pipeline (12 Stages) — SV Real Estates Admin',
+            agents
+        });
+    } catch (err) {
+        console.error('CRM Pipeline view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/customers — Customers Directory
+router.get('/crm/customers', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const deal_status = req.query.deal_status || '';
+
+        let where = "c.deal_status != 'inactive'";
+        const params = [];
+
+        if (search) {
+            where += ' AND (c.full_name LIKE ? OR c.phone LIKE ? OR c.customer_code LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        if (deal_status) {
+            where += ' AND c.deal_status = ?';
+            params.push(deal_status);
+        }
+
+        const total = db.prepare(`SELECT count(*) as c FROM customer_profiles c WHERE ${where}`).get(...params).c;
+        const customers = db.prepare(`
+            SELECT 
+                c.*,
+                u.name as assigned_agent_name,
+                (SELECT count(*) FROM leads WHERE customer_id = c.id) as total_enquiries
+            FROM customer_profiles c
+            LEFT JOIN users u ON c.assigned_to = u.id
+            WHERE ${where}
+            ORDER BY c.updated_at DESC
+            LIMIT ? OFFSET ?
+        `).all(...params, limit, offset);
+
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        res.render('admin/crm-customers', {
+            title: 'Customer Management — SV Real Estates Admin',
+            customers,
+            total,
+            page,
+            totalPages,
+            search,
+            deal_status
+        });
+    } catch (err) {
+        console.error('CRM Customers view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/customers/:id — Customer 360 View
+router.get('/crm/customers/:id', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const customer = db.prepare(`
+            SELECT c.*, u.name as assigned_agent_name
+            FROM customer_profiles c
+            LEFT JOIN users u ON c.assigned_to = u.id
+            WHERE c.id = ?
+        `).get(req.params.id);
+
+        if (!customer) return res.redirect('/admin/crm/customers');
+
+        const leads = db.prepare(`
+            SELECT l.*, p.title as property_title
+            FROM leads l
+            LEFT JOIN properties p ON l.property_id = p.id
+            WHERE l.customer_id = ? OR l.phone = ?
+            ORDER BY l.created_at DESC
+        `).all(customer.id, customer.phone);
+
+        const appointments = db.prepare(`
+            SELECT a.*, p.title as property_title, u.name as agent_name
+            FROM appointments a
+            LEFT JOIN properties p ON a.property_id = p.id
+            LEFT JOIN users u ON a.assigned_agent_id = u.id
+            WHERE a.customer_id = ? OR a.phone = ?
+            ORDER BY a.requested_date DESC
+        `).all(customer.id, customer.phone);
+
+        const followups = db.prepare(`
+            SELECT t.*, u.name as assigned_agent_name
+            FROM follow_up_tasks t
+            LEFT JOIN users u ON t.assigned_to = u.id
+            WHERE t.customer_id = ? OR t.lead_id IN (SELECT id FROM leads WHERE customer_id = ?)
+            ORDER BY t.scheduled_at DESC
+        `).all(customer.id, customer.id);
+
+        const activities = db.prepare(`
+            SELECT a.*, u.name as staff_name
+            FROM lead_activities a
+            LEFT JOIN users u ON a.user_id = u.id
+            WHERE a.customer_id = ? OR a.lead_id IN (SELECT id FROM leads WHERE customer_id = ?)
+            ORDER BY a.created_at DESC
+        `).all(customer.id, customer.id);
+
+        res.render('admin/crm-customer-detail', {
+            title: `${customer.full_name} — Customer 360`,
+            customer,
+            leads,
+            appointments,
+            followups,
+            activities
+        });
+    } catch (err) {
+        console.error('Customer 360 view error:', err);
+        res.redirect('/admin/crm/customers');
+    }
+});
+
+// GET /admin/crm/followups — Follow-up Manager
+router.get('/crm/followups', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const tab = req.query.tab || 'today';
+
+        let where = '1=1';
+        if (tab === 'today') {
+            where += " AND date(t.scheduled_at) = date('now') AND t.status = 'pending'";
+        } else if (tab === 'overdue') {
+            where += " AND t.scheduled_at < datetime('now') AND t.status = 'pending'";
+        } else if (tab === 'upcoming') {
+            where += " AND t.scheduled_at > datetime('now') AND t.status = 'pending'";
+        } else if (tab === 'completed') {
+            where += " AND t.status = 'completed'";
+        }
+
+        const tasks = db.prepare(`
+            SELECT 
+                t.*,
+                l.lead_code, l.customer_name, l.phone, l.status as lead_status,
+                u.name as assigned_agent_name
+            FROM follow_up_tasks t
+            LEFT JOIN leads l ON t.lead_id = l.id
+            LEFT JOIN users u ON t.assigned_to = u.id
+            WHERE ${where}
+            ORDER BY t.scheduled_at ASC
+        `).all();
+
+        const counts = {
+            today: db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE date(scheduled_at) = date('now') AND status = 'pending'").get().c,
+            overdue: db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE scheduled_at < datetime('now') AND status = 'pending'").get().c,
+            upcoming: db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE scheduled_at > datetime('now') AND status = 'pending'").get().c,
+            completed: db.prepare("SELECT count(*) as c FROM follow_up_tasks WHERE status = 'completed'").get().c,
+            all: db.prepare("SELECT count(*) as c FROM follow_up_tasks").get().c
+        };
+
+        res.render('admin/crm-followups', {
+            title: 'Follow-up Manager — SV Real Estates Admin',
+            tasks,
+            counts,
+            currentTab: tab
+        });
+    } catch (err) {
+        console.error('Followups view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/employees — Employees & Teams (Super Admin only)
+router.get('/crm/employees', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const employees = db.prepare(`
+            SELECT 
+                u.id, u.name, u.email, u.role, u.is_active, u.phone, u.designation, u.team_id,
+                t.name as team_name,
+                (SELECT count(*) FROM leads WHERE (assigned_to = u.id OR assigned_agent_id = u.id)) as assigned_leads_count,
+                (SELECT count(*) FROM follow_up_tasks WHERE assigned_to = u.id AND status = 'pending') as pending_tasks_count,
+                (SELECT count(*) FROM appointments WHERE assigned_agent_id = u.id AND status = 'completed') as completed_visits_count,
+                (SELECT count(*) FROM leads WHERE (assigned_to = u.id OR assigned_agent_id = u.id) AND status = 'converted') as converted_count
+            FROM users u
+            LEFT JOIN crm_teams t ON u.team_id = t.id
+            ORDER BY u.role = 'superadmin' DESC, u.name ASC
+        `).all();
+
+        res.render('admin/crm-employees', {
+            title: 'Employees & Teams — SV Real Estates Admin',
+            employees
+        });
+    } catch (err) {
+        console.error('Employees view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/reports — Reports & Analytics
+router.get('/crm/reports', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const range = req.query.range || '30d';
+
+        let dateFilter = "datetime('now', '-30 days')";
+        if (range === 'today') dateFilter = "date('now')";
+        else if (range === '7d') dateFilter = "datetime('now', '-7 days')";
+        else if (range === 'all') dateFilter = "'2000-01-01'";
+
+        const isExactDate = range === 'today';
+        const dateCond = isExactDate ? "date(l.created_at) = date('now')" : `l.created_at >= ${dateFilter}`;
+
+        const totalLeads = db.prepare(`SELECT count(*) as c FROM leads l WHERE ${dateCond}`).get().c;
+        const convertedLeads = db.prepare(`SELECT count(*) as c FROM leads l WHERE ${dateCond} AND l.status = 'converted'`).get().c;
+        const siteVisitsDone = db.prepare(`SELECT count(*) as c FROM appointments a WHERE a.status = 'completed' AND a.created_at >= ${dateFilter}`).get().c;
+        const activeDeals = db.prepare("SELECT count(*) as c FROM leads WHERE status IN ('negotiation', 'booking_in_progress', 'interested')").get().c;
+
+        const stageColors = {
+            new: '#3b82f6', not_contacted: '#64748b', contacted: '#0ea5e9',
+            qualified: '#8b5cf6', interested: '#ec4899', site_visit_scheduled: '#f59e0b',
+            site_visit_completed: '#10b981', negotiation: '#f97316', booking_in_progress: '#d97706',
+            converted: '#059669', lost: '#ef4444', spam: '#6b7280'
+        };
+
+        const stageKeys = Object.keys(stageColors);
+        const funnel = stageKeys.map(k => {
+            const count = db.prepare("SELECT count(*) as c FROM leads WHERE status = ?").get(k).c;
+            const name = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            return { id: k, name, color: stageColors[k], count };
+        });
+
+        const sources = db.prepare(`
+            SELECT coalesce(source, 'website') as source_name, count(*) as count
+            FROM leads l
+            WHERE ${dateCond}
+            GROUP BY source_name
+            ORDER BY count DESC
+        `).all();
+
+        const leaderboard = db.prepare(`
+            SELECT 
+                u.id, u.name,
+                count(l.id) as total_handled,
+                sum(CASE WHEN l.status = 'converted' THEN 1 ELSE 0 END) as converted_count,
+                sum(CASE WHEN l.status IN ('site_visit_scheduled', 'site_visit_completed') THEN 1 ELSE 0 END) as visits_count
+            FROM users u
+            JOIN leads l ON (l.assigned_to = u.id OR l.assigned_agent_id = u.id)
+            WHERE ${dateCond}
+            GROUP BY u.id, u.name
+            ORDER BY converted_count DESC, total_handled DESC
+            LIMIT 5
+        `).all();
+
+        const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+
+        res.render('admin/crm-reports', {
+            title: 'CRM Reports & Analytics — SV Real Estates Admin',
+            range,
+            analytics: {
+                kpis: {
+                    totalLeads,
+                    conversionRate,
+                    siteVisitsDone,
+                    activeDeals
+                },
+                funnel,
+                sources: sources.length > 0 ? sources : [{ source_name: 'website', count: totalLeads }],
+                leaderboard
+            }
+        });
+    } catch (err) {
+        console.error('Reports view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/import-export — Import & Export
+router.get('/crm/import-export', requirePermission('crm'), (req, res) => {
+    try {
+        const db = getDb();
+        const totalLeads = db.prepare("SELECT count(*) as c FROM leads").get().c;
+        res.render('admin/crm-import-export', {
+            title: 'Import & Export — SV Real Estates Admin',
+            totalLeads
+        });
+    } catch (err) {
+        console.error('Import/export view error:', err);
+        res.redirect('/admin/crm');
+    }
+});
+
+// GET /admin/crm/audit-logs — Audit Logs
+router.get('/crm/audit-logs', requireSuperAdmin, (req, res) => {
+    try {
+        const db = getDb();
+        const page = parseInt(req.query.page) || 1;
+        const limit = 25;
+        const offset = (page - 1) * limit;
+
+        const total = db.prepare("SELECT count(*) as c FROM audit_logs").get().c;
+        const logs = db.prepare("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT ? OFFSET ?").all(limit, offset);
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        res.render('admin/crm-audit-logs', {
+            title: 'Audit Logs — SV Real Estates Admin',
+            logs,
+            total,
+            page,
+            totalPages
+        });
+    } catch (err) {
+        console.error('Audit logs view error:', err);
+        res.redirect('/admin/crm');
     }
 });
 

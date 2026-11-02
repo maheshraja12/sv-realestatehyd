@@ -272,6 +272,7 @@ const apiAppointmentRoutes = require('./routes/api/appointments');
 const apiDashboardRoutes = require('./routes/api/dashboard');
 const apiNotificationRoutes = require('./routes/api/notifications');
 const apiChatbotRoutes = require('./routes/api/chatbot');
+const apiCrmRoutes = require('./routes/api/crm');
 
 // Apply rate limiters
 app.use('/admin/login', loginLimiter);
@@ -303,6 +304,7 @@ app.use('/api/appointments', apiAppointmentRoutes);
 app.use('/api/dashboard', apiDashboardRoutes);
 app.use('/api/notifications', apiNotificationRoutes);
 app.use('/api/chatbot', apiChatbotRoutes);
+app.use('/api/crm', apiCrmRoutes);
 
 // GET /api/health — System health check (safe, no secret leakage)
 app.get('/api/health', (req, res) => {

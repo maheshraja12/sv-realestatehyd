@@ -12,8 +12,11 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'agent')),
+    role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'sales_manager', 'sales_executive', 'receptionist', 'agent')),
     is_active INTEGER NOT NULL DEFAULT 1,
+    phone TEXT,
+    designation TEXT,
+    team_id INTEGER,
     last_login_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -197,10 +200,13 @@ CREATE TABLE IF NOT EXISTS appointments (
     confirmed_date TEXT,
     confirmed_time TEXT,
     status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
-        'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled'
+        'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'no_show'
     )),
     assigned_agent_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     result_notes TEXT,
+    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+    feedback_rating INTEGER,
+    feedback_notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -451,5 +457,112 @@ CREATE TABLE IF NOT EXISTS content_revisions (
     created_by INTEGER,
     created_by_name TEXT,
     note TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+
+-- ============================================================
+-- CRM CUSTOMER PROFILES (360 Degree Customer Relationship)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS customer_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_code TEXT NOT NULL UNIQUE,
+    lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+    full_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    alt_phone TEXT,
+    email TEXT,
+    address TEXT,
+    city TEXT DEFAULT 'Hyderabad',
+    preferred_locations TEXT,
+    budget_range TEXT,
+    property_interests TEXT,
+    deal_status TEXT NOT NULL DEFAULT 'active' CHECK(deal_status IN ('active', 'in_negotiation', 'booked', 'closed', 'inactive')),
+    assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    notes TEXT,
+    merged_into_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON customer_profiles(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_assigned ON customer_profiles(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_customers_status ON customer_profiles(deal_status);
+
+-- ============================================================
+-- CRM FOLLOW-UP TASKS & REMINDERS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS follow_up_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_code TEXT NOT NULL UNIQUE,
+    lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE CASCADE,
+    assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    scheduled_at TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'rescheduled', 'missed', 'cancelled')),
+    result_notes TEXT,
+    completed_at TEXT,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_followups_scheduled ON follow_up_tasks(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_followups_status ON follow_up_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_followups_assigned ON follow_up_tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_followups_lead ON follow_up_tasks(lead_id);
+
+-- ============================================================
+-- CRM LEAD & CUSTOMER ACTIVITY TIMELINE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS lead_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_name TEXT,
+    activity_type TEXT NOT NULL CHECK(activity_type IN ('call', 'whatsapp', 'email', 'meeting', 'site_visit', 'follow_up', 'note', 'status_change', 'assignment')),
+    title TEXT NOT NULL,
+    notes TEXT,
+    metadata TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_activities_lead ON lead_activities(lead_id);
+CREATE INDEX IF NOT EXISTS idx_activities_customer ON lead_activities(customer_id);
+CREATE INDEX IF NOT EXISTS idx_activities_type ON lead_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_activities_created ON lead_activities(created_at);
+
+-- ============================================================
+-- CRM TEAMS & DISTRIBUTION
+-- ============================================================
+CREATE TABLE IF NOT EXISTS crm_teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    team_lead_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS crm_team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL REFERENCES crm_teams(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(team_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS crm_lead_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    rule_type TEXT NOT NULL CHECK(rule_type IN ('round_robin', 'location', 'category')),
+    config TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    priority_order INTEGER DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

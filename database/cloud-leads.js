@@ -1,7 +1,17 @@
 /**
- * Server-to-server client for the SV Real Estate production leads Edge Function.
- * Never expose SV_REAL_ESTATE_EDGE_TOKEN to browser code.
+ * Server-to-server client for the SV Real Estate persistent cloud database & Edge Function.
+ * Seamlessly routes to direct PostgreSQL / Supabase (@supabase/supabase-js) or Supabase Edge Functions.
  */
+const {
+    isPostgresConfigured,
+    insertLead: insertPgLead,
+    fetchLeads: fetchPgLeads,
+    fetchProperties: fetchPgProperties,
+    insertProperty: insertPgProperty,
+    updateProperty: updatePgProperty,
+    deleteProperty: deletePgProperty
+} = require('./postgres');
+
 function getEndpoint() {
     const base = (process.env.SV_REAL_ESTATE_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const token = (process.env.SV_REAL_ESTATE_EDGE_TOKEN_V2 || '').trim();
@@ -10,7 +20,7 @@ function getEndpoint() {
 }
 
 function cloudLeadsConfigured() {
-    return Boolean(getEndpoint());
+    return Boolean(getEndpoint() || isPostgresConfigured());
 }
 
 async function callCloud(method, payloadOrQuery) {
@@ -64,42 +74,86 @@ async function callCloud(method, payloadOrQuery) {
 }
 
 async function submitCloudLead(lead) {
-    return callCloud('POST', lead);
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('POST', lead);
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        return insertPgLead(lead);
+    }
+    return { success: false, error: 'No cloud database or edge function configured' };
 }
 
 async function listCloudLeads(options = {}) {
-    return callCloud('GET', {
-        status: options.status,
-        category: options.category,
-        search: options.search,
-        limit: options.limit || 25,
-        offset: options.offset || 0
-    });
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('GET', {
+                status: options.status,
+                category: options.category,
+                search: options.search,
+                limit: options.limit || 25,
+                offset: options.offset || 0
+            });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        return fetchPgLeads(options);
+    }
+    return { success: false, error: 'No cloud database or edge function configured', data: [], count: 0 };
 }
 
 async function listCloudProperties(options = {}) {
-    return callCloud('GET', {
-        resource: 'properties',
-        public: options.public ? 'true' : 'false',
-        id: options.id,
-        status: options.status,
-        category: options.category,
-        purpose: options.purpose,
-        city: options.city,
-        locality: options.locality,
-        sort: options.sort,
-        availability: options.availability,
-        min_price: options.min_price,
-        max_price: options.max_price,
-        bedrooms: options.bedrooms,
-        search: options.search,
-        limit: options.limit || 24,
-        offset: options.offset || 0
-    });
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('GET', {
+                resource: 'properties',
+                public: options.public ? 'true' : 'false',
+                id: options.id,
+                status: options.status,
+                category: options.category,
+                purpose: options.purpose,
+                city: options.city,
+                locality: options.locality,
+                sort: options.sort,
+                availability: options.availability,
+                min_price: options.min_price,
+                max_price: options.max_price,
+                bedrooms: options.bedrooms,
+                search: options.search,
+                limit: options.limit || 24,
+                offset: options.offset || 0
+            });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        const res = await fetchPgProperties(options);
+        return {
+            success: res.success,
+            properties: res.data || [],
+            data: res.data || [],
+            count: res.count || 0,
+            property: res.property || null,
+            error: res.error
+        };
+    }
+    return { success: false, error: 'No cloud database configured', data: [], count: 0 };
 }
 
 async function createCloudProperty(property) {
-    return callCloud('POST', { resource: 'properties', ...property });
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('POST', { resource: 'properties', ...property });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        return insertPgProperty(property);
+    }
+    return { success: false, error: 'No cloud database configured' };
 }
 
 async function uploadCloudPropertyImage(propertyId, file) {
@@ -131,11 +185,32 @@ async function updateCloudProperty(id, patch) {
     const values = { ...patch };
     if (values.status === 'published' && !values.published_at) values.published_at = new Date().toISOString();
     if (values.status === 'draft') values.published_at = null;
-    return callCloud('PATCH', { resource: 'properties', id, ...values });
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('PATCH', { resource: 'properties', id, ...values });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        return updatePgProperty(id, values);
+    }
+    return { success: false, error: 'No cloud database configured' };
 }
 
 async function setCloudPropertyStatus(id, operation) {
-    return callCloud('PATCH', { resource: 'properties', id, operation });
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('PATCH', { resource: 'properties', id, operation });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
+    }
+    if (isPostgresConfigured()) {
+        let status = 'draft';
+        if (operation === 'publish' || operation === 'published') status = 'published';
+        if (operation === 'archive' || operation === 'archived') status = 'archived';
+        return updatePgProperty(id, { status, published_at: status === 'published' ? new Date().toISOString() : null });
+    }
+    return { success: false, error: 'No cloud database configured' };
 }
 
 async function setCloudPropertyCoverImage(id, imageId) {
@@ -165,24 +240,16 @@ async function deleteCloudPropertyImage(id, imageId) {
 }
 
 async function deleteCloudProperty(id) {
-    const endpoint = getEndpoint();
-    if (!endpoint) return { success: false, error: 'Production properties database is not configured.' };
-    const url = new URL(endpoint.url);
-    url.searchParams.set('resource', 'properties');
-    url.searchParams.set('id', String(id));
-    try {
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: { 'x-sv-edge-token': endpoint.token, accept: 'application/json' },
-            signal: AbortSignal.timeout(12000)
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || body.success === false) return { success: false, error: body.error || 'Could not delete property.' };
-        return { success: true, ...body };
-    } catch (error) {
-        console.error('[CLOUD PROPERTIES] Delete failed:', error.message);
-        return { success: false, error: 'Could not reach the production properties database.' };
+    if (getEndpoint()) {
+        try {
+            const edgeRes = await callCloud('DELETE', { resource: 'properties', id });
+            if (edgeRes && edgeRes.success) return edgeRes;
+        } catch (e) {}
     }
+    if (isPostgresConfigured()) {
+        return deletePgProperty(id);
+    }
+    return { success: false, error: 'No cloud database configured' };
 }
 
 module.exports = {

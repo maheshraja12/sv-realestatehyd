@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Pipeline — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-stream text-gold"></i> Sales Pipeline (12 Stages)</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="loadPipeline()" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <a href="/admin/leads" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-list"></i> Table View
+                </a>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 18px 24px;">
+            <!-- Filter Bar -->
+            <div style="background:#14171d; border:1px solid var(--border-color); border-radius:8px; padding:12px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                <div style="flex:1; min-width:220px; position:relative;">
+                    <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+                    <input type="text" id="pipelineSearch" placeholder="Search customer, phone, code..." style="width:100%; padding:8px 12px 8px 36px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;" oninput="filterCards()">
+                </div>
+                <div style="min-width:180px;">
+                    <select id="agentFilter" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;" onchange="loadPipeline()">
+                        <option value="">All Agents</option>
+                        <% if (typeof agents !== 'undefined' && agents) { %>
+                            <% agents.forEach(a => { %>
+                                <option value="<%= a.id %>"><%= a.name %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+                <div id="pipelineStatsSummary" style="font-size:0.85rem; color:var(--text-secondary); margin-left:auto;">
+                    Loading pipeline...
+                </div>
+            </div>
+
+            <!-- Toast Notification Container -->
+            <div id="pipelineToast" style="display:none; position:fixed; top:20px; right:20px; background:#10b981; color:#ffffff; padding:12px 20px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.4); z-index:9999; font-weight:600;"></div>
+
+            <!-- Kanban Board -->
+            <div class="pipeline-board-container">
+                <div class="pipeline-board" id="pipelineBoard">
+                    <!-- Populated dynamically via JavaScript with HTML5 Drag & Drop -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const PIPELINE_STAGES = [
+            { id: 'new', name: 'New Lead', color: '#3b82f6', icon: 'fa-user-plus' },
+            { id: 'not_contacted', name: 'Not Contacted', color: '#64748b', icon: 'fa-phone-slash' },
+            { id: 'contacted', name: 'Contacted', color: '#0ea5e9', icon: 'fa-phone' },
+            { id: 'qualified', name: 'Qualified', color: '#8b5cf6', icon: 'fa-clipboard-check' },
+            { id: 'interested', name: 'Interested', color: '#ec4899', icon: 'fa-heart' },
+            { id: 'site_visit_scheduled', name: 'Site Visit Scheduled', color: '#f59e0b', icon: 'fa-calendar-alt' },
+            { id: 'site_visit_completed', name: 'Site Visit Completed', color: '#10b981', icon: 'fa-check-circle' },
+            { id: 'negotiation', name: 'Negotiation', color: '#f97316', icon: 'fa-handshake' },
+            { id: 'booking_in_progress', name: 'Booking in Progress', color: '#d97706', icon: 'fa-file-signature' },
+            { id: 'converted', name: 'Converted', color: '#059669', icon: 'fa-trophy' },
+            { id: 'lost', name: 'Lost', color: '#ef4444', icon: 'fa-times-circle' },
+            { id: 'spam', name: 'Invalid / Spam', color: '#6b7280', icon: 'fa-ban' }
+        ];
+
+        let pipelineData = null;
+
+        async function loadPipeline() {
+            const agentId = document.getElementById('agentFilter').value;
+            const search = document.getElementById('pipelineSearch').value.trim();
+            const summaryEl = document.getElementById('pipelineStatsSummary');
+            summaryEl.innerText = 'Refreshing pipeline...';
+
+            try {
+                let url = '/api/crm/pipeline?';
+                if (agentId) url += 'agent_id=' + encodeURIComponent(agentId) + '&';
+                if (search) url += 'search=' + encodeURIComponent(search) + '&';
+
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                pipelineData = await res.json();
+                renderBoard(pipelineData);
+            } catch (err) {
+                console.error('Error loading pipeline:', err);
+                summaryEl.innerText = 'Failed to load pipeline data.';
+            }
+        }
+
+        function renderBoard(data) {
+            const board = document.getElementById('pipelineBoard');
+            board.innerHTML = '';
+
+            const summaryEl = document.getElementById('pipelineStatsSummary');
+            if (data.summary) {
+                const crVal = (data.summary.totalValue / 10000000).toFixed(2);
+                summaryEl.innerHTML = '<strong>' + data.summary.totalLeads + '</strong> Leads | Total: <strong>₹' + crVal + ' Cr</strong> | Conversion: <strong>' + data.summary.conversionRate + '%</strong>';
+            }
+
+            data.stages.forEach(stage => {
+                const col = document.createElement('div');
+                col.className = 'pipeline-column';
+                col.dataset.stageId = stage.id;
+
+                const stageValCr = stage.totalValue > 0 ? '₹' + (stage.totalValue / 10000000).toFixed(2) + ' Cr' : '—';
+
+                col.innerHTML = \`
+                    <div class="pipeline-column-header" style="border-top: 3px solid \${stage.color};">
+                        <div class="pipeline-stage-title">
+                            <span class="pipeline-stage-dot" style="background:\${stage.color};"></span>
+                            <span>\${stage.name}</span>
+                        </div>
+                        <span class="pipeline-stage-badge" id="badge-\${stage.id}">\${stage.count}</span>
+                    </div>
+                    <div class="pipeline-stage-val">Value: \${stageValCr}</div>
+                    <div class="pipeline-cards" id="cards-\${stage.id}" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '\${stage.id}')">
+                    </div>
+                \`;
+
+                const cardsContainer = col.querySelector('.pipeline-cards');
+                stage.leads.forEach(lead => {
+                    const card = createCardElement(lead, stage.id);
+                    cardsContainer.appendChild(card);
+                });
+
+                board.appendChild(col);
+            });
+        }
+
+        function createCardElement(lead, currentStageId) {
+            const card = document.createElement('div');
+            card.className = 'pipeline-card';
+            card.id = 'lead-card-' + lead.id;
+            card.draggable = true;
+            card.dataset.leadId = lead.id;
+            card.dataset.currentStage = currentStageId;
+            card.dataset.searchText = ((lead.customer_name || '') + ' ' + (lead.phone || '') + ' ' + (lead.lead_code || '')).toLowerCase();
+
+            card.ondragstart = (e) => {
+                e.dataTransfer.setData('text/plain', lead.id);
+                card.style.opacity = '0.5';
+            };
+            card.ondragend = (e) => {
+                card.style.opacity = '1';
+            };
+
+            const cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
+            const waLink = 'https://wa.me/91' + (cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone);
+
+            card.innerHTML = \`
+                <div class="pipeline-card-header">
+                    <span class="pipeline-card-code">\${lead.lead_code}</span>
+                    <span class="status-badge badge-priority-\${lead.priority || 'medium'}" style="font-size:0.65rem; padding:1px 6px;">\${lead.priority || 'med'}</span>
+                </div>
+                <div class="pipeline-card-name">\${escapeHtml(lead.customer_name || 'Prospect')}</div>
+                <div class="pipeline-card-meta">
+                    <div><i class="fas fa-phone"></i> \${escapeHtml(lead.phone || '—')}</div>
+                    <div><i class="fas fa-home"></i> \${escapeHtml(lead.property_category || 'Property')}</div>
+                    \${lead.next_follow_up ? '<div style="color:var(--gold);"><i class="fas fa-calendar"></i> Follow-up: ' + escapeHtml(lead.next_follow_up.slice(0, 10)) + '</div>' : ''}
+                </div>
+                <div class="pipeline-card-footer">
+                    <span class="pipeline-card-budget">\${escapeHtml(lead.budget || 'Market Price')}</span>
+                    <span class="pipeline-card-agent">\${escapeHtml(lead.agent_name || 'Unassigned')}</span>
+                </div>
+                <div style="display:flex; gap:6px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
+                    <a href="\${waLink}" target="_blank" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; color:#25d366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                    <a href="tel:\${lead.phone}" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; color:#22c55e;" title="Call"><i class="fas fa-phone"></i></a>
+                    <a href="/admin/leads/\${lead.id}" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; flex:1; text-align:center;">View &rarr;</a>
+                    <select onchange="moveLead(this.value, \${lead.id})" style="background:#0c0f17; border:1px solid var(--border-color); color:var(--text-muted); font-size:0.7rem; border-radius:4px; max-width:80px;" title="Move Stage">
+                        <option value="">Move...</option>
+                        \${PIPELINE_STAGES.map(s => '<option value="' + s.id + '"' + (s.id === currentStageId ? ' disabled' : '') + '>' + s.name + '</option>').join('')}
+                    </select>
+                </div>
+            \`;
+            return card;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e, targetStageId) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const leadId = e.dataTransfer.getData('text/plain');
+            if (leadId) {
+                await moveLead(targetStageId, leadId);
+            }
+        }
+
+        async function moveLead(targetStageId, leadId) {
+            if (!targetStageId || !leadId) return;
+            try {
+                const res = await fetch('/api/crm/pipeline/move', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lead_id: leadId, target_stage: targetStageId })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showToast('Moved lead #' + leadId + ' to ' + (result.stage_name || targetStageId));
+                    loadPipeline();
+                } else {
+                    alert(result.error || 'Failed to move lead');
+                }
+            } catch (err) {
+                console.error('Error moving lead:', err);
+                alert('Network error moving lead');
+            }
+        }
+
+        function filterCards() {
+            const q = document.getElementById('pipelineSearch').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.pipeline-card');
+            cards.forEach(card => {
+                const text = card.dataset.searchText || '';
+                if (!q || text.includes(q)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('pipelineToast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPipeline);
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import & Export Leads — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                    <h2><i class="fas fa-file-export text-gold"></i> Import & Export CRM Data</h2>
+                </div>
+            </header>
+
+            <div class="dashboard-content" style="padding: 24px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+                    <!-- Export Card -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3 style="font-size:1.1rem; font-weight:700;"><i class="fas fa-file-csv text-gold"></i>
+                                Export Customer Leads</h3>
+                        </div>
+                        <div class="card-body" style="padding:20px;">
+                            <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:16px;">
+                                Download your customer database into a CSV spreadsheet compatible with Excel, Google
+                                Sheets, or CRM software. All customer contact details, budgets, preferences, and status
+                                history are included.
+                            </p>
+                            <div
+                                style="background:#14171d; border:1px solid var(--border-color); border-radius:6px; padding:14px; margin-bottom:20px;">
+                                <div style="font-size:0.85rem; color:#ffffff; font-weight:600; margin-bottom:6px;">
+                                    Current Database Summary:</div>
+                                <div
+                                    style="font-size:0.8rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+                                    <span><i class="fas fa-check text-gold"></i> Total verified leads: <strong>
+                                            <%= totalLeads %>
+                                        </strong></span>
+                                    <span><i class="fas fa-check text-gold"></i> Includes: Lead Code, Full Name, Phone,
+                                        Email, Budget, Category, Status, Agent, Timestamp</span>
+                                </div>
+                            </div>
+                            <a href="/api/leads/export/csv" class="btn btn-primary"
+                                style="background:var(--gold); color:#0c0f17; font-weight:700; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fas fa-download"></i> Download Full CSV Export
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Import Card -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3 style="font-size:1.1rem; font-weight:700;"><i class="fas fa-file-upload text-gold"></i>
+                                Import Leads from CSV</h3>
+                        </div>
+                        <div class="card-body" style="padding:20px;">
+                            <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:16px;">
+                                Bulk upload new prospect lists. Duplicate phone numbers already in the CRM database are
+                                safely detected and skipped to preserve data integrity.
+                            </p>
+
+                            <div style="margin-bottom:16px;">
+                                <label
+                                    style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">Paste
+                                    CSV Data (or comma-separated rows):</label>
+                                <textarea id="importCsvText" rows="6"
+                                    placeholder="Customer Name,Phone,Email,Property Requirement,Budget&#10;Ravi Kumar,9848011223,ravi@example.com,4BHK Villa Kokapet,₹3.5 Cr&#10;Sunita Rao,9988776655,sunita@example.com,2BHK Flat Tellapur,₹75 Lakhs"
+                                    style="width:100%; padding:10px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; font-family:monospace; font-size:0.8rem; resize:vertical;"></textarea>
+                            </div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <button type="button" onclick="executeImport()" class="btn btn-primary"
+                                    style="background:var(--gold); color:#0c0f17; font-weight:700; padding:8px 18px;">
+                                    <i class="fas fa-upload"></i> Process & Import Leads
+                                </button>
+                                <span id="importStatus" style="font-size:0.85rem; color:var(--text-secondary);"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <script>
+            async function executeImport() {
+                const csvText = document.getElementById('importCsvText').value.trim();
+                const statusEl = document.getElementById('importStatus');
+                if (!csvText) {
+                    alert('Please paste CSV data to import');
+                    return;
+                }
+
+                statusEl.innerText = 'Importing...';
+
+                try {
+                    const res = await fetch('/api/crm/import/csv', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ csv_data: csvText })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        statusEl.innerHTML = '<span style="color:#4ade80;"><i class="fas fa-check"></i> ' + data.message + '</span>';
+                        alert(data.message + '\\nImported: ' + data.imported + ' | Skipped Duplicates: ' + data.skippedDuplicates);
+                    } else {
+                        statusEl.innerText = 'Failed: ' + (data.error || 'Server error');
+                        alert(data.error || 'Failed to import');
+                    }
+                } catch (err) {
+                    statusEl.innerText = 'Network error during import';
+                }
+            }
+        </script>
+        <script src="/js/admin.js"></script>
+</body>
+
+</html>

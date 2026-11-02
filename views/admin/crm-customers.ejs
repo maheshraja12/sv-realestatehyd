@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management — SV Real Estates Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+    <%- include('../partials/admin-sidebar') %>
+    
+    <main class="admin-main">
+        <header class="admin-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                <h2><i class="fas fa-address-book text-gold"></i> Customer Management (<%= total %>)</h2>
+            </div>
+            <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="openMergeModal()" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-code-branch"></i> Merge Duplicates
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-content" style="padding: 24px;">
+            <!-- Filter Bar -->
+            <form method="GET" action="/admin/crm/customers" style="background:#14171d; border:1px solid var(--border-color); border-radius:8px; padding:12px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:20px;">
+                <div style="flex:1; min-width:240px; position:relative;">
+                    <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+                    <input type="text" name="search" value="<%= search || '' %>" placeholder="Search customer name, phone, code..." style="width:100%; padding:8px 12px 8px 36px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                </div>
+                <div style="min-width:180px;">
+                    <select name="deal_status" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;" onchange="this.form.submit()">
+                        <option value="">All Deal Statuses</option>
+                        <option value="active" <%= deal_status === 'active' ? 'selected' : '' %>>Active</option>
+                        <option value="in_negotiation" <%= deal_status === 'in_negotiation' ? 'selected' : '' %>>In Negotiation</option>
+                        <option value="booked" <%= deal_status === 'booked' ? 'selected' : '' %>>Booked</option>
+                        <option value="closed" <%= deal_status === 'closed' ? 'selected' : '' %>>Closed</option>
+                        <option value="inactive" <%= deal_status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:8px 18px;">
+                    Filter
+                </button>
+                <% if (search || deal_status) { %>
+                    <a href="/admin/crm/customers" class="btn btn-secondary" style="padding:8px 14px;">Reset</a>
+                <% } %>
+            </form>
+
+            <!-- Customers Table -->
+            <div class="admin-card">
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <% if (!customers || customers.length === 0) { %>
+                        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                            <i class="fas fa-user-slash" style="font-size:2.5rem; color:var(--gold); margin-bottom:12px; display:block;"></i>
+                            <h3>No customer profiles found</h3>
+                            <p style="font-size:0.9rem; margin-top:6px;">Customers are created when leads are qualified or converted. You can convert any lead from the <a href="/admin/leads" style="color:var(--gold);">Leads List</a>.</p>
+                        </div>
+                    <% } else { %>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer Code</th>
+                                    <th>Customer Name</th>
+                                    <th>Contact</th>
+                                    <th>Requirements & Budget</th>
+                                    <th>Deal Status</th>
+                                    <th>Assigned Agent</th>
+                                    <th>Enquiries</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% customers.forEach(c => { %>
+                                    <tr>
+                                        <td>
+                                            <a href="/admin/crm/customers/<%= c.id %>" style="color:var(--gold); font-weight:600; text-decoration:none; font-family:monospace;">
+                                                <%= c.customer_code %>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:600; color:#ffffff;"><%= c.full_name %></div>
+                                            <div style="font-size:0.75rem; color:var(--text-muted);"><%= c.city || 'Hyderabad' %></div>
+                                        </td>
+                                        <td>
+                                            <div><i class="fas fa-phone text-gold" style="font-size:0.75rem;"></i> <%= c.phone %></div>
+                                            <% if (c.email) { %>
+                                                <div style="font-size:0.75rem; color:var(--text-muted);"><%= c.email %></div>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div style="font-size:0.85rem;"><%= c.property_interests || 'General' %></div>
+                                            <div style="font-size:0.75rem; color:var(--gold); font-weight:600;"><%= c.budget_range || '—' %></div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-<%= c.deal_status %>" style="font-size:0.72rem; text-transform:uppercase;">
+                                                <%= c.deal_status.replace('_', ' ') %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size:0.85rem; color:var(--text-secondary);"><%= c.assigned_agent_name || 'Unassigned' %></span>
+                                        </td>
+                                        <td>
+                                            <span class="badge" style="background:#202530; color:#ffffff; font-weight:700;"><%= c.total_enquiries || 1 %></span>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="display:inline-flex; gap:6px;">
+                                                <% const cleanPh = (c.phone || '').replace(/[^0-9]/g, ''); %>
+                                                <a href="https://wa.me/91<%= cleanPh.length >= 10 ? cleanPh.slice(-10) : cleanPh %>" target="_blank" class="btn btn-secondary" style="padding:4px 8px; color:#25d366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                                                <a href="tel:<%= c.phone %>" class="btn btn-secondary" style="padding:4px 8px; color:#22c55e;" title="Call"><i class="fas fa-phone"></i></a>
+                                                <a href="/admin/crm/customers/<%= c.id %>" class="btn btn-secondary" style="padding:4px 10px; font-size:0.8rem;">Profile &rarr;</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+                <div class="pagination" style="display:flex; justify-content:center; gap:8px; margin-top:20px;">
+                    <% for (let p = 1; p <= totalPages; p++) { %>
+                        <a href="/admin/crm/customers?page=<%= p %>&search=<%= search || '' %>&deal_status=<%= deal_status || '' %>" class="btn <%= p === page ? 'btn-primary' : 'btn-secondary' %>" style="padding:6px 12px; font-size:0.85rem;">
+                            <%= p %>
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </main>
+
+    <!-- Merge Modal -->
+    <div id="mergeModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:10px; padding:24px; max-width:480px; width:90%;">
+            <h3 style="font-size:1.1rem; color:#ffffff; margin-bottom:12px;"><i class="fas fa-code-branch text-gold"></i> Merge Duplicate Customers</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">
+                Merging combines all enquiries, site visits, follow-up tasks, and activities from the duplicate customer profile into the primary profile, retaining a full audit record.
+            </p>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Primary Customer ID (to KEEP):</label>
+                <input type="number" id="mergePrimaryId" placeholder="e.g. 1" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Duplicate Customer ID (to MERGE & DEACTIVATE):</label>
+                <input type="number" id="mergeDuplicateId" placeholder="e.g. 2" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Reason for Merge:</label>
+                <input type="text" id="mergeReason" placeholder="e.g. Same customer with alternate mobile number" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeMergeModal()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="executeMerge()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Confirm Merge</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openMergeModal() {
+            document.getElementById('mergeModal').style.display = 'flex';
+        }
+        function closeMergeModal() {
+            document.getElementById('mergeModal').style.display = 'none';
+        }
+        async function executeMerge() {
+            const primary_id = document.getElementById('mergePrimaryId').value.trim();
+            const duplicate_id = document.getElementById('mergeDuplicateId').value.trim();
+            const reason = document.getElementById('mergeReason').value.trim();
+
+            if (!primary_id || !duplicate_id) {
+                alert('Please enter both Primary and Duplicate Customer IDs');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/crm/customers/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ primary_id, duplicate_id, reason })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Failed to merge customers');
+                }
+            } catch (err) {
+                alert('Network error merging customers');
+            }
+        }
+    </script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
+

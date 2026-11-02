@@ -16,7 +16,100 @@ CREATE TABLE IF NOT EXISTS public."session" (
 );
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON public."session" ("expire");
 
--- 2. Leads / Enquiries Table (Receives all "Enquire Now", callback, and chatbot leads)
+-- 2. Properties Catalog Table
+CREATE TABLE IF NOT EXISTS public.properties (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    property_code VARCHAR(100) NOT NULL UNIQUE,
+    title VARCHAR(300) NOT NULL,
+    category VARCHAR(100) NOT NULL CHECK(category IN (
+        'villa', 'residential_plot', 'apartment', 'independent_house',
+        'commercial', 'agricultural_land', 'rental'
+    )),
+    purpose VARCHAR(50) NOT NULL DEFAULT 'sale' CHECK(purpose IN ('sale', 'rent', 'lease')),
+    short_description TEXT,
+    description TEXT,
+    price NUMERIC,
+    price_negotiable INT NOT NULL DEFAULT 0,
+
+    -- Location
+    state VARCHAR(100) DEFAULT 'Telangana',
+    city VARCHAR(100) DEFAULT 'Hyderabad',
+    locality VARCHAR(200),
+    full_address TEXT,
+    pin_code VARCHAR(50),
+    map_link TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+
+    -- Property Details
+    plot_area NUMERIC,
+    built_up_area NUMERIC,
+    carpet_area NUMERIC,
+    area_unit VARCHAR(50) DEFAULT 'sq_ft' CHECK(area_unit IN ('sq_ft', 'sq_yd', 'acres', 'guntas', 'cents')),
+    bedrooms INT,
+    bathrooms INT,
+    balconies INT,
+    floors INT,
+    facing VARCHAR(50),
+    furnishing VARCHAR(50) CHECK(furnishing IN ('unfurnished', 'semi_furnished', 'fully_furnished', NULL)),
+    parking VARCHAR(200),
+
+    -- Plot-specific
+    plot_dimensions VARCHAR(200),
+    road_width VARCHAR(200),
+    land_use_category VARCHAR(200),
+    approval_details TEXT,
+
+    -- Villa-specific
+    private_garden INT DEFAULT 0,
+    private_pool INT DEFAULT 0,
+
+    -- Media
+    cover_image TEXT,
+    virtual_tour_link TEXT,
+    brochure_url TEXT,
+
+    -- Amenities (JSONB array)
+    amenities JSONB DEFAULT '[]'::jsonb,
+
+    -- Status & Listing
+    status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
+    availability VARCHAR(50) DEFAULT 'available' CHECK(availability IN ('available', 'sold', 'rented', 'upcoming')),
+    is_featured INT NOT NULL DEFAULT 0,
+    published_at TIMESTAMPTZ,
+
+    -- SEO
+    seo_title VARCHAR(300),
+    seo_description TEXT,
+
+    -- Internal
+    admin_notes TEXT,
+    created_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties(status);
+CREATE INDEX IF NOT EXISTS idx_properties_category ON public.properties(category);
+CREATE INDEX IF NOT EXISTS idx_properties_city ON public.properties(city);
+CREATE INDEX IF NOT EXISTS idx_properties_purpose ON public.properties(purpose);
+CREATE INDEX IF NOT EXISTS idx_properties_price ON public.properties(price);
+CREATE INDEX IF NOT EXISTS idx_properties_featured ON public.properties(is_featured);
+
+-- 3. Property Images Table
+CREATE TABLE IF NOT EXISTS public.property_images (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    property_id BIGINT NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    original_name VARCHAR(300),
+    is_cover INT NOT NULL DEFAULT 0,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_property_images_property ON public.property_images(property_id);
+
+-- 4. Leads / Enquiries Table (Receives all "Enquire Now", callback, and chatbot leads)
 CREATE TABLE IF NOT EXISTS public.leads (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     lead_code VARCHAR(50) UNIQUE,
@@ -281,7 +374,113 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
+-- ==============================================================
+-- CRM MODULE TABLES (Pipeline, Customers, Follow-ups, Activities)
+-- ==============================================================
+
+-- Customer Profiles (360 Degree Customer Profiles)
+CREATE TABLE IF NOT EXISTS public.customer_profiles (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_code VARCHAR(100) NOT NULL UNIQUE,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE SET NULL,
+    full_name VARCHAR(200) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    alt_phone VARCHAR(50),
+    email VARCHAR(200),
+    address TEXT,
+    city VARCHAR(100) DEFAULT 'Hyderabad',
+    preferred_locations TEXT,
+    budget_range VARCHAR(100),
+    property_interests TEXT,
+    deal_status VARCHAR(50) NOT NULL DEFAULT 'active',
+    assigned_to BIGINT,
+    notes TEXT,
+    merged_into_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customer_profiles(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_assigned ON public.customer_profiles(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_customers_status ON public.customer_profiles(deal_status);
+
+-- Follow-Up Tasks & Reminders
+CREATE TABLE IF NOT EXISTS public.follow_up_tasks (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_code VARCHAR(100) NOT NULL UNIQUE,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE CASCADE,
+    customer_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE CASCADE,
+    assigned_to BIGINT,
+    title VARCHAR(250) NOT NULL,
+    description TEXT,
+    scheduled_at TIMESTAMPTZ NOT NULL,
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium',
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    result_notes TEXT,
+    completed_at TIMESTAMPTZ,
+    created_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_followups_scheduled ON public.follow_up_tasks(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_followups_status ON public.follow_up_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_followups_assigned ON public.follow_up_tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_followups_lead ON public.follow_up_tasks(lead_id);
+
+-- Lead & Customer Activity Timeline
+CREATE TABLE IF NOT EXISTS public.lead_activities (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    lead_id BIGINT REFERENCES public.leads(id) ON DELETE CASCADE,
+    customer_id BIGINT REFERENCES public.customer_profiles(id) ON DELETE CASCADE,
+    user_id BIGINT,
+    user_name VARCHAR(200),
+    activity_type VARCHAR(50) NOT NULL,
+    title VARCHAR(250) NOT NULL,
+    notes TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activities_lead ON public.lead_activities(lead_id);
+CREATE INDEX IF NOT EXISTS idx_activities_customer ON public.lead_activities(customer_id);
+CREATE INDEX IF NOT EXISTS idx_activities_type ON public.lead_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_activities_created ON public.lead_activities(created_at);
+
+-- CRM Teams & Members
+CREATE TABLE IF NOT EXISTS public.crm_teams (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL UNIQUE,
+    description TEXT,
+    team_lead_id BIGINT,
+    is_active INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.crm_team_members (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    team_id BIGINT NOT NULL REFERENCES public.crm_teams(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL,
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(team_id, user_id)
+);
+
+-- CRM Lead Assignment Rules
+CREATE TABLE IF NOT EXISTS public.crm_lead_rules (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    rule_type VARCHAR(50) NOT NULL,
+    config JSONB,
+    is_active INT DEFAULT 1,
+    priority_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Row Level Security (RLS) Configuration
+ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.property_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
@@ -320,7 +519,18 @@ DROP POLICY IF EXISTS "Public can update appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Staff full access appointments" ON public.appointments;
 CREATE POLICY "Staff full access appointments" ON public.appointments FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
 
--- Public read policies for CMS content
+-- Public read policies for Properties & CMS content
+DROP POLICY IF EXISTS "Public can read published properties" ON public.properties;
+CREATE POLICY "Public can read published properties" ON public.properties FOR SELECT TO anon, authenticated USING (status = 'published');
+
+DROP POLICY IF EXISTS "Staff full access properties" ON public.properties;
+CREATE POLICY "Staff full access properties" ON public.properties FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read property images" ON public.property_images;
+CREATE POLICY "Public can read property images" ON public.property_images FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "Staff full access property images" ON public.property_images;
+CREATE POLICY "Staff full access property images" ON public.property_images FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Public can read settings" ON public.settings;
 CREATE POLICY "Public can read settings" ON public.settings FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS "Staff full access settings" ON public.settings;
@@ -360,3 +570,30 @@ DROP POLICY IF EXISTS "Public can read website sections" ON public.website_secti
 CREATE POLICY "Public can read website sections" ON public.website_sections FOR SELECT TO anon, authenticated USING (is_active = 1);
 DROP POLICY IF EXISTS "Staff full access website sections" ON public.website_sections;
 CREATE POLICY "Staff full access website sections" ON public.website_sections FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+
+-- CRM Row Level Security
+ALTER TABLE public.customer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.follow_up_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lead_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crm_lead_rules ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Staff full access customer_profiles" ON public.customer_profiles;
+CREATE POLICY "Staff full access customer_profiles" ON public.customer_profiles FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access follow_up_tasks" ON public.follow_up_tasks;
+CREATE POLICY "Staff full access follow_up_tasks" ON public.follow_up_tasks FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access lead_activities" ON public.lead_activities;
+CREATE POLICY "Staff full access lead_activities" ON public.lead_activities FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_teams" ON public.crm_teams;
+CREATE POLICY "Staff full access crm_teams" ON public.crm_teams FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_team_members" ON public.crm_team_members;
+CREATE POLICY "Staff full access crm_team_members" ON public.crm_team_members FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Staff full access crm_lead_rules" ON public.crm_lead_rules;
+CREATE POLICY "Staff full access crm_lead_rules" ON public.crm_lead_rules FOR ALL TO authenticated, service_role USING (true) WITH CHECK (true);

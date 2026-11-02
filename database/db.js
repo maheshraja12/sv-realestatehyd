@@ -463,7 +463,17 @@ function initializeDb() {
                 { name: 'appointment_time', type: 'TEXT' },
                 { name: 'property_requirement', type: 'TEXT' },
                 { name: 'lead_category', type: "TEXT DEFAULT 'Property Buying'" },
-                { name: 'service_type', type: 'TEXT' }
+                { name: 'service_type', type: 'TEXT' },
+                { name: 'whatsapp_number', type: 'TEXT' },
+                { name: 'assigned_to', type: 'INTEGER' },
+                { name: 'priority', type: "TEXT DEFAULT 'medium'" },
+                { name: 'last_contacted_at', type: 'TEXT' },
+                { name: 'next_follow_up_date', type: 'TEXT' },
+                { name: 'utm_source', type: 'TEXT' },
+                { name: 'utm_medium', type: 'TEXT' },
+                { name: 'utm_campaign', type: 'TEXT' },
+                { name: 'customer_id', type: 'INTEGER' },
+                { name: 'estimated_budget_val', type: 'REAL DEFAULT 0' }
             ];
             for (const col of requiredCols) {
                 if (!columns.includes(col.name)) {
@@ -474,10 +484,136 @@ function initializeDb() {
             // Table created freshly from schema.sql
         }
 
-        // Migrate users table role check constraint if needed to permit 'superadmin'
+        // Auto-migrate users columns
+        try {
+            const userCols = database.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+            const requiredUserCols = [
+                { name: 'phone', type: 'TEXT' },
+                { name: 'designation', type: 'TEXT' },
+                { name: 'team_id', type: 'INTEGER' }
+            ];
+            for (const col of requiredUserCols) {
+                if (!userCols.includes(col.name)) {
+                    database.exec(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type};`);
+                }
+            }
+        } catch (e) {}
+
+        // Auto-migrate appointments columns
+        try {
+            const aptCols = database.prepare('PRAGMA table_info(appointments)').all().map(c => c.name);
+            const requiredAptCols = [
+                { name: 'customer_id', type: 'INTEGER' },
+                { name: 'feedback_rating', type: 'INTEGER' },
+                { name: 'feedback_notes', type: 'TEXT' }
+            ];
+            for (const col of requiredAptCols) {
+                if (!aptCols.includes(col.name)) {
+                    database.exec(`ALTER TABLE appointments ADD COLUMN ${col.name} ${col.type};`);
+                }
+            }
+        } catch (e) {}
+
+        // Ensure CRM Tables exist
+        try {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS customer_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_code TEXT NOT NULL UNIQUE,
+                    lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+                    full_name TEXT NOT NULL,
+                    phone TEXT NOT NULL,
+                    alt_phone TEXT,
+                    email TEXT,
+                    address TEXT,
+                    city TEXT DEFAULT 'Hyderabad',
+                    preferred_locations TEXT,
+                    budget_range TEXT,
+                    property_interests TEXT,
+                    deal_status TEXT NOT NULL DEFAULT 'active' CHECK(deal_status IN ('active', 'in_negotiation', 'booked', 'closed', 'inactive')),
+                    assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    notes TEXT,
+                    merged_into_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_customers_phone ON customer_profiles(phone);
+                CREATE INDEX IF NOT EXISTS idx_customers_assigned ON customer_profiles(assigned_to);
+                CREATE INDEX IF NOT EXISTS idx_customers_status ON customer_profiles(deal_status);
+
+                CREATE TABLE IF NOT EXISTS follow_up_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_code TEXT NOT NULL UNIQUE,
+                    lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE CASCADE,
+                    assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    scheduled_at TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
+                    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'rescheduled', 'missed', 'cancelled')),
+                    result_notes TEXT,
+                    completed_at TEXT,
+                    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_followups_scheduled ON follow_up_tasks(scheduled_at);
+                CREATE INDEX IF NOT EXISTS idx_followups_status ON follow_up_tasks(status);
+                CREATE INDEX IF NOT EXISTS idx_followups_assigned ON follow_up_tasks(assigned_to);
+
+                CREATE TABLE IF NOT EXISTS lead_activities (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    lead_id INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    user_name TEXT,
+                    activity_type TEXT NOT NULL CHECK(activity_type IN ('call', 'whatsapp', 'email', 'meeting', 'site_visit', 'follow_up', 'note', 'status_change', 'assignment')),
+                    title TEXT NOT NULL,
+                    notes TEXT,
+                    metadata TEXT,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_activities_lead ON lead_activities(lead_id);
+                CREATE INDEX IF NOT EXISTS idx_activities_customer ON lead_activities(customer_id);
+                CREATE INDEX IF NOT EXISTS idx_activities_type ON lead_activities(activity_type);
+
+                CREATE TABLE IF NOT EXISTS crm_teams (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    team_lead_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS crm_team_members (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    team_id INTEGER NOT NULL REFERENCES crm_teams(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    UNIQUE(team_id, user_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS crm_lead_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    rule_type TEXT NOT NULL CHECK(rule_type IN ('round_robin', 'location', 'category')),
+                    config TEXT,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    priority_order INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+            `);
+        } catch (crmTablesErr) {
+            console.warn('⚠️ CRM tables creation notice:', crmTablesErr.message);
+        }
+
+        // Migrate users table role check constraint if needed to permit CRM roles
         try {
             const userTableInfo = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
-            if (userTableInfo && userTableInfo.sql && !userTableInfo.sql.includes("'superadmin'")) {
+            if (userTableInfo && userTableInfo.sql && (!userTableInfo.sql.includes("'sales_manager'") || !userTableInfo.sql.includes("'sales_executive'"))) {
                 database.exec(`
                     PRAGMA foreign_keys = OFF;
                     CREATE TABLE users_migrated (
@@ -485,8 +621,11 @@ function initializeDb() {
                         name TEXT NOT NULL,
                         email TEXT NOT NULL UNIQUE,
                         password_hash TEXT NOT NULL,
-                        role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'agent')),
+                        role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('superadmin', 'admin', 'sales_manager', 'sales_executive', 'receptionist', 'agent')),
                         is_active INTEGER NOT NULL DEFAULT 1,
+                        phone TEXT,
+                        designation TEXT,
+                        team_id INTEGER,
                         last_login_at TEXT,
                         created_at TEXT NOT NULL DEFAULT (datetime('now')),
                         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -497,10 +636,61 @@ function initializeDb() {
                     ALTER TABLE users_migrated RENAME TO users;
                     PRAGMA foreign_keys = ON;
                 `);
-                console.log('✅ [MIGRATION] users table upgraded with superadmin role constraint');
+                console.log('✅ [MIGRATION] users table upgraded with multi-tier CRM roles constraint');
             }
         } catch (migErr) {
             console.warn('⚠️ Users table migration notice:', migErr.message);
+        }
+
+        // Migrate appointments table status check constraint if needed to permit 'no_show'
+        try {
+            const aptTableInfo = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'appointments'").get();
+            if (aptTableInfo && aptTableInfo.sql && !aptTableInfo.sql.includes("'no_show'")) {
+                database.exec(`
+                    PRAGMA foreign_keys = OFF;
+                    CREATE TABLE appointments_migrated (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        appointment_code TEXT NOT NULL UNIQUE,
+                        lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+                        customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+                        property_id INTEGER REFERENCES properties(id) ON DELETE SET NULL,
+                        customer_name TEXT NOT NULL,
+                        phone TEXT NOT NULL,
+                        notes TEXT,
+                        requested_date TEXT NOT NULL,
+                        requested_time TEXT,
+                        confirmed_date TEXT,
+                        confirmed_time TEXT,
+                        status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
+                            'requested', 'confirmed', 'rescheduled', 'completed', 'cancelled', 'no_show'
+                        )),
+                        assigned_agent_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        result_notes TEXT,
+                        feedback_rating INTEGER,
+                        feedback_notes TEXT,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+                    INSERT OR IGNORE INTO appointments_migrated (
+                        id, appointment_code, lead_id, customer_id, property_id, customer_name, phone,
+                        notes, requested_date, requested_time, confirmed_date, confirmed_time, status,
+                        assigned_agent_id, result_notes, feedback_rating, feedback_notes, created_at, updated_at
+                    ) SELECT 
+                        id, appointment_code, lead_id, customer_id, property_id, customer_name, phone,
+                        notes, requested_date, requested_time, confirmed_date, confirmed_time, status,
+                        assigned_agent_id, result_notes, feedback_rating, feedback_notes, created_at, updated_at
+                    FROM appointments;
+                    DROP TABLE appointments;
+                    ALTER TABLE appointments_migrated RENAME TO appointments;
+                    CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+                    CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(requested_date);
+                    CREATE INDEX IF NOT EXISTS idx_appointments_property ON appointments(property_id);
+                    PRAGMA foreign_keys = ON;
+                `);
+                console.log('✅ [MIGRATION] appointments table upgraded with no_show status constraint');
+            }
+        } catch (migErr) {
+            console.warn('⚠️ Appointments table migration notice:', migErr.message);
         }
 
         // Seed or verify Super Admin, Normal Admin, and default permissions

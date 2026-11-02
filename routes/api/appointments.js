@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../../database/db');
-const { requireAuth, auditLog, notifyAllAdmins } = require('../../middleware/auth');
+const { requireAuth, auditLog, notifyAllAdmins, logLeadActivity } = require('../../middleware/auth');
 const { sanitizeObject, validatePhone } = require('../../middleware/validation');
 const {
     isPostgresConfigured,
@@ -146,7 +146,7 @@ router.get('/', requireAuth, async (req, res) => {
             console.error('Error fetching appointments from PostgreSQL in API:', pgErr);
         }
     }
-    
+
     let where = '1=1';
     const params = [];
     if (status) { where += ' AND a.status = ?'; params.push(status); }
@@ -166,7 +166,7 @@ router.get('/', requireAuth, async (req, res) => {
 // PATCH /api/appointments/:id — Update appointment
 router.patch('/:id', requireAuth, (req, res) => {
     const db = getDb();
-    const { status, confirmed_date, confirmed_time, assigned_agent_id, result_notes } = req.body;
+    const { status, confirmed_date, confirmed_time, assigned_agent_id, result_notes, feedback_rating, feedback_notes, customer_id } = req.body;
 
     const appointment = db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
@@ -179,6 +179,9 @@ router.patch('/:id', requireAuth, (req, res) => {
     if (confirmed_time !== undefined) { updates.push('confirmed_time = ?'); params.push(confirmed_time); }
     if (assigned_agent_id !== undefined) { updates.push('assigned_agent_id = ?'); params.push(assigned_agent_id); }
     if (result_notes !== undefined) { updates.push('result_notes = ?'); params.push(result_notes); }
+    if (feedback_rating !== undefined) { updates.push('feedback_rating = ?'); params.push(feedback_rating); }
+    if (feedback_notes !== undefined) { updates.push('feedback_notes = ?'); params.push(feedback_notes); }
+    if (customer_id !== undefined) { updates.push('customer_id = ?'); params.push(customer_id); }
 
     if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
 
@@ -186,6 +189,74 @@ router.patch('/:id', requireAuth, (req, res) => {
     params.push(req.params.id);
 
     db.prepare(`UPDATE appointments SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    // Sync to persistent cloud database (Supabase / PostgreSQL)
+    if (isPostgresConfigured()) {
+        try {
+            const { updateAppointment } = require('../../database/postgres');
+            updateAppointment(req.params.id, {
+                status, confirmed_date, confirmed_time, assigned_agent_id, result_notes, feedback_rating, feedback_notes, customer_id
+            }).catch(e => console.error('Cloud appointment update error:', e));
+        } catch (pgErr) {
+            console.error('PostgreSQL appointment update error:', pgErr);
+        }
+    }
+
+    // Activity timeline & CRM lead synchronization
+    const leadId = appointment.lead_id || (appointment.phone ? db.prepare('SELECT id FROM leads WHERE phone_number = ? OR phone = ? ORDER BY id DESC LIMIT 1').get(appointment.phone, appointment.phone)?.id : null);
+    const resolvedCustomerId = appointment.customer_id || customer_id || (leadId ? db.prepare('SELECT customer_id FROM leads WHERE id = ?').get(leadId)?.customer_id : null);
+
+    if (leadId || resolvedCustomerId) {
+        const newStatus = status || appointment.status;
+        const noteText = result_notes || feedback_notes || `Site visit (${appointment.appointment_code}) status changed to ${newStatus}`;
+        logLeadActivity(db, {
+            lead_id: leadId,
+            customer_id: resolvedCustomerId,
+            user_id: req.session.userId,
+            user_name: req.session.userName,
+            activity_type: 'site_visit',
+            title: `Site Visit: ${newStatus.replace('_', ' ').toUpperCase()} (${appointment.appointment_code})`,
+            notes: noteText,
+            metadata: {
+                appointment_id: appointment.id,
+                appointment_code: appointment.appointment_code,
+                status: newStatus,
+                date: confirmed_date || appointment.confirmed_date || appointment.requested_date,
+                notes: result_notes
+            }
+        });
+
+        // Auto-progress lead pipeline stage if applicable
+        if (leadId && status === 'completed') {
+            const lead = db.prepare('SELECT status FROM leads WHERE id = ?').get(leadId);
+            if (lead && ['new', 'not_contacted', 'contacted', 'qualified', 'interested', 'site_visit_scheduled'].includes(lead.status)) {
+                db.prepare("UPDATE leads SET status = 'site_visit_completed', updated_at = datetime('now') WHERE id = ?").run(leadId);
+                logLeadActivity(db, {
+                    lead_id: leadId,
+                    customer_id: resolvedCustomerId,
+                    user_id: req.session.userId,
+                    user_name: req.session.userName,
+                    activity_type: 'status_change',
+                    title: 'Lead Pipeline Auto-Progressed: Site Visit Completed',
+                    notes: `Lead automatically updated to site_visit_completed upon completion of visit ${appointment.appointment_code}`
+                });
+            }
+        } else if (leadId && status === 'confirmed') {
+            const lead = db.prepare('SELECT status FROM leads WHERE id = ?').get(leadId);
+            if (lead && ['new', 'not_contacted', 'contacted', 'qualified', 'interested'].includes(lead.status)) {
+                db.prepare("UPDATE leads SET status = 'site_visit_scheduled', updated_at = datetime('now') WHERE id = ?").run(leadId);
+                logLeadActivity(db, {
+                    lead_id: leadId,
+                    customer_id: resolvedCustomerId,
+                    user_id: req.session.userId,
+                    user_name: req.session.userName,
+                    activity_type: 'status_change',
+                    title: 'Lead Pipeline Auto-Progressed: Site Visit Scheduled',
+                    notes: `Lead updated to site_visit_scheduled upon confirmation of visit ${appointment.appointment_code}`
+                });
+            }
+        }
+    }
 
     auditLog(db, req.session.userId, req.session.userName, 'update', 'appointment', req.params.id,
         `Status: ${status || appointment.status}`, req.ip);
