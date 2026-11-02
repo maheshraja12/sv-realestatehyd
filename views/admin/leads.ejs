@@ -21,14 +21,18 @@
                 <span class="badge" style="background:rgba(37,211,102,0.15); color:#25D366; border:1px solid rgba(37,211,102,0.3); font-size:0.8rem; padding:6px 12px; border-radius:6px; font-weight:600;">
                     <i class="fas fa-circle" style="font-size:0.6rem; margin-right:4px;"></i> Live Updates
                 </span>
-                <button type="button" onclick="window.location.reload()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; cursor:pointer;">
-                    <i class="fas fa-sync-alt"></i> Refresh Leads
+                <button type="button" onclick="openAddLeadModal()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; cursor:pointer;">
+                    <i class="fas fa-user-plus"></i> Add Lead
+                </button>
+                <button type="button" onclick="window.location.reload()" class="btn btn-secondary" style="cursor:pointer;">
+                    <i class="fas fa-sync-alt"></i> Refresh
                 </button>
                 <a href="/api/leads/export/csv" class="btn btn-secondary"><i class="fas fa-download"></i> Export CSV</a>
             </div>
         </header>
 
         <div class="admin-content">
+            <!-- Filter Bar -->
             <div class="filter-bar">
                 <form method="GET" action="/admin/leads" class="filter-form">
                     <div class="filter-group">
@@ -38,7 +42,9 @@
                         <select name="status" class="filter-select">
                             <option value="">All Status</option>
                             <option value="new" <%= status === 'new' ? 'selected' : '' %>>New</option>
+                            <option value="not_contacted" <%= status === 'not_contacted' ? 'selected' : '' %>>Not Contacted</option>
                             <option value="contacted" <%= status === 'contacted' ? 'selected' : '' %>>Contacted</option>
+                            <option value="qualified" <%= status === 'qualified' ? 'selected' : '' %>>Qualified</option>
                             <option value="interested" <%= status === 'interested' ? 'selected' : '' %>>Interested</option>
                             <option value="site_visit_scheduled" <%= status === 'site_visit_scheduled' ? 'selected' : '' %>>Site Visit Scheduled</option>
                             <option value="negotiation" <%= status === 'negotiation' ? 'selected' : '' %>>Negotiation</option>
@@ -55,6 +61,8 @@
                             <option value="apartment" <%= category === 'apartment' ? 'selected' : '' %>>Apartment</option>
                             <option value="independent_house" <%= category === 'independent_house' ? 'selected' : '' %>>Independent House</option>
                             <option value="commercial" <%= category === 'commercial' ? 'selected' : '' %>>Commercial</option>
+                            <option value="agricultural_land" <%= category === 'agricultural_land' ? 'selected' : '' %>>Agricultural Land</option>
+                            <option value="interiors" <%= category === 'interiors' ? 'selected' : '' %>>Home Interiors</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-secondary"><i class="fas fa-search"></i></button>
@@ -62,14 +70,19 @@
                 </form>
             </div>
 
-            <div class="table-info">
+            <div class="table-info" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Showing <%= leads.length %> of <%= total %> enquiries</span>
+                <span style="font-size:0.8rem; color:var(--text-muted);"><i class="fas fa-info-circle text-gold"></i> Select rows below for bulk assignment & status updates</span>
             </div>
 
+            <!-- Leads Table -->
             <div class="table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th style="width:36px; text-align:center;">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Select all visible leads">
+                            </th>
                             <th>Code</th>
                             <th>Customer Name</th>
                             <th>Phone Number</th>
@@ -83,10 +96,13 @@
                     </thead>
                     <tbody>
                         <% if (leads.length === 0) { %>
-                        <tr><td colspan="9" class="empty-row">No enquiries found</td></tr>
+                        <tr><td colspan="10" class="empty-row">No enquiries found</td></tr>
                         <% } %>
                         <% leads.forEach(lead => { %>
                         <tr onclick="window.location='/admin/leads/<%= lead.id %>'" class="clickable-row">
+                            <td onclick="event.stopPropagation();" style="text-align:center;">
+                                <input type="checkbox" class="lead-checkbox" value="<%= lead.id %>" onchange="updateBulkBar()">
+                            </td>
                             <td><strong><%= lead.lead_code %></strong></td>
                             <td>
                                 <strong style="color:var(--text-primary);"><%= lead.full_name || lead.customer_name %></strong>
@@ -122,7 +138,9 @@
                             <td>
                                 <select class="inline-status" onchange="updateLeadStatus(<%= lead.id %>, this.value); event.stopPropagation();">
                                     <option value="new" <%= lead.status === 'new' ? 'selected' : '' %>>New</option>
+                                    <option value="not_contacted" <%= lead.status === 'not_contacted' ? 'selected' : '' %>>Not Contacted</option>
                                     <option value="contacted" <%= lead.status === 'contacted' ? 'selected' : '' %>>Contacted</option>
+                                    <option value="qualified" <%= lead.status === 'qualified' ? 'selected' : '' %>>Qualified</option>
                                     <option value="interested" <%= lead.status === 'interested' ? 'selected' : '' %>>Interested</option>
                                     <option value="site_visit_scheduled" <%= lead.status === 'site_visit_scheduled' ? 'selected' : '' %>>Site Visit</option>
                                     <option value="negotiation" <%= lead.status === 'negotiation' ? 'selected' : '' %>>Negotiation</option>
@@ -160,6 +178,270 @@
         </div>
     </main>
 
+    <!-- Floating Bulk Action Bar -->
+    <div id="bulkActionBar" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#181d28; border:1px solid var(--gold); border-radius:10px; padding:12px 24px; box-shadow:0 10px 35px rgba(0,0,0,0.7); z-index:9999; align-items:center; gap:16px;">
+        <span style="color:#ffffff; font-weight:600; font-size:0.9rem;">
+            <i class="fas fa-check-square text-gold"></i> <span id="selectedCount" style="color:var(--gold); font-weight:700;">0</span> leads selected
+        </span>
+        <div style="display:flex; gap:6px; align-items:center;">
+            <select id="bulkAgentSelect" style="padding:6px 10px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; font-size:0.82rem;">
+                <option value="">Assign to Employee...</option>
+                <% if (typeof agents !== 'undefined' && agents) { %>
+                    <% agents.forEach(a => { %>
+                        <option value="<%= a.id %>"><%= (a.name || "").replace(/Super Admin/i, "Management") %></option>
+                    <% }) %>
+                <% } %>
+            </select>
+            <button type="button" onclick="executeBulkAssign()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 12px; font-size:0.82rem;">Assign</button>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+            <select id="bulkStatusSelect" style="padding:6px 10px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; font-size:0.82rem;">
+                <option value="">Change Status...</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="qualified">Qualified</option>
+                <option value="interested">Interested</option>
+                <option value="site_visit_scheduled">Site Visit</option>
+                <option value="negotiation">Negotiation</option>
+                <option value="converted">Converted</option>
+                <option value="lost">Lost</option>
+                <option value="spam">Spam</option>
+            </select>
+            <button type="button" onclick="executeBulkStatus()" class="btn btn-secondary" style="padding:6px 12px; font-size:0.82rem;">Update</button>
+        </div>
+        <button type="button" onclick="clearLeadSelection()" class="btn btn-ghost" style="padding:6px 10px; font-size:0.82rem; color:var(--text-muted);">&times; Deselect</button>
+    </div>
+
+    <!-- Add Lead Modal -->
+    <div id="addLeadModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:620px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.8);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                <h3 style="font-size:1.15rem; color:#ffffff; margin:0;"><i class="fas fa-user-plus text-gold"></i> Create New Customer Lead</h3>
+                <button type="button" onclick="closeAddLeadModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="addLeadForm" onsubmit="submitNewLead(event)">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Customer Full Name *</label>
+                        <input type="text" id="newLeadName" required placeholder="e.g. Ramesh Kumar" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Phone Number *</label>
+                        <input type="tel" id="newLeadPhone" required placeholder="e.g. 9848012345" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Email Address</label>
+                        <input type="email" id="newLeadEmail" placeholder="e.g. ramesh@example.com" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Property Category *</label>
+                        <select id="newLeadCategory" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="Residential Plot">Residential Plot</option>
+                            <option value="Villa">Villa</option>
+                            <option value="Apartment">Apartment</option>
+                            <option value="Independent House">Independent House</option>
+                            <option value="Commercial">Commercial Property</option>
+                            <option value="Agricultural Land">Agricultural Land</option>
+                            <option value="Home Interiors">Home Interiors</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Budget Range</label>
+                        <input type="text" id="newLeadBudget" placeholder="e.g. ₹75 Lakhs, ₹1.5 Cr" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Preferred Locality</label>
+                        <input type="text" id="newLeadLocality" placeholder="e.g. Tellapur, Kokapet, Miyapur" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Lead Source</label>
+                        <select id="newLeadSource" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="Phone call">Phone Call</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Walk-in">Walk-in Client</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Website">Website</option>
+                            <option value="Property enquiry">Property Enquiry</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Lead Priority</label>
+                        <select id="newLeadPriority" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Assign to Employee</label>
+                        <select id="newLeadAgent" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="">Unassigned</option>
+                            <% if (typeof agents !== 'undefined' && agents) { %>
+                                <% agents.forEach(a => { %>
+                                    <option value="<%= a.id %>"><%= (a.name || "").replace(/Super Admin/i, "Management") %></option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Initial Stage / Status</label>
+                        <select id="newLeadStatus" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="interested">Interested</option>
+                            <option value="site_visit_scheduled">Site Visit Scheduled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Notes / Customer Requirements</label>
+                    <textarea id="newLeadNotes" rows="2" placeholder="e.g. Looking for east-facing plot near ORR exit with 200 sq yards..." style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeAddLeadModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Save Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="/js/admin.js"></script>
+    <script>
+        function openAddLeadModal() {
+            document.getElementById('addLeadModal').style.display = 'flex';
+        }
+        function closeAddLeadModal() {
+            document.getElementById('addLeadModal').style.display = 'none';
+        }
+
+        async function submitNewLead(e) {
+            e.preventDefault();
+            const customer_name = document.getElementById('newLeadName').value.trim();
+            const phone = document.getElementById('newLeadPhone').value.trim();
+            const email = document.getElementById('newLeadEmail').value.trim();
+            const property_category = document.getElementById('newLeadCategory').value;
+            const budget = document.getElementById('newLeadBudget').value.trim();
+            const preferred_location = document.getElementById('newLeadLocality').value.trim();
+            const source = document.getElementById('newLeadSource').value;
+            const priority = document.getElementById('newLeadPriority').value;
+            const status = document.getElementById('newLeadStatus').value;
+            const assigned_agent_id = document.getElementById('newLeadAgent').value;
+            const notes = document.getElementById('newLeadNotes').value.trim();
+
+            try {
+                const res = await fetch('/api/leads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name, phone, email, property_category, property_requirement: property_category,
+                        budget, preferred_location, source, priority, status, assigned_agent_id, notes
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Lead created successfully: ' + data.lead_code);
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert(data.error || 'Failed to create lead');
+                }
+            } catch (err) {
+                alert('Network error creating lead');
+            }
+        }
+
+        function toggleSelectAll(master) {
+            const checks = document.querySelectorAll('.lead-checkbox');
+            checks.forEach(c => c.checked = master.checked);
+            updateBulkBar();
+        }
+
+        function updateBulkBar() {
+            const checks = document.querySelectorAll('.lead-checkbox:checked');
+            const bar = document.getElementById('bulkActionBar');
+            const countEl = document.getElementById('selectedCount');
+            countEl.innerText = checks.length;
+            if (checks.length > 0) {
+                bar.style.display = 'flex';
+            } else {
+                bar.style.display = 'none';
+                const master = document.getElementById('selectAllCheckbox');
+                if (master) master.checked = false;
+            }
+        }
+
+        function clearLeadSelection() {
+            const checks = document.querySelectorAll('.lead-checkbox');
+            checks.forEach(c => c.checked = false);
+            const master = document.getElementById('selectAllCheckbox');
+            if (master) master.checked = false;
+            updateBulkBar();
+        }
+
+        function getSelectedLeadIds() {
+            const checks = document.querySelectorAll('.lead-checkbox:checked');
+            return Array.from(checks).map(c => parseInt(c.value)).filter(Boolean);
+        }
+
+        async function executeBulkAssign() {
+            const agentId = document.getElementById('bulkAgentSelect').value;
+            if (!agentId) { alert('Please select an employee to assign'); return; }
+            const leadIds = getSelectedLeadIds();
+            if (leadIds.length === 0) { alert('No leads selected'); return; }
+
+            try {
+                const res = await fetch('/api/crm/leads/bulk-assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lead_ids: leadIds, agent_id: agentId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'Leads assigned successfully');
+                    setTimeout(() => location.reload(), 700);
+                } else {
+                    alert(data.error || 'Failed to assign leads');
+                }
+            } catch (err) { alert('Network error during bulk assignment'); }
+        }
+
+        async function executeBulkStatus() {
+            const status = document.getElementById('bulkStatusSelect').value;
+            if (!status) { alert('Please select a status'); return; }
+            const leadIds = getSelectedLeadIds();
+            if (leadIds.length === 0) { alert('No leads selected'); return; }
+
+            try {
+                const res = await fetch('/api/crm/leads/bulk-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lead_ids: leadIds, status: status })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'Status updated successfully');
+                    setTimeout(() => location.reload(), 700);
+                } else {
+                    alert(data.error || 'Failed to update status');
+                }
+            } catch (err) { alert('Network error during bulk status update'); }
+        }
+    </script>
 </body>
 </html>

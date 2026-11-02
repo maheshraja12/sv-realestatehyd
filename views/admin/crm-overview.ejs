@@ -140,7 +140,9 @@
                 <div class="admin-card">
                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <h3 style="font-size:1rem; font-weight:700;"><i class="fas fa-history text-gold"></i> Live Customer Activity Timeline</h3>
+                        <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.isSuperAdmin) { %>
                         <a href="/admin/crm/audit-logs" style="color:var(--gold); font-size:0.85rem; text-decoration:none;">Audit Logs &rarr;</a>
+                        <% } %>
                     </div>
                     <div class="card-body" style="padding:16px;">
                         <% if (!recentActivities || recentActivities.length === 0) { %>

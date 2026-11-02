@@ -4,11 +4,11 @@
 
 function getAdminPermissions(db) {
     const perms = {
-        dashboard: false,
-        properties: false,
+        dashboard: true,
+        properties: true,
         leads: true,
-        appointments: false,
-        interiors: false,
+        appointments: true,
+        interiors: true,
         cms: false,
         settings: false,
         crm: true,

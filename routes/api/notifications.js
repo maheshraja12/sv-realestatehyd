@@ -34,11 +34,13 @@ router.patch('/:id/read', (req, res) => {
 });
 
 // PATCH /api/notifications/read-all
-router.patch('/read-all', (req, res) => {
+function markAllAsReadHandler(req, res) {
     const db = getDb();
     db.prepare("UPDATE notifications SET is_read = 1, read_at = datetime('now') WHERE user_id = ? AND is_read = 0")
         .run(req.session.userId);
     res.json({ message: 'All marked as read' });
-});
+}
+router.patch('/read-all', markAllAsReadHandler);
+router.post('/read-all', markAllAsReadHandler);
 
 module.exports = router;

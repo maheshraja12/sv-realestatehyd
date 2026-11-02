@@ -18,6 +18,9 @@
                 <h2><i class="fas fa-address-book text-gold"></i> Customer Management (<%= total %>)</h2>
             </div>
             <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="openAddCustomerModal()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-user-plus"></i> Add Customer
+                </button>
                 <button type="button" onclick="openMergeModal()" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
                     <i class="fas fa-code-branch"></i> Merge Duplicates
                 </button>
@@ -192,6 +195,114 @@
                 }
             } catch (err) {
                 alert('Network error merging customers');
+            }
+        }
+    </script>
+    <!-- Add Customer Modal -->
+    <div id="addCustomerModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:560px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.8);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                <h3 style="font-size:1.15rem; color:#ffffff; margin:0;"><i class="fas fa-user-plus text-gold"></i> Create Verified Customer Profile</h3>
+                <button type="button" onclick="closeAddCustomerModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="addCustomerForm" onsubmit="submitNewCustomer(event)">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Full Name *</label>
+                        <input type="text" id="custName" required placeholder="e.g. Anand Rao" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Phone Number *</label>
+                        <input type="tel" id="custPhone" required placeholder="e.g. 9848011223" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Email Address</label>
+                        <input type="email" id="custEmail" placeholder="e.g. anand@example.com" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Alternate / WhatsApp Phone</label>
+                        <input type="tel" id="custAltPhone" placeholder="e.g. 9988776655" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Property Interests</label>
+                        <input type="text" id="custInterests" placeholder="e.g. 4BHK Villa Kokapet" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Budget Range</label>
+                        <input type="text" id="custBudget" placeholder="e.g. ₹2.5 Cr - ₹4 Cr" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">City</label>
+                        <input type="text" id="custCity" value="Hyderabad" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Deal Status</label>
+                        <select id="custDealStatus" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="active">Active Prospect</option>
+                            <option value="in_negotiation">In Negotiation</option>
+                            <option value="booked">Booked</option>
+                            <option value="closed">Closed Deal</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Customer Notes</label>
+                    <textarea id="custNotes" rows="2" placeholder="e.g. Ready buyer, looking for immediate registration..." style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeAddCustomerModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Create Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddCustomerModal() { document.getElementById('addCustomerModal').style.display = 'flex'; }
+        function closeAddCustomerModal() { document.getElementById('addCustomerModal').style.display = 'none'; }
+
+        async function submitNewCustomer(e) {
+            e.preventDefault();
+            const full_name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const email = document.getElementById('custEmail').value.trim();
+            const alt_phone = document.getElementById('custAltPhone').value.trim();
+            const property_interests = document.getElementById('custInterests').value.trim();
+            const budget_range = document.getElementById('custBudget').value.trim();
+            const city = document.getElementById('custCity').value.trim();
+            const deal_status = document.getElementById('custDealStatus').value;
+            const notes = document.getElementById('custNotes').value.trim();
+
+            try {
+                const res = await fetch('/api/crm/customers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name, phone, email, alt_phone, property_interests,
+                        budget_range, city, deal_status, notes
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || 'Customer profile created');
+                    window.location.href = '/admin/crm/customers/' + data.customer_id;
+                } else {
+                    alert(data.error || 'Failed to create customer');
+                }
+            } catch (err) {
+                alert('Network error creating customer');
             }
         }
     </script>

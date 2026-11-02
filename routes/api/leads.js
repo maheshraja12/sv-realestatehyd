@@ -4,6 +4,17 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const router = express.Router();
+function normalizeLeadSource(src) {
+    if (!src) return 'phone';
+    const s = String(src).toLowerCase().trim().replace(/[\s_-]+/g, '');
+    if (s.includes('phone') || s.includes('call')) return 'phone';
+    if (s.includes('walk') || s.includes('office') || s.includes('visit')) return 'walkin';
+    if (s.includes('refer')) return 'referral';
+    if (s.includes('chat') || s.includes('bot')) return 'chatbot';
+    if (s.includes('web') || s.includes('site') || s.includes('form') || s.includes('property')) return 'website';
+    return 'other';
+}
+
 const { getDb } = require('../../database/db');
 const { cloudLeadsConfigured, submitCloudLead, listCloudLeads } = require('../../database/cloud-leads');
 const { requireAuth, auditLog, notifyAllAdmins, logLeadActivity } = require('../../middleware/auth');
@@ -316,6 +327,130 @@ router.post('/public', async (req, res) => {
 });
 
 // ── Admin Endpoints ───────────────────────────────────────
+
+// POST /api/leads — Create new lead manually (admin/crm)
+router.post('/', requireAuth, async (req, res) => {
+    try {
+        const db = getDb();
+        const data = sanitizeObject(req.body);
+        const customerName = String(data.customer_name || data.full_name || '').trim();
+        const rawPhone = String(data.phone || data.phone_number || '').trim();
+        if (!customerName || !rawPhone) {
+            return res.status(400).json({ error: 'Customer Name and Phone Number are required' });
+        }
+
+        const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
+        const cleanPhone = digitsOnly.length === 12 && digitsOnly.startsWith('91')
+            ? digitsOnly.slice(2)
+            : (digitsOnly.length >= 10 ? digitsOnly.slice(-10) : rawPhone);
+
+        const leadCode = generateLeadCode();
+        const propertyReq = data.property_requirement || data.property_category || 'Residential Plot';
+        const source = normalizeLeadSource(data.source);
+        const priority = data.priority || 'medium';
+        const status = data.status || 'new';
+        const budget = data.budget || 'Consult / Market Price';
+        const preferredLocation = data.preferred_location || 'Hyderabad';
+        const notes = data.notes || data.message || null;
+        const assignedAgentId = data.assigned_agent_id ? parseInt(data.assigned_agent_id) : (data.assigned_to ? parseInt(data.assigned_to) : null);
+        const nextFollowUp = data.next_follow_up || null;
+
+        // 1. Insert into persistent Supabase Postgres if configured
+        if (isPostgresConfigured()) {
+            try {
+                await insertPgLead({
+                    lead_code: leadCode,
+                    customer_name: customerName,
+                    phone: cleanPhone,
+                    email: data.email || null,
+                    property_requirement: propertyReq,
+                    property_category: propertyReq,
+                    budget: budget,
+                    preferred_location: preferredLocation,
+                    message: notes,
+                    source: source,
+                    status: status,
+                    priority: priority,
+                    assigned_agent_id: assignedAgentId,
+                    assigned_to: assignedAgentId,
+                    next_follow_up: nextFollowUp
+                });
+            } catch (pgErr) {
+                console.warn('Postgres lead insert notice:', pgErr.message);
+            }
+        }
+
+        // 2. Insert into SQLite leads table
+        let leadId = null;
+        if (db && typeof db.prepare === 'function') {
+            const insertStmt = db.prepare(`
+                INSERT INTO leads (
+                    lead_code, customer_name, full_name, phone, phone_number, email,
+                    property_category, property_requirement, lead_category, budget, preferred_location,
+                    message, source, status, priority, assigned_agent_id, assigned_to, next_follow_up
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+            const result = insertStmt.run(
+                leadCode,
+                customerName,
+                customerName,
+                cleanPhone,
+                cleanPhone,
+                data.email || null,
+                propertyReq,
+                propertyReq,
+                'Property Buying',
+                budget,
+                preferredLocation,
+                notes,
+                source,
+                status,
+                priority,
+                assignedAgentId,
+                assignedAgentId,
+                nextFollowUp
+            );
+            leadId = result.lastInsertRowid;
+
+            // Log activity
+            logLeadActivity(db, {
+                leadId: leadId,
+                userId: req.session ? req.session.userId : null,
+                userName: req.session ? req.session.userName : 'Admin',
+                type: 'note',
+                title: 'Lead Created',
+                notes: `Lead added manually via CRM (${source}). Initial status: ${status}`
+            });
+
+            // Status history
+            db.prepare(`
+                INSERT INTO lead_status_history (lead_id, old_status, new_status, changed_by)
+                VALUES (?, NULL, ?, ?)
+            `).run(leadId, status, req.session ? req.session.userId : null);
+
+            // Audit log
+            auditLog(
+                db,
+                req.session ? req.session.userId : null,
+                req.session ? req.session.userName : 'Admin',
+                'CREATE',
+                'lead',
+                leadId,
+                `Created lead ${leadCode} for ${customerName} (${cleanPhone})`
+            );
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Lead created successfully',
+            lead_id: leadId,
+            lead_code: leadCode
+        });
+    } catch (err) {
+        console.error('Admin create lead error:', err);
+        res.status(500).json({ error: 'Failed to create lead: ' + err.message });
+    }
+});
 
 // GET /api/leads — List leads (admin)
 router.get('/', requireAuth, async (req, res) => {

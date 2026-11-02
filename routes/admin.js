@@ -19,7 +19,8 @@ const {
     getLeadById: getPgLeadById,
     getLeadStats: getPgLeadStats,
     fetchAppointments: fetchPgAppointments,
-    getAppointmentStats: getPgAppointmentStats
+    getAppointmentStats: getPgAppointmentStats,
+    fetchFollowUpTasks: fetchPgFollowups
 } = require('../database/postgres');
 
 // All admin routes require authentication
@@ -38,11 +39,13 @@ router.get('/', (req, res) => {
 // GET /admin/dashboard
 router.get('/dashboard', requirePermission('dashboard'), async (req, res) => {
     if (process.env.VERCEL && cloudLeadsConfigured()) {
-        const [allPropertiesResult, publishedResult, leadResult, recentPropertiesResult] = await Promise.all([
+        const [allPropertiesResult, publishedResult, leadResult, recentPropertiesResult, aptStatsResult, followupsResult] = await Promise.all([
             listCloudProperties({ public: false, limit: 100, offset: 0 }),
             listCloudProperties({ public: true, limit: 100, offset: 0 }),
             listCloudLeads({ limit: 100, offset: 0 }),
-            listCloudProperties({ public: false, limit: 5, offset: 0 })
+            listCloudProperties({ public: false, limit: 5, offset: 0 }),
+            getPgAppointmentStats().catch(() => ({ success: false })),
+            (typeof fetchPgFollowups === 'function' ? fetchPgFollowups({ status: 'pending' }) : Promise.resolve({ success: false })).catch(() => ({ success: false }))
         ]);
         if ([allPropertiesResult, publishedResult, leadResult, recentPropertiesResult].some(r => !r.success)) {
             console.error('[ADMIN DASHBOARD] Could not load all production data');
@@ -51,14 +54,29 @@ router.get('/dashboard', requirePermission('dashboard'), async (req, res) => {
         const allProperties = allPropertiesResult.properties || [];
         const publishedProperties = publishedResult.properties || [];
         const cloudLeads = leadResult.data || [];
+
+        let scheduledVisits = 0;
+        if (aptStatsResult && aptStatsResult.success && typeof aptStatsResult.pendingCount === 'number') {
+            scheduledVisits = aptStatsResult.pendingCount;
+        } else {
+            scheduledVisits = cloudLeads.filter(l => String(l.status || '').toLowerCase() === 'site_visit_scheduled').length;
+        }
+
+        let dueFollowups = 0;
+        if (followupsResult && followupsResult.success && Array.isArray(followupsResult.data)) {
+            dueFollowups = followupsResult.data.length;
+        } else {
+            dueFollowups = cloudLeads.filter(l => l.next_follow_up && new Date(l.next_follow_up) <= new Date()).length;
+        }
+
         const stats = {
             totalProperties: Number(allPropertiesResult.total || 0),
             publishedProperties: Number(publishedResult.total || 0),
             draftProperties: allProperties.filter(p => p.status === 'draft').length,
             totalLeads: Number(leadResult.count || 0),
             newLeads: cloudLeads.filter(l => String(l.status || 'new').toLowerCase() === 'new').length,
-            followUpsDue: 0,
-            siteVisitsScheduled: 0,
+            followUpsDue: dueFollowups,
+            siteVisitsScheduled: scheduledVisits,
             closedLeads: cloudLeads.filter(l => String(l.status || '').toLowerCase() === 'converted').length
         };
         const recentLeads = cloudLeads.slice(0, 10).map(e => ({

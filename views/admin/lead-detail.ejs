@@ -183,7 +183,7 @@
                         <select id="assignAgent" class="filter-select" onchange="assignAgent(<%= lead.id %>, this.value)">
                             <option value="">Unassigned</option>
                             <% agents.forEach(agent => { %>
-                            <option value="<%= agent.id %>" <%= lead.assigned_agent_id === agent.id ? 'selected' : '' %>><%= agent.name %></option>
+                            <option value="<%= agent.id %>" <%= lead.assigned_agent_id === agent.id ? "selected" : "" %>><%= (agent.name || "").replace(/Super Admin/i, "Management") %></option>
                             <% }) %>
                         </select>
                     </div>
@@ -206,6 +206,39 @@
             </div>
         </div>
     </main>
+
+    <!-- Schedule Task Modal -->
+    <div id="scheduleTaskModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:480px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.8);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                <h3 style="font-size:1.15rem; color:#ffffff; margin:0;"><i class="fas fa-calendar-plus text-gold"></i> Schedule Follow-up Task</h3>
+                <button type="button" onclick="closeScheduleTaskModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="scheduleTaskForm" onsubmit="submitScheduleTask(event)">
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Task Description *</label>
+                    <input type="text" id="taskModalTitle" required value="Follow-up regarding <%= (lead.property_category || 'Property Buying').replace(/'/g, '') %>" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Scheduled Date & Time *</label>
+                    <input type="datetime-local" id="taskModalScheduledAt" required style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                </div>
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Priority</label>
+                    <select id="taskModalPriority" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeScheduleTaskModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="/js/admin.js"></script>
     <script>
@@ -277,21 +310,38 @@
         }
 
         function openScheduleTaskModal() {
-            const dt = prompt('Enter follow-up task description and due date (YYYY-MM-DD):', '<%= (lead.appointment_date || new Date().toISOString().slice(0,10)) %>');
-            if (!dt) return;
-            fetch('/api/crm/followups', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    lead_id: <%= lead.id %>,
-                    title: 'Follow-up regarding ' + '<%= (lead.property_category || "Property Buying").replace(/'/g, "") %>',
-                    scheduled_at: dt.includes('T') ? dt : dt + ' 10:00:00',
-                    priority: 'medium'
-                })
-            }).then(r => r.json()).then(d => {
-                alert(d.message || 'Task scheduled');
-                location.reload();
-            });
+            document.getElementById('scheduleTaskModal').style.display = 'flex';
+        }
+        function closeScheduleTaskModal() {
+            document.getElementById('scheduleTaskModal').style.display = 'none';
+        }
+
+        async function submitScheduleTask(e) {
+            e.preventDefault();
+            const title = document.getElementById('taskModalTitle').value.trim();
+            const scheduled_at = document.getElementById('taskModalScheduledAt').value;
+            const priority = document.getElementById('taskModalPriority').value;
+            if (!title || !scheduled_at) { alert('Title and Scheduled Date are required'); return; }
+
+            try {
+                const res = await fetch('/api/crm/followups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lead_id: <%= lead.id %>,
+                        title,
+                        scheduled_at,
+                        priority
+                    })
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    showToast(d.message || 'Task scheduled successfully');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert(d.error || 'Failed to schedule task');
+                }
+            } catch (err) { alert('Network error scheduling task'); }
         }
     </script>
 </body>

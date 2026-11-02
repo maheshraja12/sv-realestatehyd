@@ -18,10 +18,13 @@
                 <h2><i class="fas fa-stream text-gold"></i> Sales Pipeline (12 Stages)</h2>
             </div>
             <div class="header-right" style="display:flex; gap:12px; align-items:center;">
+                <button type="button" onclick="openAddLeadPipelineModal()" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                    <i class="fas fa-plus"></i> Add Lead
+                </button>
                 <button type="button" onclick="loadPipeline()" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
-                <a href="/admin/leads" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700; padding:6px 14px; font-size:0.85rem;">
+                <a href="/admin/leads" class="btn btn-secondary" style="padding:6px 14px; font-size:0.85rem;">
                     <i class="fas fa-list"></i> Table View
                 </a>
             </div>
@@ -39,7 +42,7 @@
                         <option value="">All Agents</option>
                         <% if (typeof agents !== 'undefined' && agents) { %>
                             <% agents.forEach(a => { %>
-                                <option value="<%= a.id %>"><%= a.name %></option>
+                                <option value="<%= a.id %>"><%= (a.name || "").replace(/Super Admin/i, "Management") %></option>
                             <% }) %>
                         <% } %>
                     </select>
@@ -254,6 +257,155 @@
         }
 
         document.addEventListener('DOMContentLoaded', loadPipeline);
+    </script>
+    <!-- Add Lead Modal in Pipeline -->
+    <div id="addLeadModal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#14171d; border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:620px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.8);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                <h3 style="font-size:1.15rem; color:#ffffff; margin:0;"><i class="fas fa-user-plus text-gold"></i> Create New Customer Lead</h3>
+                <button type="button" onclick="closeAddLeadPipelineModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="addLeadForm" onsubmit="submitNewPipelineLead(event)">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Customer Full Name *</label>
+                        <input type="text" id="newLeadName" required placeholder="e.g. Ramesh Kumar" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Phone Number *</label>
+                        <input type="tel" id="newLeadPhone" required placeholder="e.g. 9848012345" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Email Address</label>
+                        <input type="email" id="newLeadEmail" placeholder="e.g. ramesh@example.com" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Property Category *</label>
+                        <select id="newLeadCategory" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="Residential Plot">Residential Plot</option>
+                            <option value="Villa">Villa</option>
+                            <option value="Apartment">Apartment</option>
+                            <option value="Independent House">Independent House</option>
+                            <option value="Commercial">Commercial Property</option>
+                            <option value="Agricultural Land">Agricultural Land</option>
+                            <option value="Home Interiors">Home Interiors</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Budget Range</label>
+                        <input type="text" id="newLeadBudget" placeholder="e.g. ₹75 Lakhs, ₹1.5 Cr" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Preferred Locality</label>
+                        <input type="text" id="newLeadLocality" placeholder="e.g. Tellapur, Kokapet, Miyapur" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Lead Source</label>
+                        <select id="newLeadSource" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="Phone call">Phone Call</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Walk-in">Walk-in Client</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Website">Website</option>
+                            <option value="Property enquiry">Property Enquiry</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Priority</label>
+                        <select id="newLeadPriority" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Assign to Employee</label>
+                        <select id="newLeadAgent" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="">Unassigned</option>
+                            <% if (typeof agents !== 'undefined' && agents) { %>
+                                <% agents.forEach(a => { %>
+                                    <option value="<%= a.id %>"><%= (a.name || "").replace(/Super Admin/i, "Management") %></option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Pipeline Stage</label>
+                        <select id="newLeadStage" style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff;">
+                            <option value="new">New Lead</option>
+                            <option value="not_contacted">Not Contacted</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="interested">Interested</option>
+                            <option value="site_visit_scheduled">Site Visit Scheduled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Notes / Customer Requirements</label>
+                    <textarea id="newLeadNotes" rows="2" placeholder="e.g. Looking for east-facing plot near ORR exit with 200 sq yards..." style="width:100%; padding:8px 12px; background:#0f1115; border:1px solid var(--border-color); border-radius:6px; color:#ffffff; resize:vertical;"></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeAddLeadPipelineModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">Save to Pipeline</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddLeadPipelineModal() { document.getElementById('addLeadModal').style.display = 'flex'; }
+        function closeAddLeadPipelineModal() { document.getElementById('addLeadModal').style.display = 'none'; }
+
+        async function submitNewPipelineLead(e) {
+            e.preventDefault();
+            const customer_name = document.getElementById('newLeadName').value.trim();
+            const phone = document.getElementById('newLeadPhone').value.trim();
+            const email = document.getElementById('newLeadEmail').value.trim();
+            const property_category = document.getElementById('newLeadCategory').value;
+            const budget = document.getElementById('newLeadBudget').value.trim();
+            const preferred_location = document.getElementById('newLeadLocality').value.trim();
+            const source = document.getElementById('newLeadSource').value;
+            const priority = document.getElementById('newLeadPriority').value;
+            const status = document.getElementById('newLeadStage').value;
+            const assigned_agent_id = document.getElementById('newLeadAgent').value;
+            const notes = document.getElementById('newLeadNotes').value.trim();
+
+            try {
+                const res = await fetch('/api/crm/leads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name, phone, email, property_category, property_requirement: property_category,
+                        budget, preferred_location, source, priority, status, assigned_agent_id, notes
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Lead created in pipeline: ' + data.lead_code);
+                    closeAddLeadPipelineModal();
+                    loadPipeline();
+                } else {
+                    alert(data.error || 'Failed to create lead');
+                }
+            } catch (err) { alert('Network error creating lead'); }
+        }
     </script>
     <script src="/js/admin.js"></script>
 </body>

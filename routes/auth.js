@@ -12,8 +12,7 @@ function getLandingPage(userRole, db) {
     if (userRole === 'superadmin') {
         return '/admin/dashboard';
     }
-    const perms = getAdminPermissions(db);
-    return perms.dashboard ? '/admin/dashboard' : '/admin/leads';
+    return '/admin/leads';
 }
 
 // GET /admin or /admin/

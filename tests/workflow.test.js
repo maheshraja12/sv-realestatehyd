@@ -242,14 +242,14 @@ describe('5. Admin Authentication & Role-Based Permissions Workflow', () => {
         });
         assert.strictEqual(dashRes.status, 200);
 
-        // Reset permission back: Normal Admin only gets leads
+        // Reset permission back to standard CRM defaults
         await fetch(`${baseUrl}/admin/settings/permissions`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Cookie': superAdminCookie
             },
-            body: 'perm_leads=1',
+            body: 'perm_leads=1&perm_dashboard=1&perm_crm=1&perm_pipeline=1&perm_customers=1&perm_followups=1&perm_appointments=1&perm_reports=1&perm_properties=1&perm_interiors=1',
             redirect: 'manual'
         });
     });

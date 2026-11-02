@@ -289,10 +289,16 @@ function createMemoryDb() {
         business_whatsapp: '919346423434',
         business_address: '# MIG-2/183, 9th Phase, KPHB Colony, Kukatpally, Hyderabad - 500085',
         business_instagram: 'https://instagram.com/sv.realestatehyd?cplk=MWtva2tubm11NDB0Ng%3D%3D&utm_source=qr',
-        admin_perm_dashboard: '0',
-        admin_perm_properties: '0',
+        admin_perm_dashboard: '1',
+        admin_perm_properties: '1',
         admin_perm_leads: '1',
-        admin_perm_appointments: '0'
+        admin_perm_appointments: '1',
+        admin_perm_crm: '1',
+        admin_perm_pipeline: '1',
+        admin_perm_customers: '1',
+        admin_perm_followups: '1',
+        admin_perm_reports: '1',
+        admin_perm_interiors: '1'
     };
 
     return {
@@ -728,10 +734,16 @@ function initializeDb() {
 
             // Default permissions for normal admin
             const defaultPerms = [
-                ['admin_perm_dashboard', '0'],
-                ['admin_perm_properties', '0'],
+                ['admin_perm_dashboard', '1'],
+                ['admin_perm_properties', '1'],
                 ['admin_perm_leads', '1'],
-                ['admin_perm_appointments', '0']
+                ['admin_perm_appointments', '1'],
+                ['admin_perm_crm', '1'],
+                ['admin_perm_pipeline', '1'],
+                ['admin_perm_customers', '1'],
+                ['admin_perm_followups', '1'],
+                ['admin_perm_reports', '1'],
+                ['admin_perm_interiors', '1']
             ];
             const permStmt = database.prepare(`
                 INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)

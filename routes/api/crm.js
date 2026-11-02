@@ -7,6 +7,17 @@ const express = require('express');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+function normalizeLeadSource(src) {
+    if (!src) return 'phone';
+    const s = String(src).toLowerCase().trim().replace(/[\s_-]+/g, '');
+    if (s.includes('phone') || s.includes('call')) return 'phone';
+    if (s.includes('walk') || s.includes('office') || s.includes('visit')) return 'walkin';
+    if (s.includes('refer')) return 'referral';
+    if (s.includes('chat') || s.includes('bot')) return 'chatbot';
+    if (s.includes('web') || s.includes('site') || s.includes('form') || s.includes('property')) return 'website';
+    return 'other';
+}
+
 const { getDb } = require('../../database/db');
 const {
     isPostgresConfigured,
@@ -537,6 +548,115 @@ router.get('/customers', (req, res) => {
     }
 });
 
+// POST /api/crm/customers — Create new customer profile
+router.post('/customers', (req, res) => {
+    try {
+        const db = getDb();
+        const {
+            full_name, phone, email, alt_phone, city, address,
+            property_interests, budget_range, preferred_locations,
+            deal_status, assigned_to, notes
+        } = req.body;
+
+        const name = String(full_name || '').trim();
+        const rawPhone = String(phone || '').trim();
+        if (!name || !rawPhone) {
+            return res.status(400).json({ error: 'Customer Name and Phone Number are required' });
+        }
+
+        const digitsOnly = rawPhone.replace(/[^0-9]/g, '');
+        const cleanPhone = digitsOnly.length === 12 && digitsOnly.startsWith('91')
+            ? digitsOnly.slice(2)
+            : (digitsOnly.length >= 10 ? digitsOnly.slice(-10) : rawPhone);
+
+        // Check if customer with this phone already exists
+        const existing = db.prepare('SELECT id, customer_code FROM customer_profiles WHERE phone = ?').get(cleanPhone);
+        if (existing) {
+            return res.status(409).json({
+                error: `Customer with phone ${cleanPhone} already exists (${existing.customer_code})`,
+                customer_id: existing.id,
+                customer_code: existing.customer_code
+            });
+        }
+
+        const custCount = db.prepare("SELECT count(*) as c FROM customer_profiles").get().c;
+        const customerCode = `SV-CUST-${String(custCount + 1).padStart(5, '0')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+
+        const insertStmt = db.prepare(`
+            INSERT INTO customer_profiles (
+                customer_code, full_name, phone, alt_phone, email, city, address,
+                property_interests, budget_range, preferred_locations, deal_status, assigned_to, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const result = insertStmt.run(
+            customerCode,
+            name,
+            cleanPhone,
+            alt_phone || null,
+            email || null,
+            city || 'Hyderabad',
+            address || null,
+            property_interests || null,
+            budget_range || null,
+            preferred_locations || null,
+            deal_status || 'active',
+            assigned_to ? parseInt(assigned_to) : null,
+            notes || null
+        );
+        const customerId = result.lastInsertRowid;
+
+        // Sync with Postgres if configured
+        if (isPostgresConfigured()) {
+            insertPgCustomer({
+                customer_code: customerCode,
+                full_name: name,
+                phone: cleanPhone,
+                alt_phone: alt_phone || null,
+                email: email || null,
+                city: city || 'Hyderabad',
+                address: address || null,
+                property_interests: property_interests || null,
+                budget_range: budget_range || null,
+                preferred_locations: preferred_locations || null,
+                deal_status: deal_status || 'active',
+                assigned_to: assigned_to ? parseInt(assigned_to) : null,
+                notes: notes || null
+            }).catch(e => console.warn('Postgres customer insert notice:', e.message));
+        }
+
+        // Log activity & audit
+        logLeadActivity(db, {
+            customerId: customerId,
+            userId: req.session ? req.session.userId : null,
+            userName: req.session ? req.session.userName : 'Admin',
+            type: 'note',
+            title: 'Customer Profile Created',
+            notes: `Customer profile manually created (${customerCode})`
+        });
+
+        auditLog(
+            db,
+            req.session ? req.session.userId : null,
+            req.session ? req.session.userName : 'Admin',
+            'CREATE',
+            'customer',
+            customerId,
+            `Created customer profile ${customerCode} for ${name}`
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Customer profile created successfully',
+            customer_id: customerId,
+            customer_code: customerCode
+        });
+    } catch (err) {
+        console.error('Create customer profile error:', err);
+        res.status(500).json({ error: 'Failed to create customer: ' + err.message });
+    }
+});
+
 // GET /api/crm/customers/:id — Customer 360 view
 router.get('/customers/:id', (req, res) => {
     try {
@@ -593,6 +713,93 @@ router.get('/customers/:id', (req, res) => {
     } catch (err) {
         console.error('Customer detail error:', err);
         res.status(500).json({ error: 'Failed to fetch customer profile' });
+    }
+});
+
+// POST /api/crm/leads — Create new lead manually
+router.post('/leads', async (req, res) => {
+    try {
+        const db = getDb();
+        const {
+            customer_name, full_name, phone, phone_number, email,
+            property_category, property_requirement, budget, preferred_location,
+            source, priority, status, assigned_agent_id, assigned_to, notes, message
+        } = req.body;
+
+        const custName = String(customer_name || full_name || '').trim();
+        const rawPh = String(phone || phone_number || '').trim();
+        if (!custName || !rawPh) {
+            return res.status(400).json({ error: 'Customer Name and Phone are required' });
+        }
+
+        const digitsOnly = rawPh.replace(/[^0-9]/g, '');
+        const cleanPhone = digitsOnly.length === 12 && digitsOnly.startsWith('91')
+            ? digitsOnly.slice(2)
+            : (digitsOnly.length >= 10 ? digitsOnly.slice(-10) : rawPh);
+
+        // Generate lead code
+        const lastLead = db.prepare("SELECT lead_code FROM leads ORDER BY id DESC LIMIT 1").get();
+        let nextNum = 1;
+        if (lastLead && lastLead.lead_code) {
+            const m = lastLead.lead_code.match(/SV-LEAD-(d+)/);
+            if (m) nextNum = parseInt(m[1], 10) + 1;
+        }
+        let leadCode = `SV-LEAD-${String(nextNum).padStart(6, '0')}`;
+
+        const propReq = property_requirement || property_category || 'Residential Plot';
+        const leadSrc = normalizeLeadSource(source);
+        const leadPri = priority || 'medium';
+        const leadSt = status || 'new';
+        const leadBdg = budget || 'Consult / Market Price';
+        const leadLoc = preferred_location || 'Hyderabad';
+        const leadNotes = notes || message || null;
+        const agentId = assigned_agent_id ? parseInt(assigned_agent_id) : (assigned_to ? parseInt(assigned_to) : null);
+
+        // Insert into SQLite
+        const insertStmt = db.prepare(`
+            INSERT INTO leads (
+                lead_code, customer_name, full_name, phone, phone_number, email,
+                property_category, property_requirement, lead_category, budget, preferred_location,
+                message, source, status, priority, assigned_agent_id, assigned_to
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result = insertStmt.run(
+            leadCode, custName, custName, cleanPhone, cleanPhone, email || null,
+            propReq, propReq, 'Property Buying', leadBdg, leadLoc,
+            leadNotes, leadSrc, leadSt, leadPri, agentId, agentId
+        );
+        const leadId = result.lastInsertRowid;
+
+        // Log activity
+        logLeadActivity(db, {
+            leadId: leadId,
+            userId: req.session ? req.session.userId : null,
+            userName: req.session ? req.session.userName : 'Admin',
+            type: 'note',
+            title: 'Lead Created',
+            notes: `Created manually via CRM (${leadSrc}). Priority: ${leadPri}, Stage: ${leadSt}`
+        });
+
+        // Audit log
+        auditLog(
+            db,
+            req.session ? req.session.userId : null,
+            req.session ? req.session.userName : 'Admin',
+            'CREATE',
+            'lead',
+            leadId,
+            `Created lead ${leadCode} for ${custName} (${cleanPhone})`
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Lead created successfully',
+            lead_id: leadId,
+            lead_code: leadCode
+        });
+    } catch (err) {
+        console.error('CRM create lead error:', err);
+        res.status(500).json({ error: 'Failed to create lead: ' + err.message });
     }
 });
 
