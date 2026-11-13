@@ -76,6 +76,7 @@
         transform: translate(-50%, -30%) scale(0.9);
         opacity: 0.35;
     }
+
     100% {
         transform: translate(-50%, -30%) scale(1.15);
         opacity: 0.55;
@@ -173,9 +174,12 @@
 }
 
 @keyframes liquidCardSheen {
-    0%, 70% {
+
+    0%,
+    70% {
         transform: translateX(0) skewX(-20deg);
     }
+
     100% {
         transform: translateX(100%) skewX(-20deg);
     }
@@ -252,9 +256,11 @@
 /* ── The 3D Glass Sphere Orb ── */
 .launch-orb-stage {
     position: relative;
-    width: 260px;
-    height: 260px;
-    margin: 0 auto 32px auto;
+    width: 360px;
+    height: 360px;
+    max-width: 90vw;
+    max-height: 48vh;
+    margin: 0 auto 24px auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -263,28 +269,48 @@
 /* 3D WebGL Three.js Container inside Orb Stage */
 .orb-three-container {
     position: absolute;
-    width: 240px;
-    height: 240px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
     z-index: 2;
     pointer-events: none;
+    overflow: visible;
 }
 
 .orb-three-container canvas {
     width: 100% !important;
     height: 100% !important;
     display: block;
+    pointer-events: none;
 }
 
-/* CSS Glass Orb Surface (always crisp crystal fallback + container) */
+/* Glass Orb Stage Center & Anchor */
 .glass-sphere-orb {
     position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* CSS Fallback Glass Orb (Active ONLY when WebGL is disabled or unsupported) */
+.launch-overlay.fallback-mode .glass-sphere-orb {
     width: 240px;
     height: 240px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%,
             rgba(255, 255, 255, 0.22) 0%,
@@ -298,49 +324,15 @@
         inset 0 -12px 25px rgba(0, 0, 0, 0.5),
         inset -5px 0 15px rgba(212, 175, 55, 0.3);
     border: 1.5px solid rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    z-index: 3;
-    animation: orbFloat 5s ease-in-out infinite alternate;
-    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
-}
-
-.glass-sphere-orb::after {
-    content: '';
-    position: absolute;
-    top: 14px;
-    left: 28px;
-    width: 70px;
-    height: 38px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 70%);
-    transform: rotate(-35deg);
-    filter: blur(1px);
-    pointer-events: none;
-}
-
-.glass-sphere-orb::before {
-    content: '';
-    position: absolute;
-    bottom: 16px;
-    right: 28px;
-    width: 60px;
-    height: 30px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.45) 0%, rgba(212, 175, 55, 0) 70%);
-    transform: rotate(20deg);
-    filter: blur(2px);
-    pointer-events: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 @keyframes orbFloat {
     0% {
         transform: translateY(0px) rotate(0deg);
     }
+
     100% {
         transform: translateY(-10px) rotate(1.5deg);
     }
@@ -367,9 +359,11 @@
         opacity: 0.9;
         border-width: 3px;
     }
+
     50% {
         opacity: 0.6;
     }
+
     100% {
         transform: scale(1.4);
         opacity: 0;
@@ -403,11 +397,13 @@
         opacity: 0;
         filter: blur(8px);
     }
+
     60% {
         transform: scale(1.18) translateY(-4px);
         opacity: 1;
         filter: blur(0px);
     }
+
     100% {
         transform: scale(1) translateY(0);
         opacity: 1;
@@ -599,9 +595,11 @@
         transform: translate(-50%, -50%) scale(0.2);
         opacity: 1;
     }
+
     50% {
         opacity: 0.85;
     }
+
     100% {
         transform: translate(-50%, -50%) scale(60);
         opacity: 0;
@@ -610,6 +608,7 @@
 
 /* ── Reduced Motion Accessibility ── */
 @media (prefers-reduced-motion: reduce) {
+
     .glass-sphere-orb,
     .liquid-glass-card::before,
     .launch-bg-glow {
@@ -647,19 +646,24 @@
     }
 
     .launch-orb-stage {
-        width: 190px;
-        height: 190px;
-        margin: 0 auto 24px auto;
+        width: 260px;
+        height: 260px;
+        margin: 0 auto 20px auto;
     }
 
     .orb-three-container {
-        width: 170px;
-        height: 170px;
+        width: 100%;
+        height: 100%;
     }
 
     .glass-sphere-orb {
-        width: 170px;
-        height: 170px;
+        width: 100%;
+        height: 100%;
+    }
+
+    .launch-overlay.fallback-mode .glass-sphere-orb {
+        width: 180px;
+        height: 180px;
     }
 
     .orb-number-display {
