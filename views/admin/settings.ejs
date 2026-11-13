@@ -218,16 +218,27 @@
                     </form>
                 </div>
 
-                <!-- 3D Liquid Glass Launch Overlay & Countdown Settings -->
+                <!-- Website Launch Management Section -->
                 <div class="settings-card" style="border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 4px 20px rgba(212, 175, 55, 0.08);">
                     <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; margin-bottom: 18px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                            <h3><i class="fas fa-water text-gold"></i> 3D Liquid Glass Launch Countdown Experience</h3>
-                            <span class="status-badge status-published" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-weight:700;">
-                                <i class="fas fa-cube"></i> Three.js & WebGL
-                            </span>
+                            <h3><i class="fas fa-rocket text-gold"></i> Website Launch Management</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <% if (settings.launch_overlay_enabled !== '0') { %>
+                                    <span class="status-badge" style="background:rgba(46, 213, 115, 0.15); color:#2ed573; border:1px solid rgba(46, 213, 115, 0.4); font-weight:700; padding: 4px 12px; border-radius: 20px;">
+                                        <i class="fas fa-check-circle"></i> ACTIVE FOR VISITORS
+                                    </span>
+                                <% } else { %>
+                                    <span class="status-badge" style="background:rgba(255, 71, 87, 0.15); color:#ff4757; border:1px solid rgba(255, 71, 87, 0.4); font-weight:700; padding: 4px 12px; border-radius: 20px;">
+                                        <i class="fas fa-eye-slash"></i> DISABLED / REMOVED
+                                    </span>
+                                <% } %>
+                                <span class="status-badge status-published" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-weight:700; padding: 4px 12px; border-radius: 20px;">
+                                    <i class="fas fa-cube"></i> Three.js WebGL
+                                </span>
+                            </div>
                         </div>
-                        <p style="margin-top:6px; color:#9aa0ac;">Configure the full-screen launch countdown overlay with transparent 3D liquid glass sphere, realistic sliding waterdrops, and celebratory "WE ARE LIVE" reveal.</p>
+                        <p style="margin-top:6px; color:#9aa0ac;">Manage the grand 3D liquid glass countdown entrance screen. Disabling or removing the overlay preserves all database records, property listings, and leads.</p>
                     </div>
 
                     <form method="POST" action="/admin/settings" class="settings-form">
@@ -238,7 +249,7 @@
                                     <input type="checkbox" name="launch_overlay_enabled" value="1" <%= (settings.launch_overlay_enabled !== '0') ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
                                     <div>
                                         <strong style="color: #fff; font-size: 0.95rem;">Enable Website Launch Countdown Overlay</strong>
-                                        <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #9aa0ac;">When enabled, visitors to the homepage see the interactive liquid glass launch countdown overlay.</p>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #9aa0ac;">When enabled, visitors to the homepage experience the luxury 3D liquid glass entrance countdown.</p>
                                     </div>
                                 </label>
 
@@ -254,19 +265,28 @@
                             <div class="form-group" style="margin-top: 18px; margin-bottom: 0;">
                                 <label for="launch_overlay_mode" style="color: #fff; font-size: 0.9rem;">Display Frequency</label>
                                 <select id="launch_overlay_mode" name="launch_overlay_mode" style="max-width: 380px;">
-                                    <option value="session" <%= (settings.launch_overlay_mode !== 'always') ? 'selected' : '' %>>Show once per visitor session (Recommended)</option>
-                                    <option value="always" <%= (settings.launch_overlay_mode === 'always') ? 'selected' : '' %>>Show on every visit to homepage</option>
+                                    <option value="session" <%= (settings.launch_overlay_mode !== 'always') ? 'selected' : '' %>>Once per visitor session</option>
+                                    <option value="always" <%= (settings.launch_overlay_mode === 'always') ? 'selected' : '' %>>Every homepage visit</option>
                                 </select>
                             </div>
                         </div>
 
                         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                            <button type="submit" name="action" value="save_launch_settings" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
                                 <i class="fas fa-save"></i> Save Launch Settings
                             </button>
-                            <a href="/launch" target="_blank" class="btn btn-secondary" style="border-color: var(--gold); color: #f7df94;">
-                                <i class="fas fa-external-link-alt"></i> Preview 3D Launch Experience Live
+                            <a href="/admin/launch/preview" target="_blank" class="btn btn-secondary" style="border-color: var(--gold); color: #f7df94;">
+                                <i class="fas fa-eye"></i> Preview Launch Experience
                             </a>
+                            <% if (settings.launch_overlay_enabled !== '0') { %>
+                                <button type="submit" name="action" value="remove_launch_overlay" class="btn btn-danger" style="background: rgba(255, 71, 87, 0.15); border: 1px solid #ff4757; color: #ff4757; font-weight: 700; margin-left: auto;" onclick="return confirm('Immediately remove launch overlay from public website? (All settings and database records are preserved)');">
+                                    <i class="fas fa-power-off"></i> Remove Launch Overlay
+                                </button>
+                            <% } else { %>
+                                <button type="submit" name="action" value="enable_launch_overlay" class="btn btn-success" style="background: rgba(46, 213, 115, 0.15); border: 1px solid #2ed573; color: #2ed573; font-weight: 700; margin-left: auto;">
+                                    <i class="fas fa-play"></i> Re-Enable Launch Overlay
+                                </button>
+                            <% } %>
                         </div>
                     </form>
                 </div>

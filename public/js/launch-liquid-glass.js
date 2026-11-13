@@ -1,370 +1,318 @@
 /**
- * SV REAL ESTATES HYDERABAD — 3D LIQUID GLASS & WATERDROP LAUNCH ENGINE
- * Interactive 3D Liquid Glass Orb, Waterdrop Physics, Refraction & Countdown
+ * SV REAL ESTATES HYDERABAD — 3D LIQUID GLASS LAUNCH ENGINE
+ * Cinematic 3D Glass Sphere, Waterdrop Refraction, Drift-Free Countdown & Grand Reveal
  */
 
 (function () {
     'use strict';
 
-    // ── Global Namespace ──
     window.SVLaunchOverlay = {
         state: 'ready', // 'ready' | 'counting' | 'zero' | 'live' | 'closed'
         liquidEffects: true,
-        soundEnabled: true,
         timer: null,
         currentCount: 10,
-        audioCtx: null,
+        startTime: null,
+        waterdrops: null,
+        threeSphere: null,
+        isPaused: false,
 
         init: function () {
             const overlay = document.getElementById('launchOverlay');
             if (!overlay) return;
 
-            // Check admin configuration
+            // 1. Authoritative Server-Driven Settings
+            const isEnabled = overlay.getAttribute('data-enabled') === '1';
+            const isAdminPreview = overlay.getAttribute('data-admin-preview') === '1';
+            const mode = overlay.getAttribute('data-mode') || 'always';
             const fxConfig = overlay.getAttribute('data-liquid-effects');
-            this.liquidEffects = fxConfig !== '0';
+            const alreadySeen = sessionStorage.getItem('sv_launch_seen') === '1';
 
-            // Check reduced motion
+            // If globally disabled and not an authorized admin preview, remove overlay
+            if (!isEnabled && !isAdminPreview) {
+                overlay.classList.remove('is-active');
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+                return;
+            }
+
+            // If session mode and visitor already saw the launch screen in this session (unless admin preview)
+            if (!isAdminPreview && mode === 'session' && alreadySeen) {
+                overlay.classList.remove('is-active');
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+                return;
+            }
+
+            // 2. Liquid Effects Configuration
+            this.liquidEffects = fxConfig !== '0';
             if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 this.liquidEffects = false;
             }
 
-            // Setup Sound
-            this.setupAudio();
-
-            // Setup Canvas Waterdrop Simulation
+            // 3. Initialize Visual Engines
             if (this.liquidEffects) {
                 this.initWaterdrops();
                 this.initThreeSphere();
             }
 
-            // Setup Event Handlers
+            // 4. Bind Events & Lifecycle Listeners
             this.bindEvents();
 
-            // Check if should open automatically
-            const urlParams = new URLSearchParams(window.location.search);
-            const isManualPreview = urlParams.has('launch') || urlParams.has('preview_launch') || window.location.pathname === '/launch';
-            const isEnabled = overlay.getAttribute('data-enabled') !== '0';
-            const mode = overlay.getAttribute('data-mode') || 'always';
-            const alreadySeen = sessionStorage.getItem('sv_launch_seen') === '1';
-
-            if (overlay.classList.contains('is-active')) {
-                this.open();
-            } else if (isManualPreview || (isEnabled && (mode === 'always' || !alreadySeen))) {
-                this.open();
-            }
+            // 5. Open & Lock Scrolling
+            this.open();
         },
 
-        // ── Audio Synthesizer (Web Audio API) ──
-        setupAudio: function () {
+        bindEvents: function () {
             const self = this;
-            const unlockAudio = function () {
-                if (!self.audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContext) {
-                        self.audioCtx = new AudioContext();
-                    }
+
+            // Start Countdown button
+            const btnStart = document.getElementById('btnLaunchStart');
+            if (btnStart) {
+                btnStart.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    self.startCountdown();
+                });
+            }
+
+            // Explore Website button (Stage 3)
+            const btnExplore = document.getElementById('btnLaunchExplore');
+            if (btnExplore) {
+                btnExplore.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    self.close();
+                });
+            }
+
+            // Delegate any .js-launch-explore triggers
+            document.addEventListener('click', function (e) {
+                const target = e.target.closest('.js-launch-explore');
+                if (target) {
+                    e.preventDefault();
+                    self.close();
                 }
-                if (self.audioCtx && self.audioCtx.state === 'suspended') {
-                    self.audioCtx.resume();
+            });
+
+            // Pause animations when browser tab is inactive / hidden
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    self.pause();
+                } else {
+                    self.resume();
                 }
-                document.removeEventListener('click', unlockAudio);
-                document.removeEventListener('touchstart', unlockAudio);
-            };
-            document.addEventListener('click', unlockAudio, { once: true });
-            document.addEventListener('touchstart', unlockAudio, { once: true });
+            });
         },
 
-        playWaterdropChime: function (pitchMultiplier) {
-            if (!this.soundEnabled || !this.audioCtx) return;
-            try {
-                const ctx = this.audioCtx;
-                const now = ctx.currentTime;
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                const baseFreq = 950 * (pitchMultiplier || 1);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(baseFreq, now);
-                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, now + 0.08);
-                osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, now + 0.25);
-
-                gain.gain.setValueAtTime(0.001, now);
-                gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.36);
-            } catch (e) {}
-        },
-
-        playZeroShockwaveSound: function () {
-            if (!this.soundEnabled || !this.audioCtx) return;
-            try {
-                const ctx = this.audioCtx;
-                const now = ctx.currentTime;
-
-                // Sub bass swell
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(140, now);
-                osc.frequency.exponentialRampToValueAtTime(45, now + 1.2);
-
-                gain.gain.setValueAtTime(0.001, now);
-                gain.gain.linearRampToValueAtTime(0.4, now + 0.1);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now);
-                osc.stop(now + 1.85);
-
-                // High shimmer chime
-                const chime = ctx.createOscillator();
-                const chimeGain = ctx.createGain();
-                chime.type = 'sine';
-                chime.frequency.setValueAtTime(1600, now);
-                chime.frequency.exponentialRampToValueAtTime(2400, now + 0.4);
-                chime.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
-
-                chimeGain.gain.setValueAtTime(0.001, now);
-                chimeGain.gain.linearRampToValueAtTime(0.18, now + 0.05);
-                chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
-
-                chime.connect(chimeGain);
-                chimeGain.connect(ctx.destination);
-                chime.start(now);
-                chime.stop(now + 1.55);
-            } catch (e) {}
-        },
-
-        // ── Open / Close State Controller ──
         open: function () {
             const overlay = document.getElementById('launchOverlay');
             if (!overlay) return;
             overlay.classList.remove('is-closing');
             overlay.classList.add('is-active');
+            overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden';
 
             if (this.waterdrops) this.waterdrops.start();
             if (this.threeSphere) this.threeSphere.start();
         },
 
+        pause: function () {
+            this.isPaused = true;
+            if (this.waterdrops) this.waterdrops.stop();
+            if (this.threeSphere) this.threeSphere.stop();
+        },
+
+        resume: function () {
+            this.isPaused = false;
+            if (this.state !== 'closed') {
+                if (this.waterdrops) this.waterdrops.start();
+                if (this.threeSphere) this.threeSphere.start();
+            }
+        },
+
         close: function () {
+            if (this.state === 'closed') return;
+            this.state = 'closed';
+
             const overlay = document.getElementById('launchOverlay');
             if (!overlay) return;
-            overlay.classList.add('is-closing');
 
+            // Clear any active timer
             if (this.timer) {
                 clearInterval(this.timer);
                 this.timer = null;
             }
 
-            sessionStorage.setItem('sv_launch_seen', '1');
+            // Mark session as seen
+            const mode = overlay.getAttribute('data-mode') || 'always';
+            if (mode === 'session') {
+                sessionStorage.setItem('sv_launch_seen', '1');
+            }
+
+            // Smooth exit animation
+            overlay.classList.add('is-closing');
 
             setTimeout(() => {
                 overlay.classList.remove('is-active', 'is-closing');
+                overlay.style.display = 'none';
                 document.body.style.overflow = '';
-                if (this.waterdrops) this.waterdrops.stop();
-                if (this.threeSphere) this.threeSphere.stop();
+                this.dispose();
             }, 850);
         },
 
-        // ── Countdown Lifecycle ──
+        dispose: function () {
+            if (this.waterdrops) {
+                this.waterdrops.stop();
+                this.waterdrops = null;
+            }
+            if (this.threeSphere) {
+                this.threeSphere.dispose();
+                this.threeSphere = null;
+            }
+        },
+
+        // ── Stage 2: Drift-Free Elapsed-Time Countdown ──
         startCountdown: function () {
-            if (this.state === 'counting') return;
+            // Guard against multiple timers
+            if (this.state === 'counting' || this.state === 'zero' || this.state === 'live') return;
             this.state = 'counting';
 
             const welcomeStage = document.getElementById('launchWelcomeStage');
-            const countdownStage = document.getElementById('launchCountdownStage');
-            const numberDisplay = document.getElementById('orbNumberDisplay');
             const idleMonogram = document.getElementById('orbIdleMonogram');
+            const numberDisplay = document.getElementById('orbNumberDisplay');
             const liquidRipple = document.getElementById('orbLiquidRipple');
 
-            if (welcomeStage) welcomeStage.style.display = 'none';
-            if (countdownStage) countdownStage.style.display = 'block';
+            // Smoothly collapse Stage 1 text and center countdown orb
+            if (welcomeStage) welcomeStage.classList.add('is-counting');
             if (idleMonogram) idleMonogram.style.display = 'none';
-            if (numberDisplay) numberDisplay.style.display = 'block';
+            if (numberDisplay) {
+                numberDisplay.style.display = 'block';
+                numberDisplay.textContent = '10';
+            }
 
             this.currentCount = 10;
-            this.tickCount(numberDisplay, liquidRipple);
+            this.startTime = performance.now();
+            this.tickCount(10, numberDisplay, liquidRipple);
 
-            this.timer = setInterval(() => {
-                this.currentCount--;
-                if (this.currentCount > 0) {
-                    this.tickCount(numberDisplay, liquidRipple);
-                } else {
-                    clearInterval(this.timer);
-                    this.timer = null;
-                    this.triggerZeroTransition();
+            // Elapsed-time interval to prevent timer drift
+            const self = this;
+            const tickDuration = 1000;
+
+            this.timer = setInterval(function () {
+                if (self.state !== 'counting') {
+                    clearInterval(self.timer);
+                    self.timer = null;
+                    return;
                 }
-            }, 1000);
+
+                const elapsed = performance.now() - self.startTime;
+                const remaining = 10 - Math.floor(elapsed / tickDuration);
+
+                if (remaining !== self.currentCount) {
+                    if (remaining > 0) {
+                        self.currentCount = remaining;
+                        self.tickCount(self.currentCount, numberDisplay, liquidRipple);
+                    } else {
+                        clearInterval(self.timer);
+                        self.timer = null;
+                        self.triggerZeroTransition();
+                    }
+                }
+            }, 30);
         },
 
-        tickCount: function (numberDisplay, liquidRipple) {
-            if (!numberDisplay) return;
+        tickCount: function (count, numberDisplay, liquidRipple) {
+            // Update Number Display with water bubble-pop animation
+            if (numberDisplay) {
+                numberDisplay.textContent = count;
+                numberDisplay.classList.remove('number-bubble-pop');
+                void numberDisplay.offsetWidth; // Force reflow
+                numberDisplay.classList.add('number-bubble-pop');
+            }
 
-            // Update text with water bubble animation
-            numberDisplay.textContent = this.currentCount;
-            numberDisplay.classList.remove('number-bubble-pop');
-            void numberDisplay.offsetWidth; // Trigger reflow
-            numberDisplay.classList.add('number-bubble-pop');
-
-            // Sphere liquid ripple
+            // Liquid Ripple Pulse
             if (liquidRipple) {
                 liquidRipple.classList.remove('pulse');
                 void liquidRipple.offsetWidth;
                 liquidRipple.classList.add('pulse');
             }
 
-            // 3D Three.js sphere wave disturbance
+            // Trigger Three.js Glass Sphere Wave
             if (this.threeSphere) {
                 this.threeSphere.triggerWave(1.2);
             }
 
-            // Waterdrop canvas disturbance
+            // Waterdrop Canvas Shockwave
             if (this.waterdrops) {
                 this.waterdrops.createShockwave(window.innerWidth / 2, window.innerHeight / 2, 70);
             }
 
-            // Sound chime
-            const pitchFactor = 0.9 + (10 - this.currentCount) * 0.04;
-            this.playWaterdropChime(pitchFactor);
+            // Screen reader accessibility announcement
+            const sr = document.getElementById('launchSrAnnouncements');
+            if (sr) {
+                sr.textContent = 'Launch Countdown ' + count;
+            }
         },
 
+        // ── Stage 3: Grand Launch Reveal At Zero ──
         triggerZeroTransition: function () {
             this.state = 'zero';
 
-            const numberDisplay = document.getElementById('orbNumberDisplay');
-            const shockwave = document.getElementById('launchZeroShockwave');
-            const orbStage = document.getElementById('launchOrbStage');
-            const countdownStage = document.getElementById('launchCountdownStage');
+            const welcomeStage = document.getElementById('launchWelcomeStage');
             const liveStage = document.getElementById('launchLiveStage');
+            const shockwave = document.getElementById('launchZeroShockwave');
+            const sr = document.getElementById('launchSrAnnouncements');
 
-            if (numberDisplay) {
-                numberDisplay.textContent = '0';
-                numberDisplay.classList.remove('number-bubble-pop');
-                void numberDisplay.offsetWidth;
-                numberDisplay.classList.add('number-bubble-pop');
-            }
-
-            // Play shockwave audio
-            this.playZeroShockwaveSound();
-
-            // Massive shockwave ripple
+            // Trigger cinematic expanding ripple shockwave
             if (shockwave) {
                 shockwave.classList.add('trigger');
             }
 
-            if (this.threeSphere) {
-                this.threeSphere.triggerWave(3.5);
-            }
-
+            // Waterdrop burst splash
             if (this.waterdrops) {
                 this.waterdrops.burstSplash(window.innerWidth / 2, window.innerHeight / 2);
             }
 
-            // Reveal "WE ARE LIVE" celebration after ripple
+            // Three.js surge disturbance
+            if (this.threeSphere) {
+                this.threeSphere.triggerWave(3.0);
+            }
+
+            // Screen reader announcement
+            if (sr) {
+                sr.textContent = 'We are live! Your next chapter begins here.';
+            }
+
+            // Seamless transition to Stage 3 celebration
             setTimeout(() => {
-                this.state = 'live';
-                if (countdownStage) countdownStage.style.display = 'none';
-                if (orbStage) orbStage.style.display = 'none';
+                if (welcomeStage) {
+                    welcomeStage.style.display = 'none';
+                }
                 if (liveStage) {
+                    liveStage.style.display = 'block';
+                    void liveStage.offsetWidth;
                     liveStage.classList.add('is-visible');
                 }
-            }, 850);
+                this.state = 'live';
+            }, 600);
         },
 
-        // ── Event Bindings ──
-        bindEvents: function () {
-            const self = this;
-
-            // Start countdown button
-            const startBtn = document.getElementById('btnLaunchStart');
-            if (startBtn) {
-                startBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    self.startCountdown();
-                });
-            }
-
-            // Explore buttons (close overlay)
-            const exploreBtns = document.querySelectorAll('.js-launch-explore');
-            exploreBtns.forEach(btn => {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    self.close();
-                });
-            });
-
-            // Close button (X)
-            const closeBtn = document.getElementById('btnLaunchClose');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    self.close();
-                });
-            }
-
-            // Sound toggle button
-            const soundBtn = document.getElementById('btnLaunchSound');
-            if (soundBtn) {
-                soundBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    self.soundEnabled = !self.soundEnabled;
-                    const icon = soundBtn.querySelector('i');
-                    if (icon) {
-                        icon.className = self.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-                    }
-                    soundBtn.title = self.soundEnabled ? 'Mute Sound' : 'Enable Sound';
-                });
-            }
-
-            // FX Toggle button (independent liquid effects disable/enable)
-            const fxBtn = document.getElementById('btnLaunchFxToggle');
-            if (fxBtn) {
-                fxBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    self.liquidEffects = !self.liquidEffects;
-                    if (self.liquidEffects) {
-                        fxBtn.classList.remove('fx-disabled');
-                        fxBtn.innerHTML = '<i class="fas fa-magic"></i> FX: 3D Liquid';
-                        if (self.waterdrops) self.waterdrops.start();
-                        if (self.threeSphere) self.threeSphere.start();
-                    } else {
-                        fxBtn.classList.add('fx-disabled');
-                        fxBtn.innerHTML = '<i class="fas fa-ban"></i> FX: Minimal';
-                        if (self.waterdrops) self.waterdrops.stop();
-                        if (self.threeSphere) self.threeSphere.stop();
-                    }
-                });
-            }
-
-            // Keyboard ESC
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    const overlay = document.getElementById('launchOverlay');
-                    if (overlay && overlay.classList.contains('is-active')) {
-                        self.close();
-                    }
-                }
-            });
-        },
-
-        // ── 2D Canvas Waterdrop Simulation ──
+        // ── Waterdrop Physics Simulation (2D Canvas) ──
         initWaterdrops: function () {
             const canvas = document.getElementById('launchWaterdropCanvas');
             if (!canvas) return;
 
             const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
             let animId = null;
-            let width, height;
+            let width = 0;
+            let height = 0;
+            const isMobile = window.innerWidth < 768;
+
             const staticDrops = [];
             const slidingDrops = [];
             const shockwaves = [];
+            const maxStatic = isMobile ? 18 : 36;
+            const maxSliding = isMobile ? 4 : 8;
 
             function resize() {
                 width = canvas.width = window.innerWidth;
@@ -374,13 +322,12 @@
 
             function initStaticDrops() {
                 staticDrops.length = 0;
-                const count = Math.floor((width * height) / 12000);
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < maxStatic; i++) {
                     staticDrops.push({
                         x: Math.random() * width,
                         y: Math.random() * height,
-                        r: 1 + Math.random() * 3.5,
-                        opacity: 0.35 + Math.random() * 0.45
+                        r: 1 + Math.random() * 3.2,
+                        opacity: 0.3 + Math.random() * 0.4
                     });
                 }
             }
@@ -389,11 +336,10 @@
                 slidingDrops.push({
                     x: x !== undefined ? x : Math.random() * width,
                     y: y !== undefined ? y : -10,
-                    r: r !== undefined ? r : 3 + Math.random() * 3,
-                    vy: 0.8 + Math.random() * 1.6,
-                    vx: 0,
+                    r: r !== undefined ? r : 3 + Math.random() * 2.8,
+                    vy: 0.8 + Math.random() * 1.5,
                     trail: [],
-                    maxTrail: 16
+                    maxTrail: 12
                 });
             }
 
@@ -401,69 +347,59 @@
             resize();
 
             // Populate initial sliding drops
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < (isMobile ? 3 : 5); i++) {
                 spawnSlidingDrop(Math.random() * width, Math.random() * height * 0.7);
             }
-
-            // Mouse / touch interaction
-            canvas.addEventListener('mousemove', function (e) {
-                if (Math.random() < 0.25) {
-                    spawnSlidingDrop(e.clientX + (Math.random() - 0.5) * 30, e.clientY, 3.5);
-                }
-            });
 
             function render() {
                 ctx.clearRect(0, 0, width, height);
 
-                // 1. Render Static Drops
+                // 1. Static Ambient Drops
                 for (let i = 0; i < staticDrops.length; i++) {
                     const d = staticDrops[i];
                     drawDroplet(ctx, d.x, d.y, d.r, d.opacity);
                 }
 
-                // 2. Render Sliding Drops with trails
+                // 2. Sliding Drops with Trails
                 for (let i = slidingDrops.length - 1; i >= 0; i--) {
                     const s = slidingDrops[i];
 
-                    // Trail
-                    s.trail.push({ x: s.x, y: s.y, r: s.r * 0.45, alpha: 0.3 });
+                    s.trail.push({ x: s.x, y: s.y, r: s.r * 0.45, alpha: 0.28 });
                     if (s.trail.length > s.maxTrail) s.trail.shift();
 
                     for (let t = 0; t < s.trail.length; t++) {
                         const tr = s.trail[t];
-                        tr.alpha *= 0.94;
+                        tr.alpha *= 0.93;
                         drawDroplet(ctx, tr.x, tr.y, tr.r, tr.alpha);
                     }
 
-                    // Movement & slight organic sway
                     s.y += s.vy;
-                    s.x += Math.sin(s.y * 0.05) * 0.35;
+                    s.x += Math.sin(s.y * 0.05) * 0.3;
 
                     drawDroplet(ctx, s.x, s.y, s.r, 0.85);
 
-                    // Absorb static drops
+                    // Absorb static drops on collision
                     for (let j = 0; j < staticDrops.length; j++) {
                         const sd = staticDrops[j];
                         const dx = sd.x - s.x;
                         const dy = sd.y - s.y;
                         if (Math.sqrt(dx * dx + dy * dy) < s.r + sd.r) {
-                            s.r = Math.min(s.r + 0.15, 7.5);
-                            s.vy = Math.min(s.vy + 0.08, 4.5);
+                            s.r = Math.min(s.r + 0.12, 7.0);
+                            s.vy = Math.min(s.vy + 0.06, 4.0);
                             staticDrops.splice(j, 1);
                             break;
                         }
                     }
 
-                    // Reset when off screen
                     if (s.y > height + 20) {
                         slidingDrops.splice(i, 1);
-                        if (slidingDrops.length < 7) {
+                        if (slidingDrops.length < maxSliding) {
                             spawnSlidingDrop();
                         }
                     }
                 }
 
-                // 3. Render Shockwaves
+                // 3. Liquid Shockwaves
                 for (let i = shockwaves.length - 1; i >= 0; i--) {
                     const sw = shockwaves[i];
                     sw.r += sw.speed;
@@ -472,7 +408,7 @@
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(212, 175, 55, ${sw.alpha * 0.6})`;
+                    ctx.strokeStyle = `rgba(212, 175, 55, ${sw.alpha * 0.55})`;
                     ctx.lineWidth = sw.width;
                     ctx.stroke();
                     ctx.restore();
@@ -500,13 +436,13 @@
                 c.arc(x, y, r, 0, Math.PI * 2);
                 const grad = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
                 grad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
-                grad.addColorStop(0.3, 'rgba(212, 175, 55, 0.25)');
+                grad.addColorStop(0.35, 'rgba(212, 175, 55, 0.22)');
                 grad.addColorStop(0.7, 'rgba(15, 20, 32, 0.4)');
-                grad.addColorStop(1, 'rgba(212, 175, 55, 0.6)');
+                grad.addColorStop(1, 'rgba(212, 175, 55, 0.55)');
                 c.fillStyle = grad;
                 c.fill();
 
-                // Specular top-left bright glint
+                // Specular glint
                 c.beginPath();
                 c.arc(x - r * 0.32, y - r * 0.32, r * 0.35, 0, Math.PI * 2);
                 c.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -530,31 +466,30 @@
                         x: x,
                         y: y,
                         r: 10,
-                        speed: 6,
+                        speed: 5.5,
                         alpha: 0.85,
-                        width: 2.5
+                        width: 2.2
                     });
                 },
                 burstSplash: function (x, y) {
-                    for (let i = 0; i < 24; i++) {
+                    for (let i = 0; i < (isMobile ? 12 : 20); i++) {
                         const angle = Math.random() * Math.PI * 2;
-                        const dist = 40 + Math.random() * 220;
+                        const dist = 30 + Math.random() * 180;
                         slidingDrops.push({
                             x: x + Math.cos(angle) * dist,
                             y: y + Math.sin(angle) * dist,
-                            r: 2 + Math.random() * 3.5,
-                            vy: 1.5 + Math.random() * 2.5,
-                            vx: (Math.random() - 0.5) * 1.5,
+                            r: 2 + Math.random() * 3,
+                            vy: 1.2 + Math.random() * 2,
                             trail: [],
-                            maxTrail: 10
+                            maxTrail: 8
                         });
                     }
-                    this.createShockwave(x, y, 400);
+                    this.createShockwave(x, y, 350);
                 }
             };
         },
 
-        // ── Three.js 3D Liquid Glass Sphere ──
+        // ── Three.js 3D Liquid Glass Sphere Engine ──
         initThreeSphere: function () {
             if (typeof THREE === 'undefined') return;
 
@@ -562,6 +497,7 @@
             if (!container) return;
 
             let scene, camera, renderer, sphereMesh, liquidMesh;
+            let sphereGeo, glassMat, liquidGeo, liquidMat;
             let animId = null;
             let waveIntensity = 0;
 
@@ -572,47 +508,58 @@
             camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
             camera.position.z = 4.2;
 
-            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            try {
+                renderer = new THREE.WebGLRenderer({
+                    alpha: true,
+                    antialias: true,
+                    powerPreference: 'high-performance'
+                });
+            } catch (err) {
+                console.warn('WebGL initialization failed, falling back to CSS glass orb:', err);
+                return;
+            }
+
             renderer.setSize(width, height);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            const pixelRatio = Math.min(window.devicePixelRatio || 1, window.innerWidth < 768 ? 1.5 : 2);
+            renderer.setPixelRatio(pixelRatio);
             container.appendChild(renderer.domElement);
 
-            // 1. Lighting (Luxury Gold + Studio Speculars)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+            // 1. Lighting (Champagne + Luxury Warm Gold)
+            const ambientLight = new THREE.AmbientLight(0xfff8ee, 0.85);
             scene.add(ambientLight);
 
-            const goldPointLight = new THREE.PointLight(0xd4af37, 2.8, 20);
+            const goldPointLight = new THREE.PointLight(0xd4af37, 2.6, 20);
             goldPointLight.position.set(3, 4, 3);
             scene.add(goldPointLight);
 
-            const rimPointLight = new THREE.PointLight(0xffffff, 2.2, 20);
-            rimPointLight.position.set(-3, -3, 2);
+            const rimPointLight = new THREE.PointLight(0xffffff, 2.0, 20);
+            rimPointLight.position.set(-3, -3, 2.5);
             scene.add(rimPointLight);
 
             // 2. Outer Transparent Glass Sphere
-            const sphereGeo = new THREE.SphereGeometry(1.25, 64, 64);
-            const glassMat = new THREE.MeshPhysicalMaterial({
+            sphereGeo = new THREE.SphereGeometry(1.22, 48, 48);
+            glassMat = new THREE.MeshPhysicalMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.4,
-                roughness: 0.06,
-                metalness: 0.1,
-                transmission: 0.95,
-                ior: 1.45,
+                opacity: 0.38,
+                roughness: 0.05,
+                metalness: 0.08,
+                transmission: 0.94,
+                ior: 1.48,
                 reflectivity: 0.9,
                 clearcoat: 1.0,
-                clearcoatRoughness: 0.05,
+                clearcoatRoughness: 0.04,
                 wireframe: false
             });
             sphereMesh = new THREE.Mesh(sphereGeo, glassMat);
             scene.add(sphereMesh);
 
-            // 3. Inner Swirling Golden Liquid Core
-            const liquidGeo = new THREE.SphereGeometry(1.02, 48, 48);
-            const liquidMat = new THREE.MeshStandardMaterial({
+            // 3. Inner Liquid Core (Gold Wireframe Grid)
+            liquidGeo = new THREE.SphereGeometry(1.0, 36, 36);
+            liquidMat = new THREE.MeshStandardMaterial({
                 color: 0xd4af37,
                 transparent: true,
-                opacity: 0.28,
+                opacity: 0.22,
                 roughness: 0.25,
                 metalness: 0.85,
                 wireframe: true
@@ -621,30 +568,31 @@
             scene.add(liquidMesh);
 
             // Resize handler
-            window.addEventListener('resize', function () {
+            const onResize = function () {
+                if (!container || !renderer || !camera) return;
                 const w = container.clientWidth || 240;
                 const h = container.clientHeight || 240;
                 camera.aspect = w / h;
                 camera.updateProjectionMatrix();
                 renderer.setSize(w, h);
-            });
+            };
+            window.addEventListener('resize', onResize);
 
-            // Gentle floating loop
             let clock = new THREE.Clock();
 
             function animate() {
                 const elapsed = clock.getElapsedTime();
 
-                // Idle organic rotation
+                // Gentle floating & idle rotation
                 sphereMesh.rotation.y = elapsed * 0.15;
-                sphereMesh.rotation.x = Math.sin(elapsed * 0.25) * 0.1;
-                sphereMesh.position.y = Math.sin(elapsed * 0.8) * 0.06;
+                sphereMesh.rotation.x = Math.sin(elapsed * 0.25) * 0.08;
+                sphereMesh.position.y = Math.sin(elapsed * 0.8) * 0.05;
 
-                // Liquid core counter-rotates and breathes
-                liquidMesh.rotation.y = -elapsed * 0.3;
-                liquidMesh.rotation.z = Math.cos(elapsed * 0.2) * 0.15;
+                // Liquid core counter-rotation
+                liquidMesh.rotation.y = -elapsed * 0.28;
+                liquidMesh.rotation.z = Math.cos(elapsed * 0.2) * 0.12;
 
-                // Dynamic wave ripple surge
+                // Dynamic liquid wave surge on countdown ticks
                 if (waveIntensity > 0) {
                     const waveScale = 1.0 + Math.sin(elapsed * 25) * 0.08 * waveIntensity;
                     sphereMesh.scale.set(waveScale, waveScale, waveScale);
@@ -671,6 +619,20 @@
                 },
                 triggerWave: function (intensity) {
                     waveIntensity = intensity || 1.0;
+                },
+                dispose: function () {
+                    this.stop();
+                    window.removeEventListener('resize', onResize);
+                    if (sphereGeo) sphereGeo.dispose();
+                    if (glassMat) glassMat.dispose();
+                    if (liquidGeo) liquidGeo.dispose();
+                    if (liquidMat) liquidMat.dispose();
+                    if (renderer) {
+                        renderer.dispose();
+                        if (renderer.domElement && renderer.domElement.parentNode) {
+                            renderer.domElement.parentNode.removeChild(renderer.domElement);
+                        }
+                    }
                 }
             };
         }
@@ -685,4 +647,3 @@
         window.SVLaunchOverlay.init();
     }
 })();
-

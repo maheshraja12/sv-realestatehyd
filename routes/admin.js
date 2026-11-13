@@ -598,6 +598,16 @@ router.post('/settings', requireSuperAdmin, (req, res) => {
             }
         }
 
+        // Handle explicit Launch Overlay actions
+        if (req.body.action === 'remove_launch_overlay') {
+            upsert.run('launch_overlay_enabled', '0');
+            return res.redirect('/admin/settings?msg=Launch+overlay+removed+successfully+for+all+public+visitors');
+        }
+        if (req.body.action === 'enable_launch_overlay') {
+            upsert.run('launch_overlay_enabled', '1');
+            return res.redirect('/admin/settings?msg=Launch+overlay+enabled+successfully+for+all+public+visitors');
+        }
+
         // Handle 3D Liquid Glass Launch Overlay settings if submitted
         if (req.body.launch_settings_submitted || req.body.launch_overlay_enabled !== undefined || req.body.launch_liquid_effects_enabled !== undefined) {
             upsert.run('launch_overlay_enabled', req.body.launch_overlay_enabled ? '1' : '0');
@@ -611,6 +621,96 @@ router.post('/settings', requireSuperAdmin, (req, res) => {
     } catch (err) {
         console.error('Settings update error:', err);
         res.redirect('/admin/settings?err=Failed+to+save+settings');
+    }
+});
+
+// GET /admin/launch/preview — Dedicated Administrator Preview for Launch Overlay
+router.get('/launch/preview', requirePermission('settings'), async (req, res) => {
+    const db = getDb();
+    let featuredProperties = [];
+    let latestProperties = [];
+    let categoryCounts = [];
+    let interiorProjects = [];
+    let leadershipProfiles = [];
+
+    try {
+        featuredProperties = db.prepare(`
+            SELECT p.*,
+                (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
+            FROM properties p
+            WHERE p.status = 'published' AND p.is_featured = 1
+            LIMIT 8
+        `).all();
+        featuredProperties = enhancePropertyList(featuredProperties);
+
+        latestProperties = db.prepare(`
+            SELECT p.*,
+                (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
+            FROM properties p
+            WHERE p.status = 'published'
+            ORDER BY COALESCE(p.published_at, p.created_at) DESC
+            LIMIT 8
+        `).all();
+        latestProperties = enhancePropertyList(latestProperties);
+
+        categoryCounts = db.prepare(`
+            SELECT category, COUNT(*) as count
+            FROM properties
+            WHERE status = 'published'
+            GROUP BY category
+        `).all();
+
+        interiorProjects = db.prepare(`
+            SELECT * FROM interior_projects
+            WHERE is_published = 1
+            ORDER BY display_order ASC, id ASC
+            LIMIT 4
+        `).all();
+
+        leadershipProfiles = db.prepare(`
+            SELECT * FROM leadership_profiles
+            ORDER BY display_order ASC, id ASC
+        `).all();
+    } catch (e) { }
+
+    res.render('public/home', {
+        title: 'Exclusive 3D Launch Experience Preview (Admin) — SV Real Estates Hyderabad',
+        featuredProperties,
+        latestProperties,
+        categoryCounts,
+        interiorProjects,
+        leadershipProfiles,
+        adminLaunchPreview: true
+    });
+});
+
+// POST /admin/launch/remove — Dedicated action to immediately disable launch overlay
+router.post('/launch/remove', requirePermission('settings'), (req, res) => {
+    try {
+        const db = getDb();
+        db.prepare(`
+            INSERT INTO settings (key, value) VALUES ('launch_overlay_enabled', '0')
+            ON CONFLICT(key) DO UPDATE SET value = '0'
+        `).run();
+        res.redirect('/admin/settings?msg=Launch+overlay+removed+successfully+for+all+public+visitors');
+    } catch (err) {
+        console.error('Remove launch overlay error:', err);
+        res.redirect('/admin/settings?err=Failed+to+remove+launch+overlay');
+    }
+});
+
+// POST /admin/launch/enable — Dedicated action to immediately enable launch overlay
+router.post('/launch/enable', requirePermission('settings'), (req, res) => {
+    try {
+        const db = getDb();
+        db.prepare(`
+            INSERT INTO settings (key, value) VALUES ('launch_overlay_enabled', '1')
+            ON CONFLICT(key) DO UPDATE SET value = '1'
+        `).run();
+        res.redirect('/admin/settings?msg=Launch+overlay+enabled+successfully+for+all+public+visitors');
+    } catch (err) {
+        console.error('Enable launch overlay error:', err);
+        res.redirect('/admin/settings?err=Failed+to+enable+launch+overlay');
     }
 });
 

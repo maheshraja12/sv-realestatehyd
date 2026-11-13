@@ -151,8 +151,24 @@ router.get('/', async (req, res) => {
 });
 
 // GET /launch — Dedicated 3D Liquid Glass Launch Countdown Experience
+// Restricted: When disabled by admin, public visitors cannot bypass; authorized admins can preview.
 router.get('/launch', async (req, res) => {
     const db = getDb();
+    let isLaunchEnabled = true;
+    try {
+        const row = db.prepare("SELECT value FROM settings WHERE key = 'launch_overlay_enabled'").get();
+        if (row && row.value === '0') {
+            isLaunchEnabled = false;
+        }
+    } catch (e) { }
+
+    const isAdmin = !!(req.session && (req.session.userId || req.session.adminUser));
+
+    // Public visitors must not bypass global disable setting
+    if (!isLaunchEnabled && !isAdmin) {
+        return res.redirect('/');
+    }
+
     const interiorProjects = getInteriorProjects(db, { limit: 4 });
     const leadershipProfiles = getLeadershipProfiles(db);
 
@@ -195,7 +211,7 @@ router.get('/launch', async (req, res) => {
         categoryCounts,
         interiorProjects,
         leadershipProfiles,
-        forceLaunch: true
+        adminLaunchPreview: isAdmin && !isLaunchEnabled
     });
 });
 

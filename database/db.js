@@ -306,9 +306,9 @@ function createMemoryDb() {
 
     return {
         isMemory: true,
-        exec: () => {},
+        exec: () => { },
         pragma: () => [],
-        close: () => {},
+        close: () => { },
         prepare: (sql) => {
             const s = (sql || '').trim().toLowerCase();
             return {
@@ -425,13 +425,13 @@ function getDb() {
         if (DatabaseSync) {
             try {
                 db = new DatabaseSync(DB_PATH);
-                try { db.exec('PRAGMA foreign_keys = ON;'); } catch {}
+                try { db.exec('PRAGMA foreign_keys = ON;'); } catch { }
                 try { db.exec('PRAGMA journal_mode = MEMORY;'); } catch {
-                    try { db.exec('PRAGMA journal_mode = DELETE;'); } catch {}
+                    try { db.exec('PRAGMA journal_mode = DELETE;'); } catch { }
                 }
-                try { db.exec('PRAGMA synchronous = OFF;'); } catch {}
-                try { db.exec('PRAGMA temp_store = MEMORY;'); } catch {}
-                try { db.exec('PRAGMA busy_timeout = 5000;'); } catch {}
+                try { db.exec('PRAGMA synchronous = OFF;'); } catch { }
+                try { db.exec('PRAGMA temp_store = MEMORY;'); } catch { }
+                try { db.exec('PRAGMA busy_timeout = 5000;'); } catch { }
                 db.pragma = function (cmd) {
                     try { return db.exec(`PRAGMA ${cmd};`); } catch { return []; }
                 };
@@ -506,7 +506,7 @@ function initializeDb() {
                     database.exec(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type};`);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
 
         // Auto-migrate appointments columns
         try {
@@ -521,7 +521,7 @@ function initializeDb() {
                     database.exec(`ALTER TABLE appointments ADD COLUMN ${col.name} ${col.type};`);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
 
         // Ensure CRM Tables exist
         try {
