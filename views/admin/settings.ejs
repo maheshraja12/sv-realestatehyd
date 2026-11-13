@@ -218,6 +218,59 @@
                     </form>
                 </div>
 
+                <!-- 3D Liquid Glass Launch Overlay & Countdown Settings -->
+                <div class="settings-card" style="border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 4px 20px rgba(212, 175, 55, 0.08);">
+                    <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; margin-bottom: 18px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <h3><i class="fas fa-water text-gold"></i> 3D Liquid Glass Launch Countdown Experience</h3>
+                            <span class="status-badge status-published" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-weight:700;">
+                                <i class="fas fa-cube"></i> Three.js & WebGL
+                            </span>
+                        </div>
+                        <p style="margin-top:6px; color:#9aa0ac;">Configure the full-screen launch countdown overlay with transparent 3D liquid glass sphere, realistic sliding waterdrops, and celebratory "WE ARE LIVE" reveal.</p>
+                    </div>
+
+                    <form method="POST" action="/admin/settings" class="settings-form">
+                        <input type="hidden" name="launch_settings_submitted" value="1">
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="launch_overlay_enabled" value="1" <%= (settings.launch_overlay_enabled !== '0') ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.95rem;">Enable Website Launch Countdown Overlay</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #9aa0ac;">When enabled, visitors to the homepage see the interactive liquid glass launch countdown overlay.</p>
+                                    </div>
+                                </label>
+
+                                <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                    <input type="checkbox" name="launch_liquid_effects_enabled" value="1" <%= (settings.launch_liquid_effects_enabled !== '0') ? 'checked' : '' %> style="margin-top: 3px; accent-color: var(--gold);">
+                                    <div>
+                                        <strong style="color: #fff; font-size: 0.95rem;">Enable 3D Liquid Glass & Waterdrop Visual Effects (Independent Toggle)</strong>
+                                        <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #9aa0ac;">Renders the real-time Three.js 3D glass orb, dynamic sliding water droplets, and liquid ripples. If disabled, the launch overlay runs in lightweight minimal glassmorphism mode.</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 18px; margin-bottom: 0;">
+                                <label for="launch_overlay_mode" style="color: #fff; font-size: 0.9rem;">Display Frequency</label>
+                                <select id="launch_overlay_mode" name="launch_overlay_mode" style="max-width: 380px;">
+                                    <option value="session" <%= (settings.launch_overlay_mode !== 'always') ? 'selected' : '' %>>Show once per visitor session (Recommended)</option>
+                                    <option value="always" <%= (settings.launch_overlay_mode === 'always') ? 'selected' : '' %>>Show on every visit to homepage</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                            <button type="submit" class="btn btn-primary" style="background:var(--gold); color:#0c0f17; font-weight:700;">
+                                <i class="fas fa-save"></i> Save Launch Settings
+                            </button>
+                            <a href="/launch" target="_blank" class="btn btn-secondary" style="border-color: var(--gold); color: #f7df94;">
+                                <i class="fas fa-external-link-alt"></i> Preview 3D Launch Experience Live
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- SMTP & Email Settings -->
                 <div class="settings-card">
                     <div class="card-header">

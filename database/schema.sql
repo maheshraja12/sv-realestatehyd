@@ -280,6 +280,9 @@ INSERT OR REPLACE INTO settings (key, value) VALUES
     ('admin_perm_followups', '1'),
     ('admin_perm_reports', '1'),
     ('admin_perm_interiors', '1'),
+    ('launch_overlay_enabled', '1'),
+    ('launch_liquid_effects_enabled', '1'),
+    ('launch_overlay_mode', 'session'),
     ('smtp_configured', '0'),
     ('whatsapp_configured', '0');
 

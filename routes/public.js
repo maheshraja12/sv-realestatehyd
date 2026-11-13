@@ -150,6 +150,55 @@ router.get('/', async (req, res) => {
     });
 });
 
+// GET /launch — Dedicated 3D Liquid Glass Launch Countdown Experience
+router.get('/launch', async (req, res) => {
+    const db = getDb();
+    const interiorProjects = getInteriorProjects(db, { limit: 4 });
+    const leadershipProfiles = getLeadershipProfiles(db);
+
+    let featuredProperties = [];
+    let latestProperties = [];
+    let categoryCounts = [];
+
+    try {
+        featuredProperties = db.prepare(`
+            SELECT p.*,
+                (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
+            FROM properties p
+            WHERE p.status = 'published' AND p.is_featured = 1
+            LIMIT 8
+        `).all();
+        featuredProperties = enhancePropertyList(featuredProperties);
+
+        latestProperties = db.prepare(`
+            SELECT p.*,
+                (SELECT image_url FROM property_images WHERE property_id = p.id AND is_cover = 1 LIMIT 1) as cover_image
+            FROM properties p
+            WHERE p.status = 'published'
+            ORDER BY COALESCE(p.published_at, p.created_at) DESC
+            LIMIT 8
+        `).all();
+        latestProperties = enhancePropertyList(latestProperties);
+
+        categoryCounts = db.prepare(`
+            SELECT category, COUNT(*) as count
+            FROM properties
+            WHERE status = 'published'
+            GROUP BY category
+        `).all();
+    } catch (e) {}
+
+    res.render('public/home', {
+        title: 'Exclusive 3D Launch Experience — SV Real Estates Hyderabad',
+        featuredProperties,
+        latestProperties,
+        categoryCounts,
+        interiorProjects,
+        leadershipProfiles,
+        forceLaunch: true
+    });
+});
+
 // GET /properties — Property Listings
 router.get('/properties', async (req, res) => {
     const page = parseInt(req.query.page) || 1;

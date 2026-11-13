@@ -298,7 +298,10 @@ function createMemoryDb() {
         admin_perm_customers: '1',
         admin_perm_followups: '1',
         admin_perm_reports: '1',
-        admin_perm_interiors: '1'
+        admin_perm_interiors: '1',
+        launch_overlay_enabled: '1',
+        launch_liquid_effects_enabled: '1',
+        launch_overlay_mode: 'session'
     };
 
     return {
@@ -743,7 +746,10 @@ function initializeDb() {
                 ['admin_perm_customers', '1'],
                 ['admin_perm_followups', '1'],
                 ['admin_perm_reports', '1'],
-                ['admin_perm_interiors', '1']
+                ['admin_perm_interiors', '1'],
+                ['launch_overlay_enabled', '1'],
+                ['launch_liquid_effects_enabled', '1'],
+                ['launch_overlay_mode', 'session']
             ];
             const permStmt = database.prepare(`
                 INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)

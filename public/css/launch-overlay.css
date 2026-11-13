@@ -1,0 +1,701 @@
+/* ==========================================================================
+   SV REAL ESTATES HYDERABAD — 3D LIQUID GLASS & WATERDROP LAUNCH OVERLAY
+   ========================================================================== */
+
+/* ── Container & Backdrop ── */
+.launch-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #07080a;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
+}
+
+.launch-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.launch-overlay.is-closing {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: blur(12px);
+    pointer-events: none;
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s ease, filter 0.9s ease;
+}
+
+/* ── Atmosphere & Caustics Background ── */
+.launch-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 40%, #151922 0%, #0c0f16 45%, #060709 100%);
+    z-index: 1;
+    overflow: hidden;
+}
+
+.launch-bg-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    opacity: 0.45;
+    animation: launchGlowPulse 8s ease-in-out infinite alternate;
+}
+
+.launch-bg-glow-gold {
+    width: 600px;
+    height: 600px;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.28) 0%, rgba(212, 175, 55, 0.08) 50%, transparent 70%);
+}
+
+.launch-bg-glow-ambient {
+    width: 800px;
+    height: 800px;
+    bottom: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(184, 134, 11, 0.15) 0%, rgba(15, 20, 32, 0.4) 60%, transparent 80%);
+}
+
+@keyframes launchGlowPulse {
+    0% { transform: translate(-50%, -30%) scale(0.9); opacity: 0.35; }
+    100% { transform: translate(-50%, -30%) scale(1.15); opacity: 0.55; }
+}
+
+/* ── Waterdrop & Ripple Canvas Layer ── */
+.launch-waterdrop-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: auto;
+    cursor: default;
+}
+
+/* ── 3D WebGL Sphere Canvas Layer ── */
+.launch-webgl-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* ── Glass Morphism Content Layer ── */
+.launch-stage-wrapper {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 960px;
+    padding: 24px 20px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* ── Liquid Glass Card ── */
+.liquid-glass-card {
+    position: relative;
+    width: 100%;
+    max-width: 760px;
+    background: rgba(14, 18, 27, 0.45);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(212, 175, 55, 0.1),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.4);
+    border-radius: 28px;
+    padding: 44px 36px;
+    overflow: hidden;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+}
+
+.liquid-glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 40%,
+        rgba(212, 175, 55, 0.15) 50%,
+        rgba(255, 255, 255, 0.05) 55%,
+        transparent 70%
+    );
+    pointer-events: none;
+    transform: skewX(-20deg);
+    animation: liquidCardSheen 9s infinite ease-in-out;
+}
+
+@keyframes liquidCardSheen {
+    0%, 70% { transform: translateX(0) skewX(-20deg); }
+    100% { transform: translateX(100%) skewX(-20deg); }
+}
+
+/* ── Brand Monogram Header ── */
+.launch-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(212, 175, 55, 0.09);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    padding: 7px 18px;
+    border-radius: 40px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #e5c158;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.launch-brand-badge i {
+    font-size: 0.85rem;
+    color: #f3d474;
+}
+
+.launch-main-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1.15;
+    margin: 0 0 14px 0;
+    color: #ffffff;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+}
+
+.launch-main-title .gold-shimmer {
+    background: linear-gradient(135deg, #ffffff 0%, #f7df94 35%, #d4af37 60%, #aa8010 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+.launch-subtitle {
+    font-size: clamp(0.9rem, 2vw, 1.08rem);
+    line-height: 1.6;
+    color: #c4cad8;
+    max-width: 580px;
+    margin: 0 auto 32px auto;
+    font-weight: 400;
+}
+
+/* ── The 3D Glass Sphere Orb ── */
+.launch-orb-stage {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 0 auto 36px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* CSS Glass Orb Surface (always crisp fallback + container) */
+.glass-sphere-orb {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at 35% 30%,
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(212, 175, 55, 0.12) 25%,
+        rgba(15, 20, 32, 0.35) 65%,
+        rgba(8, 10, 16, 0.75) 100%
+    );
+    box-shadow: 
+        0 25px 60px rgba(0, 0, 0, 0.75),
+        0 0 50px rgba(212, 175, 55, 0.22),
+        inset 0 10px 25px rgba(255, 255, 255, 0.4),
+        inset 0 -12px 25px rgba(0, 0, 0, 0.6),
+        inset -5px 0 15px rgba(212, 175, 55, 0.25);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    animation: orbFloat 5s ease-in-out infinite alternate;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
+}
+
+.glass-sphere-orb::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 28px;
+    width: 70px;
+    height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(-35deg);
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+.glass-sphere-orb::before {
+    content: '';
+    position: absolute;
+    bottom: 16px;
+    right: 28px;
+    width: 60px;
+    height: 30px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.45) 0%, rgba(212, 175, 55, 0) 70%);
+    transform: rotate(20deg);
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+@keyframes orbFloat {
+    0% { transform: translateY(0px) rotate(0deg); }
+    100% { transform: translateY(-12px) rotate(2deg); }
+}
+
+/* Liquid Ripple Wave inside Orb */
+.orb-liquid-ripple {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(212, 175, 55, 0.5);
+    opacity: 0;
+    transform: scale(0.4);
+    pointer-events: none;
+}
+
+.orb-liquid-ripple.pulse {
+    animation: rippleShockwave 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes rippleShockwave {
+    0% { transform: scale(0.3); opacity: 0.9; border-width: 3px; }
+    50% { opacity: 0.6; }
+    100% { transform: scale(1.4); opacity: 0; border-width: 0.5px; }
+}
+
+/* ── Countdown Number Display ── */
+.orb-number-display {
+    position: relative;
+    z-index: 5;
+    font-family: 'Cinzel', serif;
+    font-size: 5.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.8),
+        0 0 25px rgba(212, 175, 55, 0.6);
+    user-select: none;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+}
+
+.orb-number-display.number-bubble-pop {
+    animation: bubblePopIn 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes bubblePopIn {
+    0% {
+        transform: scale(0.2) translateY(20px);
+        opacity: 0;
+        filter: blur(8px);
+    }
+    60% {
+        transform: scale(1.18) translateY(-4px);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Idle Ready Logo / Monogram inside Orb */
+.orb-idle-monogram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 5;
+}
+
+.orb-idle-monogram .monogram-circle {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(184, 134, 11, 0.05));
+    border: 1.5px solid rgba(212, 175, 55, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #f7df94;
+    text-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+}
+
+.orb-idle-monogram span.label {
+    font-size: 0.72rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #d4af37;
+    font-weight: 700;
+}
+
+/* ── Premium Liquid Glass Buttons ── */
+.launch-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 20;
+}
+
+.btn-liquid-glass {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px 34px;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+}
+
+/* Primary Glass Gold Button */
+.btn-liquid-primary {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35) 0%, rgba(184, 134, 11, 0.15) 100%);
+    border: 1.5px solid rgba(247, 223, 148, 0.65);
+    color: #ffffff;
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        0 0 25px rgba(212, 175, 55, 0.3),
+        inset 0 1px 1px rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.btn-liquid-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.35),
+        transparent
+    );
+    transform: skewX(-25deg);
+    transition: left 0.65s ease;
+}
+
+.btn-liquid-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: #f7df94;
+    box-shadow: 
+        0 14px 40px rgba(0, 0, 0, 0.6),
+        0 0 35px rgba(212, 175, 55, 0.55),
+        inset 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+.btn-liquid-primary:hover::before {
+    left: 100%;
+}
+
+.btn-liquid-primary:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+/* Secondary Frosted Glass Button */
+.btn-liquid-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #d1d6e2;
+    box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.btn-liquid-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(212, 175, 55, 0.45);
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+/* ── Top Bar Controls (Close, Sound, FX Toggle) ── */
+.launch-top-controls {
+    position: absolute;
+    top: 24px;
+    right: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 50;
+}
+
+.launch-ctrl-btn {
+    background: rgba(14, 18, 27, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    color: #d1d6e2;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.launch-ctrl-btn:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: #f7df94;
+    color: #ffffff;
+    transform: scale(1.08);
+}
+
+.launch-fx-pill {
+    background: rgba(14, 18, 27, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    color: #d4af37;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.launch-fx-pill:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: #f7df94;
+}
+
+.launch-fx-pill.fx-disabled {
+    color: #88909e;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ── "WE ARE LIVE" Celebration Reveal Stage ── */
+.launch-live-stage {
+    display: none;
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.launch-live-stage.is-visible {
+    display: block;
+    opacity: 1;
+    transform: scale(1);
+}
+
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(46, 213, 115, 0.2), rgba(46, 213, 115, 0.05));
+    border: 1px solid rgba(46, 213, 115, 0.4);
+    color: #2ed573;
+    padding: 6px 18px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    box-shadow: 0 0 20px rgba(46, 213, 115, 0.2);
+    animation: livePulse 2s infinite ease-in-out;
+}
+
+.live-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2ed573;
+    box-shadow: 0 0 8px #2ed573;
+}
+
+@keyframes livePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.85; }
+}
+
+.live-hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #ffffff;
+    margin: 0 0 12px 0;
+    line-height: 1.1;
+    text-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.8),
+        0 0 35px rgba(212, 175, 55, 0.4);
+}
+
+.live-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 32px 0;
+}
+
+.live-stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.18);
+    border-radius: 16px;
+    padding: 18px 12px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
+
+.live-stat-number {
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #f7df94;
+    margin-bottom: 4px;
+}
+
+.live-stat-label {
+    font-size: 0.76rem;
+    color: #a4acb9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ── Expanding Zero Ripple Transition Screen ── */
+.launch-zero-shockwave {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247, 223, 148, 0.8) 0%, rgba(212, 175, 55, 0.4) 30%, rgba(212, 175, 55, 0) 70%);
+    box-shadow: 0 0 80px rgba(212, 175, 55, 0.8);
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0;
+}
+
+.launch-zero-shockwave.trigger {
+    animation: zeroShockwaveExpand 1.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes zeroShockwaveExpand {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+    50% { opacity: 0.85; }
+    100% { transform: translate(-50%, -50%) scale(60); opacity: 0; }
+}
+
+/* ── Reduced Motion Mode ── */
+@media (prefers-reduced-motion: reduce) {
+    .glass-sphere-orb,
+    .liquid-glass-card::before,
+    .launch-bg-glow {
+        animation: none !important;
+    }
+    .launch-overlay,
+    .btn-liquid-glass,
+    .launch-live-stage {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ── Mobile Viewport Optimizations ── */
+@media (max-width: 600px) {
+    .liquid-glass-card {
+        padding: 30px 20px;
+        border-radius: 22px;
+    }
+    .launch-orb-stage {
+        width: 200px;
+        height: 200px;
+        margin-bottom: 24px;
+    }
+    .glass-sphere-orb {
+        width: 180px;
+        height: 180px;
+    }
+    .orb-number-display {
+        font-size: 4.2rem;
+    }
+    .live-stats-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .launch-actions-row {
+        flex-direction: column;
+        width: 100%;
+    }
+    .btn-liquid-glass {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .launch-top-controls {
+        top: 14px;
+        right: 14px;
+    }
+}

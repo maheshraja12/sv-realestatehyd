@@ -1,0 +1,139 @@
+<!-- ==========================================================================
+     SV REAL ESTATES HYDERABAD — 3D LIQUID GLASS & WATERDROP LAUNCH OVERLAY
+     ========================================================================== -->
+<div id="launchOverlay" class="launch-overlay" 
+     data-enabled="<%= (typeof settings !== 'undefined' && settings.launch_overlay_enabled) ? settings.launch_overlay_enabled : '1' %>" 
+     data-liquid-effects="<%= (typeof settings !== 'undefined' && typeof settings.launch_liquid_effects_enabled !== 'undefined') ? settings.launch_liquid_effects_enabled : '1' %>" 
+     data-mode="<%= (typeof settings !== 'undefined' && settings.launch_overlay_mode) ? settings.launch_overlay_mode : 'session' %>"
+     aria-modal="true" role="dialog" aria-label="Website Launch Experience">
+
+    <!-- Atmospheric Caustics Background -->
+    <div class="launch-bg">
+        <div class="launch-bg-glow launch-bg-glow-gold"></div>
+        <div class="launch-bg-glow launch-bg-glow-ambient"></div>
+    </div>
+
+    <!-- SVG Optical Refraction Filters -->
+    <svg style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true">
+        <filter id="liquidGlassRefraction">
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    <!-- 2D Waterdrop Simulation Canvas -->
+    <canvas id="launchWaterdropCanvas" class="launch-waterdrop-canvas"></canvas>
+
+    <!-- 3D WebGL Glass Sphere Canvas -->
+    <div id="launchWebglCanvas" class="launch-webgl-canvas"></div>
+
+    <!-- Top Right Controls -->
+    <div class="launch-top-controls">
+        <button type="button" id="btnLaunchFxToggle" class="launch-fx-pill" title="Toggle 3D Liquid Effects">
+            <i class="fas fa-magic"></i> FX: 3D Liquid
+        </button>
+        <button type="button" id="btnLaunchSound" class="launch-ctrl-btn" title="Toggle Sound (Web Audio Chime)">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <button type="button" id="btnLaunchClose" class="launch-ctrl-btn" title="Close & Enter Website (ESC)">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Central Glass Stage -->
+    <div class="launch-stage-wrapper">
+        <div class="liquid-glass-card">
+            
+            <!-- STAGE 1: Welcome & Initial State -->
+            <div id="launchWelcomeStage">
+                <div class="launch-brand-badge">
+                    <i class="fas fa-crown"></i>
+                    <span>SV Real Estates Hyderabad</span>
+                </div>
+                <h1 class="launch-main-title">
+                    The Grand <span class="gold-shimmer">Unveiling</span>
+                </h1>
+                <p class="launch-subtitle">
+                    Step into Hyderabad's next generation of luxury gated villas, HMDA approved capital plots, and bespoke turnkey home interiors.
+                </p>
+            </div>
+
+            <!-- Central 3D Glass Orb Stage -->
+            <div id="launchOrbStage" class="launch-orb-stage">
+                <div class="glass-sphere-orb">
+                    <div id="orbLiquidRipple" class="orb-liquid-ripple"></div>
+                    
+                    <!-- Idle Monogram Inside Orb -->
+                    <div id="orbIdleMonogram" class="orb-idle-monogram">
+                        <div class="monogram-circle">SV</div>
+                        <span class="label">Live Launch</span>
+                    </div>
+
+                    <!-- Countdown Number Display Inside Orb -->
+                    <div id="orbNumberDisplay" class="orb-number-display" style="display: none;">10</div>
+                </div>
+            </div>
+
+            <!-- STAGE 2: Active Countdown Prompt -->
+            <div id="launchCountdownStage" style="display: none;">
+                <p class="launch-subtitle" style="margin-bottom: 24px; color: #f7df94; font-weight: 600; letter-spacing: 1px;">
+                    <i class="fas fa-spinner fa-spin"></i> Initializing Luxury Real Estate Portal...
+                </p>
+            </div>
+
+            <!-- Ready Action Buttons Row (Stage 1) -->
+            <div class="launch-actions-row">
+                <button type="button" id="btnLaunchStart" class="btn-liquid-glass btn-liquid-primary">
+                    <i class="fas fa-play"></i> Start Countdown
+                </button>
+                <button type="button" class="btn-liquid-glass btn-liquid-secondary js-launch-explore">
+                    <i class="fas fa-arrow-right"></i> Explore Website
+                </button>
+            </div>
+
+            <!-- STAGE 3: "WE ARE LIVE" Celebration Reveal Stage -->
+            <div id="launchLiveStage" class="launch-live-stage">
+                <div class="live-badge">
+                    <span>Officially Launched</span>
+                </div>
+                <h2 class="live-hero-title">
+                    WE ARE <span class="gold-shimmer">LIVE</span>
+                </h2>
+                <p class="launch-subtitle">
+                    Welcome to Sri Venkateswara Real Estates Hyderabad. Explore verified luxury residential villas, high-growth highway plots, and end-to-end luxury interiors across Hyderabad.
+                </p>
+
+                <!-- Milestone Stats -->
+                <div class="live-stats-row">
+                    <div class="live-stat-card">
+                        <div class="live-stat-number">40+</div>
+                        <div class="live-stat-label">Handpicked Listings</div>
+                    </div>
+                    <div class="live-stat-card">
+                        <div class="live-stat-number">100%</div>
+                        <div class="live-stat-label">Clear Title Verified</div>
+                    </div>
+                    <div class="live-stat-card">
+                        <div class="live-stat-number">12+</div>
+                        <div class="live-stat-label">Turnkey Interiors</div>
+                    </div>
+                </div>
+
+                <div class="launch-actions-row" style="margin-top: 24px;">
+                    <button type="button" class="btn-liquid-glass btn-liquid-primary js-launch-explore" style="padding: 16px 42px; font-size: 1.05rem;">
+                        <i class="fas fa-compass"></i> Enter & Explore Website
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Expanding Zero Ripple Shockwave -->
+    <div id="launchZeroShockwave" class="launch-zero-shockwave"></div>
+</div>
+
+<!-- Three.js (local fallback with CDN support) -->
+<script src="/js/vendor/three.min.js"></script>
+<!-- Launch 3D Liquid Glass Engine -->
+<script src="/js/launch-liquid-glass.js"></script>

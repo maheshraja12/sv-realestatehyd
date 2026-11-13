@@ -598,6 +598,15 @@ router.post('/settings', requireSuperAdmin, (req, res) => {
             }
         }
 
+        // Handle 3D Liquid Glass Launch Overlay settings if submitted
+        if (req.body.launch_settings_submitted || req.body.launch_overlay_enabled !== undefined || req.body.launch_liquid_effects_enabled !== undefined) {
+            upsert.run('launch_overlay_enabled', req.body.launch_overlay_enabled ? '1' : '0');
+            upsert.run('launch_liquid_effects_enabled', req.body.launch_liquid_effects_enabled ? '1' : '0');
+            if (req.body.launch_overlay_mode) {
+                upsert.run('launch_overlay_mode', String(req.body.launch_overlay_mode).trim());
+            }
+        }
+
         res.redirect('/admin/settings?msg=Settings+saved+successfully');
     } catch (err) {
         console.error('Settings update error:', err);
@@ -889,6 +898,13 @@ router.post('/cms/branding', requireSuperAdmin, (req, res) => {
         upsert.run('whatsapp_floating_enabled', req.body.whatsapp_floating_enabled ? '1' : '0');
         upsert.run('announcement_bar_enabled', req.body.announcement_bar_enabled ? '1' : '0');
         if (req.body.announcement_text !== undefined) upsert.run('announcement_text', req.body.announcement_text.trim());
+        if (req.body.launch_settings_submitted || req.body.launch_overlay_enabled !== undefined || req.body.launch_liquid_effects_enabled !== undefined) {
+            upsert.run('launch_overlay_enabled', req.body.launch_overlay_enabled ? '1' : '0');
+            upsert.run('launch_liquid_effects_enabled', req.body.launch_liquid_effects_enabled ? '1' : '0');
+            if (req.body.launch_overlay_mode) {
+                upsert.run('launch_overlay_mode', String(req.body.launch_overlay_mode).trim());
+            }
+        }
 
         auditLog(db, req.session.userId, req.session.userName, 'update_branding', 'settings', null, 'Branding settings updated', req.ip);
         res.redirect('/admin/cms?msg=Branding+settings+updated+successfully');
