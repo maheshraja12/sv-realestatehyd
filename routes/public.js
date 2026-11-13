@@ -16,7 +16,7 @@ function getLeadershipProfiles(db) {
             ORDER BY display_order ASC, id ASC
         `).all();
         if (rows && rows.length > 0) return rows;
-    } catch (e) {}
+    } catch (e) { }
     // Fallback if table empty
     return [
         {
@@ -51,7 +51,7 @@ function getInteriorServices(db) {
             ORDER BY display_order ASC, id ASC
         `).all();
         if (rows && rows.length > 0) return rows;
-    } catch (e) {}
+    } catch (e) { }
     return [];
 }
 
@@ -186,7 +186,7 @@ router.get('/launch', async (req, res) => {
             WHERE status = 'published'
             GROUP BY category
         `).all();
-    } catch (e) {}
+    } catch (e) { }
 
     res.render('public/home', {
         title: 'Exclusive 3D Launch Experience — SV Real Estates Hyderabad',
@@ -458,7 +458,7 @@ router.get('/interiors/projects/:id', (req, res) => {
         } else {
             project = db.prepare("SELECT * FROM interior_projects WHERE slug = ? AND is_published = 1").get(id);
         }
-    } catch (e) {}
+    } catch (e) { }
 
     if (!project) {
         return res.status(404).render('public/404', {
@@ -469,7 +469,7 @@ router.get('/interiors/projects/:id', (req, res) => {
     let images = [];
     try {
         images = db.prepare("SELECT * FROM interior_project_images WHERE project_id = ? ORDER BY display_order ASC, id ASC").all(project.id);
-    } catch (e) {}
+    } catch (e) { }
 
     if (images.length === 0 && project.cover_image) {
         images = [{ id: 1, image_url: project.cover_image, title: project.title }];

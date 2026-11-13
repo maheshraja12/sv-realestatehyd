@@ -1659,7 +1659,7 @@ Located within a private enclave of only 8 residences with 3-tier security, 100%
                 ('admin_perm_interiors', '1'),
                 ('launch_overlay_enabled', '1'),
                 ('launch_liquid_effects_enabled', '1'),
-                ('launch_overlay_mode', 'session')
+                ('launch_overlay_mode', 'always')
         `).run();
 
         console.log('🎉 Seeding successfully completed! All areas set with minimum ₹70 Lakhs budget baseline.');

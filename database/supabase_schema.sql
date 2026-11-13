@@ -211,7 +211,7 @@ INSERT INTO public.settings (key, value) VALUES
     ('admin_perm_interiors', '1'),
     ('launch_overlay_enabled', '1'),
     ('launch_liquid_effects_enabled', '1'),
-    ('launch_overlay_mode', 'session'),
+    ('launch_overlay_mode', 'always'),
     ('theme_primary_color', '#0a0d14'),
     ('theme_accent_gold', '#d4af37'),
     ('whatsapp_floating_enabled', '1'),

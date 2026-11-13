@@ -111,7 +111,7 @@ describe('11. 3D Liquid Glass & Waterdrop Launch Countdown Overlay', () => {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Cookie': superAdminCookie
             },
-            body: 'launch_settings_submitted=1&launch_overlay_enabled=1&launch_liquid_effects_enabled=1&launch_overlay_mode=session',
+            body: 'launch_settings_submitted=1&launch_overlay_enabled=1&launch_liquid_effects_enabled=1&launch_overlay_mode=always',
             redirect: 'manual'
         });
         assert.ok([302, 307].includes(reEnableRes.status));
@@ -121,3 +121,4 @@ describe('11. 3D Liquid Glass & Waterdrop Launch Countdown Overlay', () => {
         assert.ok(html2.includes('data-liquid-effects="1"'), 'Liquid effects should be re-enabled');
     });
 });
+

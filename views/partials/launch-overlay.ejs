@@ -1,10 +1,10 @@
 <!-- ==========================================================================
      SV REAL ESTATES HYDERABAD — 3D LIQUID GLASS & WATERDROP LAUNCH OVERLAY
      ========================================================================== -->
-<div id="launchOverlay" class="launch-overlay" 
+<div id="launchOverlay" class="launch-overlay <%= (typeof settings !== 'undefined' && settings.launch_overlay_enabled === '0') ? '' : 'is-active' %>" 
      data-enabled="<%= (typeof settings !== 'undefined' && settings.launch_overlay_enabled) ? settings.launch_overlay_enabled : '1' %>" 
      data-liquid-effects="<%= (typeof settings !== 'undefined' && typeof settings.launch_liquid_effects_enabled !== 'undefined') ? settings.launch_liquid_effects_enabled : '1' %>" 
-     data-mode="<%= (typeof settings !== 'undefined' && settings.launch_overlay_mode) ? settings.launch_overlay_mode : 'session' %>"
+     data-mode="<%= (typeof settings !== 'undefined' && settings.launch_overlay_mode) ? settings.launch_overlay_mode : 'always' %>"
      aria-modal="true" role="dialog" aria-label="Website Launch Experience">
 
     <!-- Atmospheric Caustics Background -->
@@ -21,11 +21,8 @@
         </filter>
     </svg>
 
-    <!-- 2D Waterdrop Simulation Canvas -->
+    <!-- 2D Waterdrop Simulation Canvas (Full-screen sliding drops) -->
     <canvas id="launchWaterdropCanvas" class="launch-waterdrop-canvas"></canvas>
-
-    <!-- 3D WebGL Glass Sphere Canvas -->
-    <div id="launchWebglCanvas" class="launch-webgl-canvas"></div>
 
     <!-- Top Right Controls -->
     <div class="launch-top-controls">
@@ -60,6 +57,11 @@
 
             <!-- Central 3D Glass Orb Stage -->
             <div id="launchOrbStage" class="launch-orb-stage">
+                <!-- 3D Three.js WebGL Canvas Container directly inside Orb Stage -->
+                <div id="launchOrbThreeContainer" class="orb-three-container">
+                    <div id="launchWebglCanvas"></div>
+                </div>
+                
                 <div class="glass-sphere-orb">
                     <div id="orbLiquidRipple" class="orb-liquid-ripple"></div>
                     

@@ -43,11 +43,13 @@
             // Check if should open automatically
             const urlParams = new URLSearchParams(window.location.search);
             const isManualPreview = urlParams.has('launch') || urlParams.has('preview_launch') || window.location.pathname === '/launch';
-            const isEnabled = overlay.getAttribute('data-enabled') === '1';
-            const mode = overlay.getAttribute('data-mode') || 'session';
+            const isEnabled = overlay.getAttribute('data-enabled') !== '0';
+            const mode = overlay.getAttribute('data-mode') || 'always';
             const alreadySeen = sessionStorage.getItem('sv_launch_seen') === '1';
 
-            if (isManualPreview || (isEnabled && (mode === 'always' || !alreadySeen))) {
+            if (overlay.classList.contains('is-active')) {
+                this.open();
+            } else if (isManualPreview || (isEnabled && (mode === 'always' || !alreadySeen))) {
                 this.open();
             }
         },
@@ -556,19 +558,19 @@
         initThreeSphere: function () {
             if (typeof THREE === 'undefined') return;
 
-            const container = document.getElementById('launchWebglCanvas');
+            const container = document.getElementById('launchOrbThreeContainer') || document.getElementById('launchWebglCanvas');
             if (!container) return;
 
             let scene, camera, renderer, sphereMesh, liquidMesh;
             let animId = null;
             let waveIntensity = 0;
 
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+            const width = container.clientWidth || 240;
+            const height = container.clientHeight || 240;
 
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-            camera.position.z = 5.2;
+            camera.position.z = 4.2;
 
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
             renderer.setSize(width, height);
@@ -576,14 +578,14 @@
             container.appendChild(renderer.domElement);
 
             // 1. Lighting (Luxury Gold + Studio Speculars)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
             scene.add(ambientLight);
 
-            const goldPointLight = new THREE.PointLight(0xd4af37, 2.5, 20);
+            const goldPointLight = new THREE.PointLight(0xd4af37, 2.8, 20);
             goldPointLight.position.set(3, 4, 3);
             scene.add(goldPointLight);
 
-            const rimPointLight = new THREE.PointLight(0xffffff, 1.8, 20);
+            const rimPointLight = new THREE.PointLight(0xffffff, 2.2, 20);
             rimPointLight.position.set(-3, -3, 2);
             scene.add(rimPointLight);
 
@@ -592,12 +594,12 @@
             const glassMat = new THREE.MeshPhysicalMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.35,
-                roughness: 0.08,
+                opacity: 0.4,
+                roughness: 0.06,
                 metalness: 0.1,
-                transmission: 0.92,
+                transmission: 0.95,
                 ior: 1.45,
-                reflectivity: 0.85,
+                reflectivity: 0.9,
                 clearcoat: 1.0,
                 clearcoatRoughness: 0.05,
                 wireframe: false
@@ -606,22 +608,22 @@
             scene.add(sphereMesh);
 
             // 3. Inner Swirling Golden Liquid Core
-            const liquidGeo = new THREE.SphereGeometry(1.05, 48, 48);
+            const liquidGeo = new THREE.SphereGeometry(1.02, 48, 48);
             const liquidMat = new THREE.MeshStandardMaterial({
                 color: 0xd4af37,
                 transparent: true,
-                opacity: 0.18,
-                roughness: 0.3,
-                metalness: 0.8,
+                opacity: 0.28,
+                roughness: 0.25,
+                metalness: 0.85,
                 wireframe: true
             });
             liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
             scene.add(liquidMesh);
 
-            // Window resize handler
+            // Resize handler
             window.addEventListener('resize', function () {
-                const w = window.innerWidth;
-                const h = window.innerHeight;
+                const w = container.clientWidth || 240;
+                const h = container.clientHeight || 240;
                 camera.aspect = w / h;
                 camera.updateProjectionMatrix();
                 renderer.setSize(w, h);
@@ -683,3 +685,4 @@
         window.SVLaunchOverlay.init();
     }
 })();
+

@@ -219,6 +219,26 @@
     justify-content: center;
 }
 
+/* 3D WebGL Three.js Container inside Orb Stage */
+.orb-three-container {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.orb-three-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
 /* CSS Glass Orb Surface (always crisp fallback + container) */
 .glass-sphere-orb {
     position: absolute;
@@ -227,24 +247,25 @@
     border-radius: 50%;
     background: radial-gradient(
         circle at 35% 30%,
-        rgba(255, 255, 255, 0.28) 0%,
-        rgba(212, 175, 55, 0.12) 25%,
-        rgba(15, 20, 32, 0.35) 65%,
-        rgba(8, 10, 16, 0.75) 100%
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(212, 175, 55, 0.15) 30%,
+        rgba(15, 20, 32, 0.25) 70%,
+        rgba(8, 10, 16, 0.45) 100%
     );
     box-shadow: 
         0 25px 60px rgba(0, 0, 0, 0.75),
-        0 0 50px rgba(212, 175, 55, 0.22),
-        inset 0 10px 25px rgba(255, 255, 255, 0.4),
-        inset 0 -12px 25px rgba(0, 0, 0, 0.6),
-        inset -5px 0 15px rgba(212, 175, 55, 0.25);
-    border: 1.5px solid rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+        0 0 50px rgba(212, 175, 55, 0.28),
+        inset 0 10px 25px rgba(255, 255, 255, 0.45),
+        inset 0 -12px 25px rgba(0, 0, 0, 0.5),
+        inset -5px 0 15px rgba(212, 175, 55, 0.3);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    z-index: 3;
     animation: orbFloat 5s ease-in-out infinite alternate;
     transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
 }
@@ -699,3 +720,4 @@
         right: 14px;
     }
 }
+
